@@ -1,0 +1,20 @@
+[package]
+name = "libscemu"
+version = "0.4.15"
+edition = "2018"
+authors = ["sha0coder"]
+license = "MIT"
+description = "x86 32/64bits and system internals emulator, for securely emulating malware and other stuff."
+email = "sha0@badchecksum.net"
+documentation = "https://docs.rs/libscemu/0.4.1/libscemu/"
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+
+[dependencies]
+iced-x86 = "1.17.0"
+md5 = "0.7.0"
+lazy_static = "1.4.0"
+attohttpc = "0.18.0"
+rand = "0.8.4"
+ctrlc = "3.2.2"
+scan_fmt = "0.2.6"
