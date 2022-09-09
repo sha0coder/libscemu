@@ -7,6 +7,7 @@ license = "MIT"
 description = "x86 32/64bits and system internals emulator, for securely emulating malware and other stuff."
 email = "sha0@badchecksum.net"
 documentation = "https://docs.rs/libscemu/0.4.1/libscemu/"
+repository = "https://github.com/sha0coder/libscemu"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 
