@@ -487,11 +487,19 @@ impl Regs64 {
     }
 
     pub fn get_sil(&self) -> u64 {
-        get_reg8h!(self.rsi);
+        get_reg8l!(self.rsi);
     }
 
     pub fn get_dil(&self) -> u64 {
-        get_reg8h!(self.rdi);
+        get_reg8l!(self.rdi);
+    }
+
+    pub fn get_bpl(&self) -> u64 {
+        get_reg8l!(self.rbp);
+    }
+
+    pub fn get_spl(&self) -> u64 {
+        get_reg8l!(self.rsp);
     }
 
     // get 32bits
@@ -804,11 +812,19 @@ impl Regs64 {
     }
 
     pub fn set_sil(&mut self, val:u64) {
-        set_reg8h!(self.rsi, val);
+        set_reg8l!(self.rsi, val);
     }
 
     pub fn set_dil(&mut self, val:u64) {
-        set_reg8h!(self.rdi, val);
+        set_reg8l!(self.rdi, val);
+    }
+
+    pub fn set_bpl(&mut self, val:u64) {
+        set_reg8l!(self.rbp, val);
+    }
+
+    pub fn set_spl(&mut self, val:u64) {
+        set_reg8l!(self.rsp, val);
     }
 
     // xmm 
@@ -951,6 +967,8 @@ impl Regs64 {
             Register::R15L => self.get_r15l(),
             Register::SIL => self.get_sil(),
             Register::DIL => self.get_dil(),
+            Register::BPL => self.get_bpl(),
+            Register::SPL => self.get_spl(),
             // segmets
             Register::DS => 0,
             Register::CS => 0,
@@ -1038,6 +1056,8 @@ impl Regs64 {
             Register::R15L => self.set_r15l(value),
             Register::SIL => self.set_sil(value),
             Register::DIL => self.set_dil(value),
+            Register::BPL => self.set_bpl(value),
+            Register::SPL => self.set_spl(value),
             // segments
             Register::SS => { },
             Register::ES => { },
@@ -1117,6 +1137,8 @@ impl Regs64 {
             Register::R15L => 8,
             Register::SIL => 8,
             Register::DIL => 8,
+            Register::BPL => 8,
+            Register::SPL => 8,
             _ => unimplemented!("unimplemented register {:?}", reg),
         };
 
@@ -1197,6 +1219,8 @@ impl Regs64 {
             "r15l" => return self.get_r15l(),
             "sil" => return self.get_sil(),
             "dil" => return self.get_dil(),
+            "bpl" => return self.get_bpl(),
+            "spl" => return self.get_spl(),
             &_ => unimplemented!("weird register name parsed {}", reg_name),
         }
     }
@@ -1275,6 +1299,8 @@ impl Regs64 {
             "r15l" => self.set_r15l(value),
             "sil" => self.set_sil(value),
             "dil" => self.set_dil(value),
+            "bpl" => self.set_bpl(value),
+            "spl" => self.set_spl(value),
             &_ => panic!("weird register name parsed {}", reg_name),
         }
     }
@@ -1548,12 +1574,20 @@ impl Regs64 {
         self.show_reg64(maps, "dil", self.get_dil(), pos);
     }
 
+    pub fn show_bpl(&self, maps:&Maps, pos:u64) {
+        self.show_reg64(maps, "bpl", self.get_bpl(), pos);
+    }
+
+    pub fn show_spl(&self, maps:&Maps, pos:u64) {                        
+        self.show_reg64(maps, "spl", self.get_spl(), pos);   
+    }
+
     pub fn is_reg(&self, reg:&str) -> bool {
         match reg {
             "rax"|"rbx"|"rcx"|"rdx"|"rsi"|"rdi"|"rbp"|"rsp"|"rip"|"r8"|"r9"|"r10"|"r11"|"r12"|
             "eax"|"ebx"|"ecx"|"edx"|"esi"|"edi"|"esp"|"ebp"|"eip"|"r8d"|"r9d"|"r10d"|"r11d"|"r12d"|
             "ax"|"bx"|"cx"|"dx"|"bp"|"sp"|"r8w"|"r9w"|"r10w"|"r11w"|"r12w"|
-            "si"|"di"|"al"|"ah"|"bl"|"bh"|"cl"|"ch"|"dl"|"dh"|"r8l"|"r9l"|"r10l"|"r11l"|"r12l"|"sil"|"dil" => true,
+            "si"|"di"|"al"|"ah"|"bl"|"bh"|"cl"|"ch"|"dl"|"dh"|"r8l"|"r9l"|"r10l"|"r11l"|"r12l"|"sil"|"dil"|"bpl"|"spl" => true,
             &_ => false,
         }
     }

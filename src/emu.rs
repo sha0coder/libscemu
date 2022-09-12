@@ -98,6 +98,7 @@ pub struct Emu {
     colors: Colors,
     pos: u64,
     force_break: bool,
+    pub tls_callbacks: Vec<u64>,
     pub tls: Vec<u32>,
     pub fls: Vec<u32>,
     step: bool,
@@ -129,6 +130,7 @@ impl Emu {
             colors: Colors::new(),
             pos: 0,
             force_break: false,
+            tls_callbacks: Vec::new(),
             tls: Vec::new(),
             fls: Vec::new(),
             step: false,
@@ -785,17 +787,25 @@ impl Emu {
 
     pub fn load_pe64(&mut self, filename: &str, set_entry: bool, force_base: u64) -> (u64,u32) {
         let mut pe64 = PE64::load(filename);
-        if set_entry {
-            pe64.iat_binding(self);
-        }
+        let mut base:u64;
 
-        let map_name = self.filename_to_mapname(filename);
-        let base:u64;
         if force_base > 0 {
             base = force_base;
         } else {
             base = pe64.opt.image_base;
         }
+
+        if self.cfg.code_base_addr != 0x3c0000 {   
+            base = self.cfg.code_base_addr;                 
+        }
+
+        let map_name = self.filename_to_mapname(filename);
+
+        if set_entry {
+            //TODO: update the peb64 with latest changes on peb32
+            pe64.iat_binding(self);
+        }
+
     
         //TODO: query if this vaddr is already used
         let pemap = self.maps.create_map(&format!("{}.pe", map_name));
@@ -804,7 +814,7 @@ impl Emu {
         pemap.memcpy(pe64.get_headers(), pe64.opt.size_of_headers as usize);
 
         println!("Loaded {}", filename);
-        println!("\t{} sections  base addr 0x{:x}", pe64.num_of_sections(), base);
+        println!("\t{} sections,  base addr 0x{:x}", pe64.num_of_sections(), base);
 
         for i in 0..pe64.num_of_sections() {
             let base;
@@ -827,7 +837,7 @@ impl Emu {
             }
             map.memcpy(ptr, ptr.len());
 
-            println!("\tcreated pe32 map for section `{}` at 0x{:x} size: {}", sect.get_name(), 
+            println!("\tcreated pe64 map for section `{}` at 0x{:x} size: {}", sect.get_name(), 
                      map.get_base(), sect.virtual_size);
 
             if set_entry {
@@ -842,6 +852,9 @@ impl Emu {
                     }
 
                     println!("\tentry point at 0x{:x}  0x{:x} ", self.regs.rip, pe64.opt.address_of_entry_point);
+                } else if sect.get_name() == ".tls" {
+                    let tls_off = sect.pointer_to_raw_data;
+                    self.tls_callbacks = pe64.get_tls_callbacks(sect.virtual_address);
                 }
             }
         }
@@ -875,7 +888,19 @@ impl Emu {
 
         } else if self.cfg.is_64bits && PE64::is_pe64(filename) {
             println!("PE64 header detected.");
-            self.load_pe64(filename, true, 0);
+            let (base, pe_off) = self.load_pe64(filename, true, 0);
+            let ep = self.regs.rip;
+
+            // emulating tls callbacks
+            for i in 0..self.tls_callbacks.len() {
+                println!("Emulating tls_callback {}", i+1);
+                self.regs.rip = self.tls_callbacks[i];
+                self.stack_push64(base);
+                self.run(base);
+            }
+
+            self.regs.rip = ep;
+
 
         } else { // shellcode
 
@@ -3063,9 +3088,9 @@ impl Emu {
                             "rdx" => self.regs.show_rdx(&self.maps, self.pos),
                             "rsi" => self.regs.show_rsi(&self.maps, self.pos),
                             "rdi" => self.regs.show_rdi(&self.maps, self.pos),
-                            "rbp" => println!("\t{} rbp: 0x{:}", self.pos, self.regs.rbp),
-                            "rsp" => println!("\t{} rsp: 0x{:}", self.pos, self.regs.rsp),
-                            "rip" => println!("\t{} rip: 0x{:}", self.pos, self.regs.rip),
+                            "rbp" => println!("\t{} rbp: 0x{:x}", self.pos, self.regs.rbp),
+                            "rsp" => println!("\t{} rsp: 0x{:x}", self.pos, self.regs.rsp),
+                            "rip" => println!("\t{} rip: 0x{:x}", self.pos, self.regs.rip),
                             "r8" => self.regs.show_r8(&self.maps, self.pos),
                             "r9" => self.regs.show_r9(&self.maps, self.pos),
                             "r10" => self.regs.show_r10(&self.maps, self.pos),
@@ -3080,9 +3105,9 @@ impl Emu {
                             "edx" => self.regs.show_edx(&self.maps, self.pos),
                             "esi" => self.regs.show_esi(&self.maps, self.pos),
                             "edi" => self.regs.show_edi(&self.maps, self.pos),
-                            "esp" => println!("\t{} esp: 0x{:}", self.pos, self.regs.get_esp() as u32),
-                            "ebp" => println!("\t{} ebp: 0x{:}", self.pos, self.regs.get_ebp() as u32),
-                            "eip" => println!("\t{} eip: 0x{:}", self.pos, self.regs.get_eip() as u32),
+                            "esp" => println!("\t{} esp: 0x{:x}", self.pos, self.regs.get_esp() as u32),
+                            "ebp" => println!("\t{} ebp: 0x{:x}", self.pos, self.regs.get_ebp() as u32),
+                            "eip" => println!("\t{} eip: 0x{:x}", self.pos, self.regs.get_eip() as u32),
                             _ => panic!("invalid register."),
                         }
                     }
@@ -4141,6 +4166,7 @@ impl Emu {
                             dest += 1;
                             bitpos += 1;
                         }
+                        dest -= 1;
 
                         if dest == sz as u64 {
                             self.flags.f_cf = true;
@@ -4198,21 +4224,19 @@ impl Emu {
                         self.show_instruction(&self.colors.green, &ins);
                         assert!(ins.op_count() == 1);
 
-                        let mut value0 = match self.get_operand_value(&ins, 0, true) {
+                        let value0 = match self.get_operand_value(&ins, 0, true) {
                             Some(v) => v,
                             None => break,
                         };
 
-                        let mut dst:u64;
-
+                        let value1;
                         let sz = self.get_operand_sz(&ins, 0);
 
-                        for i in 0..sz {
-                            let bit = get_bit!(value0, i);
-                            set_bit!(value0, sz-i-1, bit);
-                        }
+                        value1 = (value0 & 0x00000000_000000ff) << 24 | (value0 & 0x00000000_0000ff00) << 8 |
+                            (value0 & 0x00000000_00ff0000) >> 8 | (value0 & 0x00000000_ff000000) >> 24 |
+                            (value0 & 0xffffffff_00000000);
 
-                        if !self.set_operand_value(&ins, 0, value0) {
+                        if !self.set_operand_value(&ins, 0, value1) {
                             break;
                         }
 
@@ -4708,7 +4732,36 @@ impl Emu {
                                 break;
                             }
                         }
+                    }
 
+                    Mnemonic::Cmovs => {
+                        self.show_instruction(&self.colors.orange, &ins);
+
+                        if self.flags.f_sf {
+                            let value1 = match self.get_operand_value(&ins, 1, true) {
+                                Some(v) => v,
+                                None => break,
+                            };
+
+                            if !self.set_operand_value(&ins, 0, value1) {
+                                break;
+                            }
+                        }
+                    }
+
+                    Mnemonic::Cmovo => {
+                        self.show_instruction(&self.colors.orange, &ins);
+
+                        if self.flags.f_of {
+                            let value1 = match self.get_operand_value(&ins, 1, true) {
+                                Some(v) => v,
+                                None => break,
+                            };
+
+                            if !self.set_operand_value(&ins, 0, value1) {
+                                break;
+                            }
+                        }
                     }
 
 

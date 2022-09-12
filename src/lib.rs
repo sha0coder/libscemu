@@ -35,9 +35,9 @@ mod tests {
         assert!(1==1); 
         // cannot do tests, maps folder cannot be predicted on test time.
 
+        /*
         use crate::emu32;
 
-        /*
         let mut emu = emu32();
         emu.set_maps_folder("/tmp/maps32/");
         emu.init();
