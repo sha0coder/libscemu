@@ -330,6 +330,31 @@ impl Maps {
         }
     }
 
+    pub fn dump_n(&self, addr:u64, amount:u64) {
+        let mut count:u64 = 0;
+        for i in 0..8 {
+            let mut bytes:Vec<u8> = Vec::new();
+            print!("0x{:x}: ", addr + i * 16);
+            for _ in 0..16 {
+                let b = self.read_byte(addr + count).unwrap_or(0);
+                bytes.push(b);
+                count += 1;
+                print!("{:02x} ", b);
+                if count >= amount {
+                    return;
+                }
+            }
+
+            let pritable_bytes = self.filter_replace_bytes(&bytes);
+            let s:String = match str::from_utf8(&pritable_bytes) {
+                Ok(v) => v.to_string(),
+                Err(n) => " -utf8err- ".to_string(),
+            };
+            
+            println!("    {}", s);
+        }
+    }
+
     #[deprecated]
     pub fn dump2(&self, addr:u64) {
         let mut count = 0;

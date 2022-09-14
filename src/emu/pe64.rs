@@ -327,7 +327,7 @@ impl PE64 {
         let off = self.sect_hdr[id].pointer_to_raw_data as usize;
         let mut sz = self.sect_hdr[id].size_of_raw_data as usize; //TODO: coger sz en disk no en va
         if off+sz >= self.raw.len() {
-            println!("/!\\ warning: raw sz:{} off:{} sz:{}  off+sz:{}", self.raw.len(), off, sz, off+sz);
+            //println!("/!\\ warning: raw sz:{} off:{} sz:{}  off+sz:{}", self.raw.len(), off, sz, off+sz);
             sz = self.raw.len() - off - 1;
         }
         let section_ptr = &self.raw[off..off+sz];
