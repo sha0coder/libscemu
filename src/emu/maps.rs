@@ -537,12 +537,12 @@ impl Maps {
         bytes
     }
 
-    pub fn search_spaced_bytes(&self, sbs:&str, map_name:&str) -> bool {
+    pub fn search_spaced_bytes(&self, sbs:&str, map_name:&str) -> Vec<u64> {
         let bytes = self.spaced_bytes_to_bytes(sbs);
         self.search_bytes(bytes, map_name)
     }
 
-    pub fn search_space_bytes_in_all(&self, sbs:&str) -> Vec<u64> {
+    pub fn search_spaced_bytes_in_all(&self, sbs:&str) -> Vec<u64> {
         let bytes = self.spaced_bytes_to_bytes(sbs);
         let mut found:Vec<u64> = Vec::new();
 
@@ -604,8 +604,8 @@ impl Maps {
         }
     }
    
-    pub fn search_bytes(&self, bkw:Vec<u8>, map_name:&str) -> bool {
-        let mut found:bool = false;
+    pub fn search_bytes(&self, bkw:Vec<u8>, map_name:&str) -> Vec<u64> {
+        let mut addrs:Vec<u64> = Vec::new();
 
         for (name,mem) in self.maps.iter() {
             if name == map_name {
@@ -622,17 +622,15 @@ impl Maps {
                     }
 
                     if c == bkw.len() {
-                        println!("found at 0x{:x}", addr);
-                        found = true;
+                        addrs.push(addr);
                     }
 
                 }
 
-                return found;
+                return addrs;
             }
         }
-        println!("map not found");
-        false
+        return addrs;
     }
 
     pub fn size(&self) -> usize {

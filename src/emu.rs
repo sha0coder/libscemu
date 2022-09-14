@@ -2248,14 +2248,18 @@ impl Emu {
                     let mem_name = con.cmd();
                     con.print("spaced bytes");
                     let sbs = con.cmd();
-                    if !self.maps.search_spaced_bytes(&sbs, &mem_name) {
+                    let addrs = self.maps.search_spaced_bytes(&sbs, &mem_name);
+                    if addrs.len() == 0 {
                         println!("not found.");
+                    }
+                    for addr in addrs {
+                        println!("0x{:x}", addr);
                     }
                 },
                 "sba" => {
                     con.print("spaced bytes");
                     let sbs = con.cmd();
-                    let results = self.maps.search_space_bytes_in_all(&sbs);
+                    let results = self.maps.search_spaced_bytes_in_all(&sbs);
                     if self.cfg.is_64bits {
                         for addr in results.iter() {
                             println!("found at 0x{:x}", addr);
