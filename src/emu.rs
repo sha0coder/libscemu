@@ -744,9 +744,11 @@ impl Emu {
         pemap.set_base(base.into());
         pemap.set_size(pe32.opt.size_of_headers.into());
         pemap.memcpy(pe32.get_headers(), pe32.opt.size_of_headers as usize);
-
-        println!("Loaded {}", filename);
-        println!("\t{} sections  base addr 0x{:x}", pe32.num_of_sections(), base);
+    
+        if self.cfg.verbose >= 1 {
+            println!("Loaded {}", filename);
+            println!("\t{} sections  base addr 0x{:x}", pe32.num_of_sections(), base);
+        }
 
         for i in 0..pe32.num_of_sections() {
             let base:u32;
@@ -769,12 +771,16 @@ impl Emu {
             }
             map.memcpy(ptr, ptr.len());
 
-            println!("\tcreated pe32 map for section `{}` at 0x{:x} size: {}", sect.get_name(), 
+            if self.cfg.verbose >= 1 {
+                println!("\tcreated pe32 map for section `{}` at 0x{:x} size: {}", sect.get_name(), 
                      map.get_base(), sect.virtual_size);
+            }
             if set_entry {
                 if sect.get_name() == ".text" || i == 0 {
                     self.regs.rip = base as u64 + pe32.opt.address_of_entry_point as u64;
-                    println!("\tentry point at 0x{:x}  0x{:x} ", self.regs.rip, pe32.opt.address_of_entry_point);
+                    if self.cfg.verbose >= 1 {
+                        println!("\tentry point at 0x{:x}  0x{:x} ", self.regs.rip, pe32.opt.address_of_entry_point);
+                    }
                 }
             }
         }
@@ -813,8 +819,10 @@ impl Emu {
         pemap.set_size(pe64.opt.size_of_headers.into());
         pemap.memcpy(pe64.get_headers(), pe64.opt.size_of_headers as usize);
 
-        println!("Loaded {}", filename);
-        println!("\t{} sections,  base addr 0x{:x}", pe64.num_of_sections(), base);
+        if self.cfg.verbose >= 1 {
+            println!("Loaded {}", filename);
+            println!("\t{} sections,  base addr 0x{:x}", pe64.num_of_sections(), base);
+        }
 
         for i in 0..pe64.num_of_sections() {
             let base;
@@ -837,21 +845,24 @@ impl Emu {
             }
             map.memcpy(ptr, ptr.len());
 
-            println!("\tcreated pe64 map for section `{}` at 0x{:x} size: {}", sect.get_name(), 
+            if self.cfg.verbose >= 1 {
+                println!("\tcreated pe64 map for section `{}` at 0x{:x} size: {}", sect.get_name(), 
                      map.get_base(), sect.virtual_size);
+            }
 
             if set_entry {
                 if sect.get_name() == ".text" || i == 0 {
 
                     if pe64.opt.address_of_entry_point == 0 {
-                        println!("entry point zero");
                         self.regs.rip = base + sect.virtual_address as u64 + 
                             sect.pointer_to_raw_data as u64;
                     } else {
                         self.regs.rip = base + pe64.opt.address_of_entry_point as u64; 
                     }
-
-                    println!("\tentry point at 0x{:x}  0x{:x} ", self.regs.rip, pe64.opt.address_of_entry_point);
+    
+                    if self.cfg.verbose >= 1 {
+                        println!("\tentry point at 0x{:x}  0x{:x} ", self.regs.rip, pe64.opt.address_of_entry_point);
+                    }
                 } else if sect.get_name() == ".tls" {
                     let tls_off = sect.pointer_to_raw_data;
                     self.tls_callbacks = pe64.get_tls_callbacks(sect.virtual_address);
