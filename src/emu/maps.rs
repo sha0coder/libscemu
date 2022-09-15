@@ -594,6 +594,38 @@ impl Maps {
         return 0;
     }
 
+
+    // search only one occurence from specific address backward
+    pub fn search_spaced_bytes_from_bw(&self, sbs:&str, saddr:u64) -> u64 {
+        let bkw = self.spaced_bytes_to_bytes(sbs);
+        for (_, mem) in self.maps.iter() {
+            if mem.get_base() <= saddr && saddr < mem.get_bottom() {
+                for addr in mem.get_base()..saddr {
+                    let mut c = 0;                        
+                                      
+                    for (i, bkwn) in bkw.iter().enumerate() {
+                        if addr + i as u64 >= mem.get_bottom() {
+                            break;                           
+                        }                             
+                        let b = mem.read_byte(addr+(i as u64));
+                        if b == *bkwn {
+                            c += 1;
+                        } else {
+                            break;                   
+                        }            
+                    }              
+
+                    if c == bkw.len() {
+                        return addr;
+                    }
+                } // for
+
+                return 0;
+            }
+        }
+        return 0;
+    }
+
     pub fn search_spaced_bytes(&self, sbs:&str, map_name:&str) -> Vec<u64> {
         let bytes = self.spaced_bytes_to_bytes(sbs);
         self.search_bytes(bytes, map_name)
