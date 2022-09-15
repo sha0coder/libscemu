@@ -761,10 +761,10 @@ impl PE32 {
                 }
 
             } else {
-                println!("no import directory at va 0x{:x}.", import_va);
+                //println!("no import directory at va 0x{:x}.", import_va);
             }
         } else {
-            println!("no import directory at va 0x{:x}", import_va);
+            //println!("no import directory at va 0x{:x}", import_va);
         }
 
         PE32 {

@@ -600,7 +600,7 @@ impl Maps {
         let bkw = self.spaced_bytes_to_bytes(sbs);
         for (_, mem) in self.maps.iter() {
             if mem.get_base() <= saddr && saddr < mem.get_bottom() {
-                for addr in mem.get_base()..saddr {
+                for addr in (mem.get_base()..=saddr).rev() {
                     let mut c = 0;                        
                                       
                     for (i, bkwn) in bkw.iter().enumerate() {
