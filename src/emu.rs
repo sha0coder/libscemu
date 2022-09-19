@@ -46,7 +46,7 @@ use breakpoint::Breakpoint;
 use iced_x86::{Decoder, DecoderOptions, Formatter, Instruction, IntelFormatter, Mnemonic, OpKind, 
     InstructionInfoFactory, Register, MemorySize};
 
-
+/*
 macro_rules! rotate_left {
     ($val:expr, $rot:expr, $bits:expr) => {
        ($val << $rot) | ($val >> ($bits-$rot)) 
@@ -57,7 +57,7 @@ macro_rules! rotate_right {
     ($val:expr, $rot:expr, $bits:expr) => {
         ($val >> $rot) | ($val << ($bits-$rot))
     };
-}
+}*/
 
 macro_rules! get_bit {
     ($val:expr, $count:expr) => {
