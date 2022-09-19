@@ -1394,6 +1394,100 @@ impl Emu {
         }
     }
 
+    fn rol(&self, val:u64, rot:u64, bits:u8) -> u64 {
+        let mut ret:u64 = val;
+        for _ in 0..rot {
+            let last_bit = get_bit!(ret, bits-1);
+            //println!("last bit: {}", last_bit);
+            let mut ret2:u64 = ret;
+            
+            for j in 0..bits-1 {
+                let bit = get_bit!(ret, j);
+                set_bit!(ret2, j+1, bit);
+            }
+            
+            set_bit!(ret2, 0, last_bit);
+            ret = ret2;
+            //println!("{:b}", ret);
+        }
+        
+        ret
+    }
+
+    fn rcl(&self, val:u64, rot2:u64, bits:u8) -> u64 {
+        let mut ret:u128 = val as u128;
+        let rot = rot2 & 0b11111;
+       
+        if self.flags.f_cf {
+            set_bit!(ret, bits, 1);
+        } else {
+            set_bit!(ret, bits, 0);
+        }
+        
+        for _ in 0..rot {
+            let last_bit = get_bit!(ret, bits);
+            //println!("last bit: {}", last_bit);
+            let mut ret2:u128 = ret;
+            
+            for j in 0..bits {
+                let bit = get_bit!(ret, j);
+                set_bit!(ret2, j+1, bit);
+            }
+            
+            set_bit!(ret2, 0, last_bit);
+            ret = ret2;
+            //println!("{:b}", ret);
+        }
+
+        let a:u128 = 2;
+        (ret & (a.pow(bits as u32)-1) ) as u64
+    }
+
+    fn ror(&self, val:u64, rot:u64, bits:u8) -> u64 {
+        let mut ret:u64 = val;
+        for _ in 0..rot {
+            let first_bit = get_bit!(ret, 0);
+            let mut ret2:u64 = ret;
+            
+            for j in (1..bits).rev() {
+                let bit = get_bit!(ret, j);
+                set_bit!(ret2, j-1, bit);
+            }
+            
+            set_bit!(ret2, bits-1, first_bit);
+            ret = ret2;
+        }
+        
+        ret
+    }   
+
+    fn rcr(&self, val:u64, rot2:u64, bits:u8) -> u64 {
+        let mut ret:u128 = val as u128;
+        let rot = rot2 & 0b11111;
+        
+        if self.flags.f_cf {
+            set_bit!(ret, bits, 1);
+        } else {
+            set_bit!(ret, bits, 0);
+        }
+        
+        for _ in 0..rot {
+            let first_bit = get_bit!(ret, 0);
+            let mut ret2:u128 = ret;
+            
+            for j in (1..=bits).rev() {
+                let bit = get_bit!(ret, j);
+                set_bit!(ret2, j-1, bit);
+            }
+            
+            set_bit!(ret2, bits, first_bit);
+            ret = ret2;
+        }
+        
+        let a:u128 = 2;
+        (ret & (a.pow(bits as u32)-1) ) as u64
+    }
+
     
     fn mul64(&mut self, value0:u64) {
         let value1:u64 = self.regs.rax;
@@ -3639,16 +3733,31 @@ impl Emu {
 
                         /*let mut ival = value0 as i32;
                         ival = !ival;*/
-
-                        if self.cfg.is_64bits {
-                            let mut ival = value0 as i64;
-                            ival = !ival;
-                            val = ival as u64;
-                        } else {
-                            let mut ival = value0 as u32 as i32;
-                            ival = !ival;
-                            val = ival as u32 as u64;
+                        let sz = self.get_operand_sz(&ins, 0);
+                        match sz {                           
+                            64 => {  
+                                let mut ival = value0 as i64;
+                                ival = !ival;
+                                val = ival as u64;
+                            }
+                            32 => {
+                                let mut ival = value0 as u32 as i32;
+                                ival = !ival;
+                                val = value0 & 0xffffffff_00000000 | ival as u32 as u64;
+                            }
+                            16 => {
+                                let mut ival = value0 as u16 as i16;
+                                ival = !ival;
+                                val = value0 & 0xffffffff_ffff0000 | ival as u16 as u64;
+                            }
+                            8 => {
+                                let mut ival = value0 as u8 as i8;
+                                ival = !ival;
+                                val = value0 & 0xffffffff_ffffff00 | ival as u8 as u64;
+                            }
+                            _ => unimplemented!("weird"),
                         }
+
 
                         if !self.set_operand_value(&ins, 0, val) {
                             break;
@@ -3943,7 +4052,7 @@ impl Emu {
                         }
                     }
 
-                    Mnemonic::Ror | Mnemonic::Rcr => {
+                    Mnemonic::Ror => {
                         self.show_instruction(&self.colors.green, &ins);
 
                         assert!(ins.op_count() == 1 || ins.op_count() == 2);
@@ -3958,7 +4067,7 @@ impl Emu {
                                 None => break,
                             };
 
-                            result = rotate_right!(value0, 1, sz as u64);
+                            result = self.ror(value0, 1, sz);
 
                         } else { // 2 params
                             let value0 = match self.get_operand_value(&ins, 0, true) {
@@ -3971,7 +4080,7 @@ impl Emu {
                                 None => break,
                             };
 
-                            result = rotate_right!(value0, value1, sz as u64);
+                            result = self.ror(value0, value1, sz);
                         }
 
                         if !self.set_operand_value(&ins, 0, result) {
@@ -3981,7 +4090,7 @@ impl Emu {
                         self.flags.calc_flags(result, sz);
                     }
 
-                    Mnemonic::Rol|Mnemonic::Rcl => {
+                    Mnemonic::Rcr => {
                         self.show_instruction(&self.colors.green, &ins);
 
                         assert!(ins.op_count() == 1 || ins.op_count() == 2);
@@ -3996,7 +4105,46 @@ impl Emu {
                                 None => break,
                             };
 
-                            result = rotate_left!(value0, 1, sz as u64);
+                            result = self.rcr(value0, 1, sz);
+
+                        } else { // 2 params
+                            let value0 = match self.get_operand_value(&ins, 0, true) {
+                                Some(v) => v,
+                                None => break,
+                            };
+
+                            let value1 = match self.get_operand_value(&ins, 1, true) {
+                                Some(v) => v,
+                                None => break,
+                            };
+
+                            result = self.rcr(value0, value1, sz);
+                        }
+
+                        if !self.set_operand_value(&ins, 0, result) {
+                            break;
+                        }
+
+                        self.flags.calc_flags(result, sz);
+                    }
+
+
+                    Mnemonic::Rol => {
+                        self.show_instruction(&self.colors.green, &ins);
+
+                        assert!(ins.op_count() == 1 || ins.op_count() == 2);
+
+                        let result:u64;
+                        let sz = self.get_operand_sz(&ins, 0);
+
+
+                        if ins.op_count() == 1 { // 1 param
+                            let value0 = match self.get_operand_value(&ins, 0, true) {
+                                Some(v) => v,
+                                None => break,
+                            };
+
+                            result = self.rol(value0, 1, sz);
 
                         } else { // 2 params
                             let value0 = match self.get_operand_value(&ins, 0, true) {
@@ -4010,7 +4158,7 @@ impl Emu {
                             };
 
 
-                            result = rotate_left!(value0, value1, sz as u64);
+                            result = self.rol(value0, value1, sz);
                         }
 
                         if !self.set_operand_value(&ins, 0, result) {
@@ -4019,6 +4167,46 @@ impl Emu {
 
                         self.flags.calc_flags(result, sz as u8);
                     }
+
+                    Mnemonic::Rcl => {
+                        self.show_instruction(&self.colors.green, &ins);
+
+                        assert!(ins.op_count() == 1 || ins.op_count() == 2);
+
+                        let result:u64;
+                        let sz = self.get_operand_sz(&ins, 0) + 1;
+
+
+                        if ins.op_count() == 1 { // 1 param
+                            let value0 = match self.get_operand_value(&ins, 0, true) {
+                                Some(v) => v,
+                                None => break,
+                            };
+
+                            result = self.rcl(value0, 1, sz);
+
+                        } else { // 2 params
+                            let value0 = match self.get_operand_value(&ins, 0, true) {
+                                Some(v) => v,
+                                None => break,
+                            };
+
+                            let value1 = match self.get_operand_value(&ins, 1, true) {
+                                Some(v) => v,
+                                None => break,
+                            };
+
+
+                            result = self.rcl(value0, value1, sz);
+                        }
+
+                        if !self.set_operand_value(&ins, 0, result) {
+                            break;
+                        }
+
+                        self.flags.calc_flags(result, sz as u8 -1);
+                    }
+
 
                     Mnemonic::Mul => {
                         self.show_instruction(&self.colors.cyan, &ins);
@@ -4247,9 +4435,25 @@ impl Emu {
                         let value1;
                         let sz = self.get_operand_sz(&ins, 0);
 
-                        value1 = (value0 & 0x00000000_000000ff) << 24 | (value0 & 0x00000000_0000ff00) << 8 |
-                            (value0 & 0x00000000_00ff0000) >> 8 | (value0 & 0x00000000_ff000000) >> 24 |
-                            (value0 & 0xffffffff_00000000);
+                        if sz == 32 {
+                            value1 = (value0 & 0x00000000_000000ff) << 24 | (value0 & 0x00000000_0000ff00) << 8 |
+                                (value0 & 0x00000000_00ff0000) >> 8 | (value0 & 0x00000000_ff000000) >> 24 |
+                                (value0 & 0xffffffff_00000000);
+
+                        } else if sz == 64 {
+                            value1 = (value0 & 0xff000000_00000000) >> 56 | (value0 & 0x00ff0000_00000000) >> 40 |
+                                (value0 & 0x0000ff00_00000000) >> 24 | (value0 & 0x000000ff_00000000) >> 8 |
+                                (value0 & 0x00000000_ff000000) << 8 | (value0 & 0x00000000_00ff0000) << 24 |
+                                (value0 & 0x00000000_0000ff00) << 40 | (value0 & 0x00000000_000000ff) << 56;
+
+                        } else if sz == 16 {
+                            value1 = (value0 & 0x00000000_000000ff) << 8 | (value0 & 0x00000000_0000ff00) >> 8;
+
+                        } else {
+                            unimplemented!("bswap <16bits makes no sense, isn't it?");
+                        }
+
+
 
                         if !self.set_operand_value(&ins, 0, value1) {
                             break;
@@ -4731,6 +4935,68 @@ impl Emu {
                             }
                         }
                     }
+
+                    Mnemonic::Cmovno => {
+                        self.show_instruction(&self.colors.orange, &ins);
+
+                        if !self.flags.f_of {
+                            let value1 = match self.get_operand_value(&ins, 1, true) {
+                                Some(v) => v,
+                                None => break,
+                            };
+
+                            if !self.set_operand_value(&ins, 0, value1) {
+                                break;
+                            }
+                        }
+                    }
+
+                    Mnemonic::Cmovne => {
+                        self.show_instruction(&self.colors.orange, &ins);
+
+                        if !self.flags.f_zf {
+                            let value1 = match self.get_operand_value(&ins, 1, true) {
+                                Some(v) => v,
+                                None => break,
+                            };
+
+                            if !self.set_operand_value(&ins, 0, value1) {
+                                break;
+                            }
+                        }
+                    }
+
+                    Mnemonic::Cmovns => {
+                        self.show_instruction(&self.colors.orange, &ins);
+
+                        if !self.flags.f_sf {
+                            let value1 = match self.get_operand_value(&ins, 1, true) {
+                                Some(v) => v,
+                                None => break,
+                            };
+
+                            if !self.set_operand_value(&ins, 0, value1) {
+                                break;
+                            }
+                        }
+                    }
+
+                    Mnemonic::Cmovp => {
+                        self.show_instruction(&self.colors.orange, &ins);
+
+                        if self.flags.f_pf {
+                            let value1 = match self.get_operand_value(&ins, 1, true) {
+                                Some(v) => v,
+                                None => break,
+                            };
+
+                            if !self.set_operand_value(&ins, 0, value1) {
+                                break;
+                            }
+                        }
+                    }
+
+                    
 
                     // https://hjlebbink.github.io/x86doc/html/CMOVcc.html
 
@@ -7020,6 +7286,13 @@ impl Emu {
                         
                         let flags = self.stack_pop32(true);
                         self.flags.load(flags);
+                    }
+
+                    Mnemonic::Popfq => {
+                        self.show_instruction(&self.colors.blue, &ins);
+                        
+                        let rflags = self.stack_pop64(true);
+                        // TODO: rflags
                     }
 
                     Mnemonic::Daa => {
