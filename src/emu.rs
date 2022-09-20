@@ -1797,15 +1797,26 @@ impl Emu {
     pub fn shrd(&mut self, value0:u64, value1:u64, pcounter:u64, size:u8) -> u64 {
         let mut storage0:u64 = value0;
         let mut counter:u64 = pcounter;
-        self.flags.f_cf = get_bit!(value0, counter - 1) == 1;
 
-        if counter >= size as u64 {
-            counter = pcounter - size as u64;
+        if size == 64 {
+            counter = counter % 64; 
+        } else {
+            counter = counter % 32;
         }
 
         if counter == 0 {
             return storage0;
         }
+
+        if counter > size as u64 {
+            if self.cfg.verbose >= 1 {
+                println!("/!\\ SHRD undefined behaviour");
+            }
+            return storage0;
+        }
+
+
+        self.flags.f_cf = get_bit!(value0, counter - 1) == 1;
 
         let mut to = size as u64 - 1 - counter;
         if to>64 {
@@ -1834,18 +1845,26 @@ impl Emu {
     pub fn shld(&mut self, value0:u64, value1:u64, pcounter:u64, size:u8) -> u64 {
         let mut storage0:u64 = value0;
         let mut counter:u64 = pcounter;
-    
-        if counter < size as u64 && size - (counter as u8) < 64 {
-            self.flags.f_cf = get_bit!(value0, size - counter as u8) == 1;
-        }
 
-        if pcounter >= size as u64 {
-            counter = pcounter - size as u64;
+        if size == 64 {
+            counter = counter % 64; 
+        } else {
+            counter = counter % 32;
         }
 
         if counter == 0 {
             return storage0;
         }
+
+        if counter > size as u64 {
+            if self.cfg.verbose >= 1 {
+                println!("/!\\ undefined behaviour on shld");
+            }
+            return storage0;
+        }
+
+        self.flags.f_cf = get_bit!(value0, size as u64 - counter) == 1;
+
 
         for i in (counter..=((size as u64)-1)).rev() {
             let bit = get_bit!(storage0, i - counter);
@@ -4593,11 +4612,18 @@ impl Emu {
                     }
 
                     Mnemonic::Movsb => {
-                        self.show_instruction(&self.colors.light_cyan, &ins);
 
                         if self.cfg.is_64bits {
                             if ins.has_rep_prefix() {
+                                let mut first_iteration = true;
                                 loop {
+                                    if first_iteration || self.cfg.verbose >= 3 {
+                                        self.show_instruction(&self.colors.light_cyan, &ins);
+                                    }
+                                    if !first_iteration {
+                                        self.pos += 1;
+                                    }
+
                                     let val = self.maps.read_byte(self.regs.rsi).expect("cannot read memory"); 
                                     self.maps.write_byte(self.regs.rdi, val);
 
@@ -4613,9 +4639,11 @@ impl Emu {
                                     if self.regs.rcx == 0 { 
                                         break 
                                     }
+                                    first_iteration = false;
                                 }
 
                             } else {
+                                self.show_instruction(&self.colors.light_cyan, &ins);
                                 let val = self.maps.read_byte(self.regs.rsi).expect("cannot read memory"); 
                                 self.maps.write_byte(self.regs.rdi, val);
                                 if !self.flags.f_df {
@@ -4629,7 +4657,15 @@ impl Emu {
                         } else { // 32bits
 
                             if ins.has_rep_prefix() {
+                                let mut first_iteration = true;
                                 loop {
+                                    if first_iteration || self.cfg.verbose >= 3 {
+                                        self.show_instruction(&self.colors.light_cyan, &ins);
+                                    }
+                                    if !first_iteration {
+                                        self.pos += 1;
+                                    }
+
                                     let val = self.maps.read_byte(self.regs.get_esi()).expect("cannot read memory"); 
                                     self.maps.write_byte(self.regs.get_edi(), val);
 
@@ -4645,9 +4681,11 @@ impl Emu {
                                     if self.regs.get_ecx() == 0 { 
                                         break 
                                     }
+                                    first_iteration = false;
                                 }
 
                             } else {
+                                self.show_instruction(&self.colors.light_cyan, &ins);
                                 let val = self.maps.read_byte(self.regs.get_esi()).expect("cannot read memory"); 
                                 self.maps.write_byte(self.regs.get_edi(), val);
                                 if !self.flags.f_df {
