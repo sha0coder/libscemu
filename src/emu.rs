@@ -2432,8 +2432,9 @@ impl Emu {
                     }
                 },
                 "n"|"" => {
-                    self.exp = self.pos + 1;
-                    return;
+                    self.step();
+                    //self.exp = self.pos + 1;
+                    //return;
                 },
                 "m" => self.maps.print_maps(),
                 "ms" => {
@@ -3097,6 +3098,7 @@ impl Emu {
 
     pub fn step(&mut self) {
         self.pos += 1;
+        self.step = false;
 
         let code = match self.maps.get_mem_by_addr(self.regs.rip) {
             Some(c) => c,
@@ -3125,6 +3127,16 @@ impl Emu {
             formatter.format(&ins, &mut self.out); 
 
             self.emulate_instruction(&ins, sz); 
+
+            if self.force_reload { 
+                self.force_reload = false;
+            } else {
+                if self.cfg.is_64bits {
+                    self.regs.rip += sz as u64;
+                } else {
+                    self.regs.set_eip(self.regs.get_eip() + sz as u64);
+                }
+            }
 
             break; // only one iteration
         }
