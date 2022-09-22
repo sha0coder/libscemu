@@ -3126,7 +3126,7 @@ impl Emu {
             self.out.clear();
             formatter.format(&ins, &mut self.out); 
 
-            self.emulate_instruction(&ins, sz); 
+            self.emulate_instruction(&ins, sz, true); 
 
             if self.force_reload { 
                 self.force_reload = false;
@@ -3326,7 +3326,7 @@ impl Emu {
 
 
                 // instruction implementation
-                self.emulate_instruction(&ins, sz);
+                self.emulate_instruction(&ins, sz, false);
 
                 if self.force_reload {
                     self.force_reload = false;
@@ -3357,7 +3357,7 @@ impl Emu {
 
     //////////// EMULATE INSTRUCTION ////////////
 
-    fn emulate_instruction(&mut self, ins:&Instruction, instruction_sz:usize) {
+    fn emulate_instruction(&mut self, ins:&Instruction, instruction_sz:usize, rep_step:bool) {
         match ins.mnemonic() {
 
             Mnemonic::Jmp => {
@@ -4736,6 +4736,10 @@ impl Emu {
                                 return 
                             }
                             first_iteration = false;
+                            if rep_step {
+                                self.force_reload = true;
+                                break;
+                            }
                         }
 
                     } else {
@@ -4779,6 +4783,10 @@ impl Emu {
                                 return 
                             }
                             first_iteration = false;
+                            if rep_step {
+                                self.force_reload = true;
+                                break;
+                            }
                         }
 
                     } else {
@@ -4827,6 +4835,10 @@ impl Emu {
                                 return 
                             }
                             first_iteration = false;
+                            if rep_step {
+                                self.force_reload = true;
+                                break;
+                            }
                         }
 
                     } else {
@@ -4870,6 +4882,10 @@ impl Emu {
                                 return 
                             }
                             first_iteration = false;
+                            if rep_step {
+                                self.force_reload = true;
+                                break;
+                            }
                         }
 
                     } else {
@@ -4916,6 +4932,10 @@ impl Emu {
                                 return 
                             }
                             first_iteration = false;
+                            if rep_step {
+                                self.force_reload = true;
+                                break;
+                            }
                         }
 
                     } else {
@@ -4958,6 +4978,10 @@ impl Emu {
                                 return 
                             }
                             first_iteration = false;
+                            if rep_step {
+                                self.force_reload = true;
+                                break;
+                            }
                         }
 
                     } else {
@@ -5476,6 +5500,10 @@ impl Emu {
 
                         self.regs.rcx -= 1;
                         first_iteration = false;
+                        if rep_step {
+                            self.force_reload = true;
+                            break;
+                        }
                     }
 
                 } else {
@@ -5555,6 +5583,10 @@ impl Emu {
 
                         self.regs.rcx -= 1;
                         first_iteration = false;
+                        if rep_step {
+                            self.force_reload = true;
+                            break;
+                        }
                     }
                 } else {
                     self.show_instruction(&self.colors.light_cyan, &ins);
@@ -5922,6 +5954,10 @@ impl Emu {
                         }
 
                         first_iteration = false;
+                        if rep_step {
+                            self.force_reload = true;
+                            break;
+                        }
                     }
 
                 } else { // not rep
@@ -6032,6 +6068,10 @@ impl Emu {
                         }
 
                         first_iteration = false;
+                        if rep_step {
+                            self.force_reload = true;
+                            break;
+                        }
                     }
 
                 } else { // no rep
@@ -6142,6 +6182,10 @@ impl Emu {
                         }
 
                         first_iteration = false;
+                        if rep_step {
+                            self.force_reload = true;
+                            break;
+                        }
                     }
 
 
@@ -6254,6 +6298,10 @@ impl Emu {
                         }
 
                         first_iteration = false;
+                        if rep_step {
+                            self.force_reload = true;
+                            break;
+                        }
                     }
 
                 } else { // no rep

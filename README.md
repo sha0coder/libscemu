@@ -53,6 +53,8 @@ Or if you prefer call specific function.
     emu.stack_push32(ret_addr);
     emu.run(ret_addr);
 
+    emu.step();
+
     // check result
     println!("return value: 0x{:x}", emu.regs.get_eax());
     emu.maps.dump(param2_out_buff);
