@@ -217,9 +217,16 @@ impl Emu {
         assert!(stack.inside(self.regs.rsp));
         assert!(stack.inside(self.regs.rbp));
     }
+    
+    pub fn init_stack64_dts9_patcherv(&mut self) {
+        let stack = self.maps.get_mem("stack");
+        self.regs.rsp = 0x000000000014F4B0;
+        self.regs.rbp = 0x0000000000000000;
+        stack.set_base(0x0000000000149000);
+        stack.set_size(0x0000000000007000);
+    }
 
     pub fn init_regs_dts9_patcherv(&mut self) {
-        // DTS9_PatcherV.exe
         self.regs.rax = 0x00000001448A76A4;
         self.regs.rbx = 0x000000007FFE0385;
         self.regs.rcx = 0x0000000140000000;
@@ -249,7 +256,8 @@ impl Emu {
             self.maps.is_64bits = true;
             self.init_regs_dts9_patcherv();
             self.init_mem64();
-            self.init_stack64();
+            //self.init_stack64();
+            self.init_stack64_dts9_patcherv();
 
         } else { // 32bits
             self.regs.sanitize32();
