@@ -1,6 +1,6 @@
 [package]
 name = "libscemu"
-version = "0.6.2"
+version = "0.6.4"
 edition = "2018"
 authors = ["sha0coder"]
 license = "MIT"
@@ -19,3 +19,4 @@ attohttpc = "0.18.0"
 rand = "0.8.4"
 ctrlc = "3.2.2"
 scan_fmt = "0.2.6"
+atty = "0.2.14"

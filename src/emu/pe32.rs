@@ -60,6 +60,7 @@ pub const IMAGE_DIRECTORY_ENTRY_DELAY_LOAD:usize = 13;
 pub const IMAGE_DIRECTORY_ENTRY_DOTNET_HDR:usize = 14;
 
 
+
 pub const IMAGE_SIZEOF_SHORT_NAME:usize = 8;
 pub const IMAGE_DEBUG_TYPE_UNKNOWN:u8 = 0;
 pub const IMAGE_DEBUG_TYPE_COFF:u8 = 1;
@@ -761,10 +762,10 @@ impl PE32 {
                 }
 
             } else {
-                //println!("no import directory at va 0x{:x}.", import_va);
+                println!("no import directory at va 0x{:x}.", import_va);
             }
         } else {
-            //println!("no import directory at va 0x{:x}", import_va);
+            println!("no import directory at va 0x{:x}", import_va);
         }
 
         PE32 {
@@ -829,7 +830,7 @@ impl PE32 {
         let off = self.sect_hdr[id].pointer_to_raw_data as usize;
         let mut sz = self.sect_hdr[id].size_of_raw_data as usize; //TODO: coger sz en disk no en va
         if off+sz >= self.raw.len() {
-            //println!("/!\\ warning: raw sz:{} off:{} sz:{}  off+sz:{}", self.raw.len(), off, sz, off+sz);
+            println!("/!\\ warning: raw sz:{} off:{} sz:{}  off+sz:{}", self.raw.len(), off, sz, off+sz);
             sz = self.raw.len() - off - 1;
         }
         let section_ptr = &self.raw[off..off+sz];
@@ -876,6 +877,10 @@ impl PE32 {
                 if dbg { println!("real addr: 0x{:x}", real_addr); }
 
                 write_u32_le!(self.raw, off_addr, real_addr);
+
+                if emu.cfg.verbose >= 1 { 
+                    println!("binded 0x{:x} {}", real_addr, func_name);
+                }
 
                 off_name += HintNameItem::size();
                 off_addr += 4;

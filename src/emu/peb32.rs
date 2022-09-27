@@ -20,15 +20,18 @@ pub fn init_peb(emu:&mut emu::Emu, first_entry:u64, bin_base:u32) -> u64 {
     let peb = PEB::new(ldr as u32, process_parameters, alt_thunk_list_ptr, reserved7, alt_thunk_list_ptr_32, post_process_init_routine, session_id);
     peb.save(&mut peb_map);
 
+    //emu.maps.write_dword(ldr + 24, first_entry as u32);
     emu.maps.write_dword(ldr + 0x14, first_entry as u32);
-    let ntdll_data = emu.maps.read_dword(peb_addr + 0xc).unwrap();  
-    emu.maps.write_dword(ntdll_data as u64 + 0xc, first_entry as u32); 
 
     if bin_base > 0 {
         let ntdll_data = emu.maps.read_dword(peb_addr + 0xc).unwrap();
         let reserved = emu.maps.read_dword(ntdll_data as u64 + 0xc).unwrap();
         emu.maps.write_dword(reserved as u64 + 0x18, bin_base);
     }
+    //let dll_base = emu.maps.read_dword(reserved as u64 + 0x18).unwrap();
+    //println!("dll_base: 0x{:x}", dll_base);
+    //assert!(1==2);
+    //
 
     // xloader checks the flink + 0x30 of every lib looking for the module name which really it's
     // on flink + 0x28
@@ -45,8 +48,9 @@ pub fn init_peb(emu:&mut emu::Emu, first_entry:u64, bin_base:u32) -> u64 {
         if flink.get_ptr() == first_flink {
             break;
         }
-    }
-   
+    }    
+
+    
     peb_addr
 }
 
@@ -67,7 +71,6 @@ pub struct Flink {
 
 impl Flink {
     pub fn save(&mut self, emu: &mut emu::Emu) {
-        
     }
 
     pub fn new(emu: &mut emu::Emu) -> Flink {
@@ -115,7 +118,7 @@ impl Flink {
     }
 
     pub fn get_mod_name(&mut self, emu: &mut emu::Emu) {
-        let mod_name_ptr = emu.maps.read_dword(self.flink_addr + 0x28)
+        let mod_name_ptr = emu.maps.read_dword(self.flink_addr + 0x28) //0x28
             .expect("error reading mod_name_ptr") as u64;
         self.mod_name = emu.maps.read_wide_string(mod_name_ptr);
     }
@@ -298,7 +301,8 @@ pub fn dynamic_link_module(base: u64, pe_off: u32, libname: &str, emu: &mut emu:
     emu.maps.write_dword(next_flink+4, space_addr as u32);
 }
 
-pub fn create_ldr_entry(emu: &mut emu::Emu, base:u64, pe_off:u32, libname:&str, next_flink:u64, prev_flink:u64) -> u64 {
+pub fn create_ldr_entry(emu: &mut emu::Emu, base:u64, pe_off:u32, libname:&str, 
+                        next_flink:u64, prev_flink:u64) -> u64 {
     // make space for ldr
     let sz = LdrDataTableEntry::size() as u64 +0x40 +1024;
     let space_addr = emu.maps.alloc(sz).expect("cannot alloc few bytes to put the LDR for LoadLibraryA");
@@ -325,13 +329,14 @@ pub fn create_ldr_entry(emu: &mut emu::Emu, base:u64, pe_off:u32, libname:&str, 
     //mem.write_dword(space_addr+0x10, next_flink as u32); // in_memory_order_linked_list
     mem.write_dword(space_addr+0x10, base as u32); // in_memory_order_linked_list
                                                          //
-    mem.write_dword(space_addr+0x1c, base as u32);
+    mem.write_dword(space_addr+0x1c, base as u32); // entry_point?
     mem.write_dword(space_addr+0x3c, pe_off);
     mem.write_dword(space_addr+0x28, space_addr as u32 + 0x40); // libname ptr
     mem.write_dword(space_addr+0x30, space_addr as u32 + 0x40); // libname ptr
     mem.write_wide_string(space_addr+0x40, &(libname.to_string()+"\x00"));
     mem.write_word(space_addr+0x26, libname.len() as u16 * 2 + 2); // undocumented field used on a cobalt strike sample.
-                                                                   //
+
     space_addr
 }
+
 
