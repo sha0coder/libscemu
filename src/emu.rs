@@ -1949,6 +1949,7 @@ impl Emu {
         }
 
         let con = Console::new();
+        self.pos -= 1;
         loop {
             let cmd = con.cmd();
             match cmd.as_str() {
