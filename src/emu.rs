@@ -245,6 +245,7 @@ impl Emu {
             self.cfg.nocolors = true;
             self.colors.disable();
             self.cfg.console_enabled = false;
+            self.disable_ctrlc();
         }
 
         println!("initializing regs");
