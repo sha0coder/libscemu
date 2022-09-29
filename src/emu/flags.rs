@@ -464,7 +464,9 @@ impl Flags {
         self.f_cf = true;
 
         let mut ival = value as i64;
-        ival = -ival;
+        if ival != i64::MIN {
+            ival = -ival;
+        }
 
         let res = ival as u64;
 
@@ -477,7 +479,9 @@ impl Flags {
         self.f_cf = true;
 
         let mut ival = value as i32;
-        ival = -ival;
+        if ival != i32::MIN {
+            ival = -ival;
+        }
 
         let res = ival as u32 as u64;
 
@@ -490,7 +494,9 @@ impl Flags {
         self.f_cf = true;
         
         let mut ival = value as i16;
-        ival = -ival;
+        if ival != i16::MIN {
+            ival = -ival;
+        }
 
         let res = ival as u16 as u64;
 
@@ -503,7 +509,9 @@ impl Flags {
         self.f_cf = true;
         
         let mut ival = value as i8;
-        ival = -ival;
+        if ival != i8::MIN {
+            ival = -ival;
+        }
 
         let res = ival as u8 as u64;
 
