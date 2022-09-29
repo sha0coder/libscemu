@@ -3606,7 +3606,9 @@ impl Emu {
                 let num:i64 = self.regs.get_eax() as u32 as i32 as i64; // sign-extend
                 let unum:u64 = num as u64;
                 self.regs.set_edx((unum & 0xffffffff00000000) >> 32);
-                self.regs.rax = self.regs.rax & 0xffffffff | (unum & 0xffffffff);
+                // preserve upper 64-bits from getting overriden
+                let rax_upper = self.regs.rax >> 32;
+                self.regs.rax = (rax_upper << 32) | (unum & 0xffffffff);
             }
 
             Mnemonic::Cqo => {
