@@ -8070,6 +8070,15 @@ impl Emu {
                 }
             }
 
+            Mnemonic::Movq => {
+                self.show_instruction(&self.colors.green, &ins);
+
+                assert!(ins.op_count() == 2);
+
+                let value1 = self.get_operand_xmm_value_128(&ins, 1, true).expect("error getting xmm value");
+                
+                self.set_operand_xmm_value_128(&ins, 0, value1);
+            }
 
             Mnemonic::Movdqa => {
                 self.show_instruction(&self.colors.green, &ins);
