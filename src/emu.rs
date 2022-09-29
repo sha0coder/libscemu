@@ -1862,7 +1862,7 @@ impl Emu {
             counter = counter % 32;
         }*/
         
-        counter = counter % size;
+        counter = counter % size as u64;
 
         if counter == 0 {
             return (storage0, false);
