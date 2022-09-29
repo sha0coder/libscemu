@@ -218,7 +218,7 @@ impl Emu {
         assert!(stack.inside(self.regs.rbp));
     }
     
-    pub fn init_stack64_dts9_patcherv(&mut self) {
+    pub fn init_stack64_tests(&mut self) {
         let stack = self.maps.get_mem("stack");
         self.regs.rsp = 0x000000000014F4B0;
         self.regs.rbp = 0x0000000000000000;
@@ -226,7 +226,7 @@ impl Emu {
         stack.set_size(0x0000000000007000);
     }
 
-    pub fn init_regs_dts9_patcherv(&mut self) {
+    pub fn init_regs_tests(&mut self) {
         self.regs.rax = 0x00000001448A76A4;
         self.regs.rbx = 0x000000007FFE0385;
         self.regs.rcx = 0x0000000140000000;
@@ -255,10 +255,10 @@ impl Emu {
         if self.cfg.is_64bits {
             self.regs.rip = self.cfg.entry_point;
             self.maps.is_64bits = true;
-            self.init_regs_dts9_patcherv();
+            self.init_regs_tests();
             self.init_mem64();
             //self.init_stack64();
-            self.init_stack64_dts9_patcherv();
+            self.init_stack64_tests();
 
         } else { // 32bits
             self.regs.sanitize32();
@@ -1913,11 +1913,14 @@ impl Emu {
         let mut storage0:u64 = value0;
         let mut counter:u64 = pcounter;
 
+        /*[
         if size == 64 {
             counter = counter % 64;
         } else {
             counter = counter % 32;
-        }
+        }*/
+
+        counter = counter % size as u64;
 
         if counter == 0 {
             return (value0, false);
@@ -7932,7 +7935,7 @@ impl Emu {
                 let sz = self.get_operand_sz(&ins, 0);
                 let (result, undef) = self.shld(value0, value1, counter, sz);
 
-                if self.cfg.test_mode && !undef {
+                if self.cfg.test_mode { //&& !undef {
                     if result != inline::shld(value0, value1, counter, sz) {
                         panic!("SHLD 0x{:x} should be 0x{:x}", result, inline::shld(value0, value1, counter, sz));
                     }
