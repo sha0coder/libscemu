@@ -28,6 +28,7 @@ pub fn gateway(addr:u32, emu:&mut emu::Emu) {
         0x775b62b8 => NtReadFile(emu),
         0x775b54c8 => NtClose(emu),
         0x775cee8d => RtlInitializeCriticalSectionAndSpinCount(emu),
+        0x775b5f18 => NtProtectVirtualMemory(emu),
         _ => panic!("calling unimplemented ntdll API 0x{:x} {}", addr, kernel32::guess_api_name(emu, addr)),
     }
 }
@@ -578,5 +579,35 @@ fn NtClose(emu:&mut emu::Emu) {
 }
 
 fn RtlInitializeCriticalSectionAndSpinCount(emu:&mut emu::Emu) { 
+
+}
+
+fn NtProtectVirtualMemory(emu:&mut emu::Emu) {
+    let sz = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("ntdll!NtProtectVirtualMemory error reading sz param") as u64;
+    let status = emu.maps.read_dword(emu.regs.get_esp() + 4)
+        .expect("ntdll!NtProtectVirtualMemory error reading status param") as u64;
+    let page_number = emu.maps.read_dword(emu.regs.get_esp() + 8)
+        .expect("ntdll!NtProtectVirtualMemory error reading page_number param") as u64;
+    let page = emu.maps.read_dword(emu.regs.get_esp() + 12)
+        .expect("ntdll!NtProtectVirtualMemory error reading page param") as u64;
+    let old_prot_ptr = emu.maps.read_dword(emu.regs.get_esp() + 16)      
+        .expect("ntdll!NtProtectVirtualMemory error reading old prot param") as u64;
+
+    println!("{}** {} ntdll!NtProtectVirtualMemory sz: {} {}",
+             emu.colors.light_red, emu.pos, sz, emu.colors.nc);
+
+    for _ in 0..5 {
+        emu.stack_pop32(false);
+    }
+
+    emu.regs.rax = constants::STATUS_SUCCESS;                                                                  
+}                                             
+
+fn CheckRemoteDebuggerPresent(emu:&mut emu::Emu) {
+    let hndl = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("ntdll!NtProtectVirtualMemory error reading hndl param") as u64;
+    let bool_ptr = emu.maps.read_dword(emu.regs.get_esp() + 4)
+        .expect("ntdll!NtProtectVirtualMemory error reading bool ptr param") as u64;
 
 }
