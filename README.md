@@ -1,5 +1,5 @@
 
-# SCEMU
+# SCEMU the lib
 
 
 ## Usage
