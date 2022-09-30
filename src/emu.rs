@@ -1871,7 +1871,7 @@ impl Emu {
             return (storage0, false);
         }
 
-        if counter > size as u64 {
+        if counter >= size as u64 {
             if self.cfg.verbose >= 1 {
                 println!("/!\\ SHRD undefined behaviour value0 = 0x{:x} value1 = 0x{:x} pcounter = 0x{:x} counter = 0x{:x} size = 0x{:x}", value0, value1, pcounter, counter, size);
             }
