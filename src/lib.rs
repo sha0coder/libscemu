@@ -33,10 +33,8 @@ mod tests {
     #[test]
     fn test() {
 
-        /*
-        let args: Vec<String> = std::env::args().collect();
-        println!("len {}", args.len());
 
+        /*
         let mut emu = emu64();
         emu.set_maps_folder("../scemu/maps64/");
         emu.cfg.test_mode = true;
@@ -47,7 +45,6 @@ mod tests {
         emu.cfg.trace_regs = true;
         emu.run(0);
         */
-
 
         assert!(1 == 1); 
 

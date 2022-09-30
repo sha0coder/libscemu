@@ -7967,7 +7967,7 @@ impl Emu {
                 let sz = self.get_operand_sz(&ins, 0);
                 let (result, undef) = self.shld(value0, value1, counter, sz);
 
-                if self.cfg.test_mode && !undef {
+                if self.cfg.test_mode { //&& !undef {
                     if result != inline::shld(value0, value1, counter, sz) {
                         panic!("SHLD{} 0x{:x} should be 0x{:x}", sz, result, inline::shld(value0, value1, counter, sz));
                     }
@@ -8002,7 +8002,7 @@ impl Emu {
                 let (result, undef) = self.shrd(value0, value1, counter, sz);
 
                 //println!("0x{:x} SHRD 0x{:x}, 0x{:x}, 0x{:x} = 0x{:x}", ins.ip32(), value0, value1, counter, result);
-                if self.cfg.test_mode && !undef {
+                if self.cfg.test_mode { //&& !undef {
                     if result != inline::shrd(value0, value1, counter, sz) {
                         panic!("SHRD{} 0x{:x} should be 0x{:x}", sz, result, inline::shrd(value0, value1, counter, sz));
                     }
