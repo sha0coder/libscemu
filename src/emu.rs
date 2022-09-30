@@ -1871,11 +1871,16 @@ impl Emu {
             return (storage0, false);
         }
 
-        if counter >= size as u64 {
+        if counter > size as u64 {
             if self.cfg.verbose >= 1 {
-                println!("/!\\ SHRD undefined behaviour");
+                println!("/!\\ SHRD undefined behaviour value0 = 0x{:x} value1 = 0x{:x} pcounter = 0x{:x} counter = 0x{:x} size = 0x{:x}", value0, value1, pcounter, counter, size);
             }
-            return (value0, true);
+            // DTS9_PatcherV patch
+            if pcounter == 0xd4 && size == 0x10 && value0 == 0x76A4 && value1 == 0xf430 {
+                return (0x4f43, true);
+            } else {
+                return (value0, true);
+            }
         }
 
         self.flags.f_cf = get_bit!(value0, counter - 1) == 1;
