@@ -1876,6 +1876,7 @@ impl Emu {
                 println!("/!\\ SHRD undefined behaviour value0 = 0x{:x} value1 = 0x{:x} pcounter = 0x{:x} counter = 0x{:x} size = 0x{:x}", value0, value1, pcounter, counter, size);
             }
             // DTS9_PatcherV patch
+            self.flags.calc_flags(storage0, size);
             if pcounter == 0xd4 && size == 0x10 && value0 == 0x76A4 && value1 == 0xf430 {
                 return (0x4f43, true);
             } else {
@@ -1950,6 +1951,7 @@ impl Emu {
         }*/
 
         if counter > size as u64 {
+            self.flags.calc_flags(value0, size);
             if self.cfg.verbose >= 1 {
                 println!("/!\\ undefined behaviour on shld");
             }
