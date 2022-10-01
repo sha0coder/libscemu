@@ -8406,7 +8406,16 @@ impl Emu {
             Mnemonic::Lahf => {
                 self.show_instruction(&self.colors.red, &ins);
 
-                self.regs.set_ah((self.flags.dump() & 0xff).into());
+                let mut result: u8 = 0;
+                set_bit!(result, 0, self.flags.f_cf as u8);
+                set_bit!(result, 1, true as u8);
+                set_bit!(result, 2, self.flags.f_pf as u8);
+                set_bit!(result, 3, false as u8);
+                set_bit!(result, 4, self.flags.f_af as u8);
+                set_bit!(result, 5, false as u8);
+                set_bit!(result, 6, self.flags.f_zf as u8);
+                set_bit!(result, 7, self.flags.f_sf as u8);
+                self.regs.set_ah(result as u64);
             }
 
 
