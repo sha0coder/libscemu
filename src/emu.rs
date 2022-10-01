@@ -4794,6 +4794,12 @@ impl Emu {
                 }
 
                 self.flags.f_cf = (value & (1 << bit)) == 1;
+
+                let mut result = value;
+                set_bit!(result, bit, !self.flags.f_cf as u8);
+                if !self.set_operand_value(&ins, 0, result) {
+                    return;
+                }
             }
 
             Mnemonic::Bsf => {
