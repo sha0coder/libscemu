@@ -4621,7 +4621,7 @@ impl Emu {
                 assert!(ins.op_count() == 1 || ins.op_count() == 2);
 
                 let result:u64;
-                let sz = self.get_operand_sz(&ins, 0) + 1;
+                let sz = self.get_operand_sz(&ins, 0);
 
                 if ins.op_count() == 1 { // 1 param
                     let value0 = match self.get_operand_value(&ins, 0, true) {
@@ -4630,7 +4630,7 @@ impl Emu {
                     };
 
                     result = self.rcl(value0, 1, sz);
-                    self.flags.calc_flags(result, sz as u8 -1);
+                    self.flags.calc_flags(result, sz);
 
                 } else { // 2 params
                     let value0 = match self.get_operand_value(&ins, 0, true) {
