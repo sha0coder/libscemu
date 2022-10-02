@@ -1456,8 +1456,15 @@ impl Emu {
     }
 
 
-    fn rol(&self, val:u64, rot:u64, bits:u8) -> u64 {
+    fn rol(&self, val:u64, rot2:u64, bits:u8) -> u64 {
         let mut ret:u64 = val;
+        let rot;
+        if bits == 64 {
+            rot = rot2 & 0b111111;
+        } else {
+            rot = rot2 & 0b11111;
+        }
+
         for _ in 0..rot {
             let last_bit = get_bit!(ret, bits-1);
             //println!("last bit: {}", last_bit);
@@ -1478,7 +1485,12 @@ impl Emu {
 
     fn rcl(&self, val:u64, rot2:u64, bits:u8) -> u64 {
         let mut ret:u128 = val as u128;
-        let rot = rot2 & 0b11111;
+        let rot;
+        if bits == 64 {
+            rot = rot2 & 0b111111;
+        } else {
+            rot = rot2 & 0b11111;
+        }
 
         if self.flags.f_cf {
             set_bit!(ret, bits, 1);
@@ -1505,8 +1517,15 @@ impl Emu {
         (ret & (a.pow(bits as u32)-1) ) as u64
     }
 
-    fn ror(&self, val:u64, rot:u64, bits:u8) -> u64 {
+    fn ror(&self, val:u64, rot2:u64, bits:u8) -> u64 {
         let mut ret:u64 = val;
+        let rot;
+        if bits == 64 {
+            rot = rot2 & 0b111111;
+        } else {
+            rot = rot2 & 0b11111;
+        }
+
         for _ in 0..rot {
             let first_bit = get_bit!(ret, 0);
             let mut ret2:u64 = ret;
@@ -1525,7 +1544,12 @@ impl Emu {
 
     fn rcr(&self, val:u64, rot2:u64, bits:u8) -> u64 {
         let mut ret:u128 = val as u128;
-        let rot = rot2 & 0b11111;
+        let rot;
+        if bits == 64 {
+            rot = rot2 & 0b111111;
+        } else {
+            rot = rot2 & 0b11111;
+        }
 
         if self.flags.f_cf {
             set_bit!(ret, bits, 1);
@@ -4433,6 +4457,7 @@ impl Emu {
                     };
 
                     result = self.ror(value0, 1, sz);
+                    self.flags.calc_flags(result, sz);
 
                     if self.cfg.test_mode {
                         if result != inline::ror(value0, 1, sz) {
@@ -4459,13 +4484,23 @@ impl Emu {
                         }
                     }
 
+                    let masked_counter;
+                    if sz == 64 {
+                        masked_counter = value1 & 0b111111;
+                    } else {
+                        masked_counter = value1 & 0b11111;
+                    }
+
+                    if masked_counter > 0 {
+                        self.flags.calc_flags(result, sz);
+                    }
+
                 }
 
                 if !self.set_operand_value(&ins, 0, result) {
                     return;
                 }
 
-                self.flags.calc_flags(result, sz);
             }
 
             Mnemonic::Rcr => {
@@ -4484,6 +4519,7 @@ impl Emu {
                     };
 
                     result = self.rcr(value0, 1, sz);
+                    self.flags.calc_flags(result, sz);
 
                 } else { // 2 params
                     let value0 = match self.get_operand_value(&ins, 0, true) {
@@ -4497,13 +4533,23 @@ impl Emu {
                     };
 
                     result = self.rcr(value0, value1, sz);
+
+                    let masked_counter;
+                    if sz == 64 {
+                        masked_counter = value1 & 0b111111;
+                    } else {
+                        masked_counter = value1 & 0b11111;
+                    }
+
+                    if masked_counter > 0 {
+                        self.flags.calc_flags(result, sz);
+                    }
                 }
 
                 if !self.set_operand_value(&ins, 0, result) {
                     return;
                 }
 
-                self.flags.calc_flags(result, sz);
             }
 
             Mnemonic::Rol => {
@@ -4529,6 +4575,8 @@ impl Emu {
                         }
                     }
 
+                    self.flags.calc_flags(result, sz as u8);
+
                 } else { // 2 params
                     let value0 = match self.get_operand_value(&ins, 0, true) {
                         Some(v) => v,
@@ -4547,13 +4595,24 @@ impl Emu {
                             panic!("0x{:x} should be 0x{:x}", result, inline::rol(value0, value1, sz));
                         }
                     }
+
+                    let masked_counter;
+                    if sz == 64 {
+                        masked_counter = value1 & 0b111111;
+                    } else {
+                        masked_counter = value1 & 0b11111;
+                    }
+
+                    if masked_counter > 0 {
+                        self.flags.calc_flags(result, sz as u8);
+                    }
                 }
+                
 
                 if !self.set_operand_value(&ins, 0, result) {
                     return;
                 }
 
-                self.flags.calc_flags(result, sz as u8);
             }
 
             Mnemonic::Rcl => {
@@ -4571,6 +4630,7 @@ impl Emu {
                     };
 
                     result = self.rcl(value0, 1, sz);
+                    self.flags.calc_flags(result, sz as u8 -1);
 
                 } else { // 2 params
                     let value0 = match self.get_operand_value(&ins, 0, true) {
@@ -4584,13 +4644,23 @@ impl Emu {
                     };
 
                     result = self.rcl(value0, value1, sz);
+
+                    let masked_counter;
+                    if sz == 64 {
+                        masked_counter = value1 & 0b111111;
+                    } else {
+                        masked_counter = value1 & 0b11111;
+                    }
+
+                    if masked_counter > 0 {
+                        self.flags.calc_flags(result, sz);
+                    }
                 }
 
                 if !self.set_operand_value(&ins, 0, result) {
                     return;
                 }
 
-                self.flags.calc_flags(result, sz as u8 -1);
             }
 
 
