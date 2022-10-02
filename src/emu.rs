@@ -4831,32 +4831,37 @@ impl Emu {
                     None => return,
                 };
 
-                let sz = self.get_operand_sz(&ins, 0);
-                let mut bitpos: u8 = 0;
-                let mut dest: u64 = 0;
-
-                while bitpos < sz && get_bit!(src, bitpos) == 0 {
-                    dest += 1;
-                    bitpos += 1;
-                }
-                if dest > 0 {
-                    dest -= 1;
-                }
-
-                if dest == sz as u64 {
-                    self.flags.f_cf = true;
-                } else {
-                    self.flags.f_cf = false;
-                }
-
-                if dest == 0 {
+                if src == 0 {
                     self.flags.f_zf = true;
+                    println!("/!\\ bsf src == 0 is undefined behavior");
                 } else {
-                    self.flags.f_zf = false;
-                }
+                    let sz = self.get_operand_sz(&ins, 0);
+                    let mut bitpos: u8 = 0;
+                    let mut dest: u64 = 0;
 
-                if !self.set_operand_value(&ins, 0, dest) {
-                    return;
+                    while bitpos < sz && get_bit!(src, bitpos) == 0 {
+                        dest += 1;
+                        bitpos += 1;
+                    }
+                    if dest > 0 {
+                        dest -= 1;
+                    }
+
+                    if dest == sz as u64 {
+                        self.flags.f_cf = true;
+                    } else {
+                        self.flags.f_cf = false;
+                    }
+
+                    if dest == 0 {
+                        self.flags.f_zf = true;
+                    } else {
+                        self.flags.f_zf = false;
+                    }
+
+                    if !self.set_operand_value(&ins, 0, dest) {
+                        return;
+                    }
                 }
             }
 
