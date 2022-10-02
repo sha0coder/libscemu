@@ -89,6 +89,8 @@ pub struct Emu {
     pub pre_op_regs: Regs64,
     pub post_op_regs: Regs64,
     pub flags: Flags,
+    pub pre_op_flags: Flags,
+    pub post_op_flags: Flags,
     pub eflags: Eflags,
     pub fpu: FPU,
     pub maps: Maps,
@@ -125,6 +127,8 @@ impl Emu {
             pre_op_regs: Regs64::new(),
             post_op_regs: Regs64::new(),
             flags: Flags::new(),
+            pre_op_flags: Flags::new(),
+            post_op_flags: Flags::new(),
             eflags: Eflags::new(),
             fpu: FPU::new(),
             maps: Maps::new(),
@@ -3226,9 +3230,18 @@ impl Emu {
         self.pre_op_regs = self.regs.clone();
     }
 
+    pub fn capture_pre_op_flags(&mut self) {
+        self.pre_op_flags = self.flags.clone();
+    }
+
     pub fn diff_pre_op_post_op_registers_64bits(&mut self) {
         self.post_op_regs = self.regs.clone();
         Regs64::diff(self.pre_op_regs, self.post_op_regs);
+    }
+
+    pub fn diff_pre_op_post_op_flags(&mut self) {
+        self.post_op_flags = self.flags.clone();
+        Flags::diff(self.regs.rip, self.pre_op_flags, self.post_op_flags);
     }
 
     pub fn step(&mut self) {
@@ -3384,6 +3397,9 @@ impl Emu {
                     }
 
                     if self.cfg.trace_regs {
+                        // flags
+                        self.capture_pre_op_flags();
+                        // registers
                         if self.cfg.is_64bits {
                             self.capture_pre_op_registers_64bits();
                             println!("\trax: 0x{:x} rbx: 0x{:x} rcx: 0x{:x} rdx: 0x{:x} rsi: 0x{:x} rdi: 0x{:x} rbp: 0x{:x}",
@@ -3468,6 +3484,9 @@ impl Emu {
 
 
                     if self.cfg.trace_regs {
+                        // flags
+                        self.diff_pre_op_post_op_flags();
+                        // registers
                         if self.cfg.is_64bits {
                             self.diff_pre_op_post_op_registers_64bits();
                         } else {
@@ -7221,8 +7240,9 @@ impl Emu {
 
             Mnemonic::Rdtsc => {
                 self.show_instruction(&self.colors.red, &ins);
-                self.regs.rdx = 0;
-                self.regs.rax = 0;
+                // TODO: actually mock a timestamp?
+                self.regs.rdx = 0x1BC2B;
+                self.regs.rax = 0xE6668424;
             }
 
             Mnemonic::Loop => {
@@ -8411,6 +8431,8 @@ impl Emu {
 
             Mnemonic::Lahf => {
                 self.show_instruction(&self.colors.red, &ins);
+
+                println!("lahf: flags = {:?}", self.flags);
 
                 let mut result: u8 = 0;
                 set_bit!(result, 0, self.flags.f_cf as u8);
