@@ -35,7 +35,7 @@ macro_rules! set_bit {
     };
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy, Debug)]
 pub struct Flags {
     pub f_cf: bool,
     pub f_pf: bool,
@@ -63,6 +63,21 @@ impl Flags {
             f_of: false,
             f_nt: false, 
         }
+    }
+
+    pub fn diff(rip: u64, a: Flags, b: Flags) {
+        let mut output = format!("\tdiff_flags: rip = {:x} ", rip);
+        if a.f_cf != b.f_cf { output = format!("{}{} {:x} -> {:x}; ", output, "f_cf", a.f_cf as u8, b.f_cf as u8); }
+        if a.f_pf != b.f_pf { output = format!("{}{} {:x} -> {:x}; ", output, "f_pf", a.f_pf as u8, b.f_pf as u8); }
+        if a.f_af != b.f_af { output = format!("{}{} {:x} -> {:x}; ", output, "f_af", a.f_af as u8, b.f_af as u8); }
+        if a.f_zf != b.f_zf { output = format!("{}{} {:x} -> {:x}; ", output, "f_zf", a.f_zf as u8, b.f_zf as u8); }
+        if a.f_sf != b.f_sf { output = format!("{}{} {:x} -> {:x}; ", output, "f_sf", a.f_sf as u8, b.f_sf as u8); }
+        if a.f_tf != b.f_tf { output = format!("{}{} {:x} -> {:x}; ", output, "f_tf", a.f_tf as u8, b.f_tf as u8); }
+        if a.f_if != b.f_if { output = format!("{}{} {:x} -> {:x}; ", output, "f_if", a.f_if as u8, b.f_if as u8); }
+        if a.f_df != b.f_df { output = format!("{}{} {:x} -> {:x}; ", output, "f_df", a.f_df as u8, b.f_df as u8); }
+        if a.f_of != b.f_of { output = format!("{}{} {:x} -> {:x}; ", output, "f_of", a.f_of as u8, b.f_of as u8); }
+        if a.f_nt != b.f_nt { output = format!("{}{} {:x} -> {:x}; ", output, "f_nt", a.f_nt as u8, b.f_nt as u8); }
+        println!("{}", output);
     }
 
 
