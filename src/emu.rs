@@ -3426,14 +3426,15 @@ impl Emu {
                         // registers
                         if self.cfg.is_64bits {
                             self.capture_pre_op_registers_64bits();
-                            println!("\trax: 0x{:x} rbx: 0x{:x} rcx: 0x{:x} rdx: 0x{:x} rsi: 0x{:x} rdi: 0x{:x} rbp: 0x{:x}",
+                            println!("\trax: 0x{:x} rbx: 0x{:x} rcx: 0x{:x} rdx: 0x{:x} rsi: 0x{:x} rdi: 0x{:x} rbp: 0x{:x} rsp: 0x{:x}",
                               self.regs.rax, self.regs.rbx, self.regs.rcx,
-                              self.regs.rdx, self.regs.rsi, self.regs.rdi, self.regs.rbp);
+                              self.regs.rdx, self.regs.rsi, self.regs.rdi, self.regs.rbp, self.regs.rsp);
                         } else {
                             // TODO: capture pre_op_registers 32-bits?
-                            println!("\teax: 0x{:x} ebx: 0x{:x} ecx: 0x{:x} edx: 0x{:x} esi: 0x{:x} edi: 0x{:x} ebp: 0x{:x}",
+                            println!("\teax: 0x{:x} ebx: 0x{:x} ecx: 0x{:x} edx: 0x{:x} esi: 0x{:x} edi: 0x{:x} ebp: 0x{:x} esp: 0x{:x}",
                               self.regs.get_eax() as u32, self.regs.get_ebx() as u32, self.regs.get_ecx() as u32,
-                              self.regs.get_edx() as u32, self.regs.get_esi() as u32, self.regs.get_edi() as u32, self.regs.get_ebp() as u32);
+                              self.regs.get_edx() as u32, self.regs.get_esi() as u32, self.regs.get_edi() as u32,
+                              self.regs.get_ebp() as u32, self.regs.get_esp() as u32);
                         }
                     }
 
@@ -4603,8 +4604,17 @@ impl Emu {
                         masked_counter = value1 & 0b11111;
                     }
 
+                    // If the masked count is 0, the flags are not affected.
+                    // If the masked count is 1, then the OF flag is affected, otherwise (masked count is greater than 1) the OF flag is undefined.
+                    // The CF flag is affected when the masked count is nonzero.
+                    // The SF, ZF, AF, and PF flags are always unaffected.
                     if masked_counter > 0 {
-                        self.flags.calc_flags(result, sz as u8);
+                        if masked_counter == 1 {
+                            // TODO: OF flag
+                        } else {
+                            // OF flag is undefined?
+                        }
+                        // TODO: CF flag
                     }
                 }
                 
@@ -4612,7 +4622,6 @@ impl Emu {
                 if !self.set_operand_value(&ins, 0, result) {
                     return;
                 }
-
             }
 
             Mnemonic::Rcl => {
@@ -8508,7 +8517,7 @@ impl Emu {
             Mnemonic::Lahf => {
                 self.show_instruction(&self.colors.red, &ins);
 
-                println!("lahf: flags = {:?}", self.flags);
+                println!("\tlahf: flags = {:?}", self.flags);
 
                 let mut result: u8 = 0;
                 set_bit!(result, 0, self.flags.f_cf as u8);
