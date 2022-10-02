@@ -33,7 +33,6 @@ mod tests {
     #[test]
     fn test() {
 
-
         /*
         let mut emu = emu64();
         emu.set_maps_folder("../scemu/maps64/");

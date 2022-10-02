@@ -4660,7 +4660,8 @@ impl Emu {
                         println!("div{} rdx is 0x{:x} and should be 0x{:x}", sz, self.regs.rdx, post_rdx); 
                         panic!("inline asm test failed");
                     }
-                }*/
+                }
+                */
             }
 
             Mnemonic::Idiv => {

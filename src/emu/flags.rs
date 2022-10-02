@@ -862,6 +862,10 @@ impl Flags {
         let mut s64 = value0 as i64;
         let sign_mask = 0x3f;
 
+        if value1 == 0 {
+            return value0;
+        }
+
         for _ in 0..(value1 & sign_mask) {
             if get_bit!(s64, 63) == 1 {
                 self.f_cf = true;
@@ -879,6 +883,10 @@ impl Flags {
     pub fn shl2p32(&mut self, value0:u64, value1:u64) -> u64 {
         let mut s32 = value0 as u32 as i32;
         let sign_mask = 0x1f;
+
+        if value1 == 0 {
+            return value0;
+        }
 
         for _ in 0..(value1 & sign_mask) {
             if get_bit!(s32, 31) == 1 {
@@ -898,6 +906,10 @@ impl Flags {
         let mut s16 = value0 as u16 as i16;
         let sign_mask = 0x1f;
 
+        if value1 == 0 {
+            return value0;
+        }
+
         for _ in 0..(value1 & sign_mask) {
             if get_bit!(s16, 15) == 1 {
                 self.f_cf = true;
@@ -915,6 +927,10 @@ impl Flags {
     pub fn shl2p8(&mut self, value0:u64, value1:u64) -> u64 {
         let mut s8 = value0 as u8 as i8;
         let sign_mask = 0x1f;
+
+        if value1 == 0 {
+            return value0;
+        }
 
         for _ in 0..(value1 & sign_mask) {
             if get_bit!(s8, 7) == 1 {
@@ -1026,6 +1042,10 @@ impl Flags {
         let mut s64:i64 = value0 as i64;
         let count_mask = 0x3f;
 
+        if value1 == 0 {
+            return value0;
+        }
+
         for _ in 0..(value1 & count_mask) {
             if get_bit!(s64, 0) == 1 {
                 self.f_cf = true;
@@ -1044,6 +1064,10 @@ impl Flags {
     pub fn shr2p32(&mut self, value0:u64, value1:u64) -> u64 {
         let mut s32:i32 = value0 as u32 as i32;
         let count_mask = 0x1f;
+
+        if value1 == 0 {
+            return value0;
+        }
 
         for _ in 0..(value1 & count_mask) {
             if get_bit!(s32, 0) == 1 {
@@ -1064,6 +1088,10 @@ impl Flags {
         let mut s16:u16 = value0 as u16;
         let count_mask = 0x1f;
 
+        if value1 == 0 {
+            return value0;
+        }
+
         for _ in 0..(value1 & count_mask) {
             if get_bit!(s16, 0) == 1 {
                 self.f_cf = true;
@@ -1082,6 +1110,10 @@ impl Flags {
     pub fn shr2p8(&mut self, value0:u64, value1:u64) -> u64 {
         let mut s8:i8 = value0 as u8 as i8;
         let count_mask = 0x1f;
+
+        if value1 == 0 {
+            return value0;
+        }
 
         for _ in 0..(value1 & count_mask) {
             if get_bit!(s8, 0) == 1 {
