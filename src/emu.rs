@@ -5020,7 +5020,9 @@ impl Emu {
 
                 if src == 0 {
                     self.flags.f_zf = true;
-                    println!("/!\\ bsf src == 0 is undefined behavior");
+                    if self.cfg.verbose >= 1 {
+                        println!("/!\\ bsf src == 0 is undefined behavior");
+                    }
                 } else {
                     let sz = self.get_operand_sz(&ins, 0);
                     let mut bitpos: u8 = 0;
@@ -5058,29 +5060,34 @@ impl Emu {
                     None => return,
                 };
 
-                let sz = self.get_operand_sz(&ins, 0);
-                let mut bitpos: u8 = sz-1;
-                let mut dest: u64 = 0;
-
-                while bitpos <= 0 && get_bit!(value1, bitpos) == 0 {
-                    dest += 1;
-                    bitpos -= 1;
-                }
-
-                if dest != sz as u64 {
-                    self.flags.f_cf = true;
-                } else {
-                    self.flags.f_cf = false;
-                }
-
-                if dest == 0 {
+                if value1 == 0 {
                     self.flags.f_zf = true;
+                    if self.cfg.verbose >= 1 {
+                        println!("/!\\ bsr src == 0 is undefined behavior");
+                    }
                 } else {
-                    self.flags.f_zf = false;
-                }
+                    let sz = self.get_operand_sz(&ins, 0);
+                    let mut dest: u64 = sz as u64 -1;
 
-                if !self.set_operand_value(&ins, 0, dest) {
-                    return;
+                    while dest > 0 && get_bit!(value1, dest) == 0 {
+                        dest -= 1;
+                    }
+
+                    if dest != sz as u64 {
+                        self.flags.f_cf = true;
+                    } else {
+                        self.flags.f_cf = false;
+                    }
+
+                    if dest == 0 {
+                        self.flags.f_zf = true;
+                    } else {
+                        self.flags.f_zf = false;
+                    }
+
+                    if !self.set_operand_value(&ins, 0, dest) {
+                        return;
+                    }
                 }
             }
 
