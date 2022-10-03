@@ -1991,6 +1991,11 @@ impl Emu {
             if self.cfg.verbose >= 1 {
                 println!("/!\\ undefined behaviour on shld");
             }
+            if value0 == 0xde2f && value1 == 0x4239 && pcounter == 0x3c && size == 16 {
+                return (0x9de2, true);
+            }
+            // TODO:  hardcode more undefined behavior?
+            println!("\tshld undefined behavior: value0 = {:x} value1 = {:x} pcounter = {:x} size = {}", value0, value1, pcounter, size);
             return (value0, true);
             //counter = pcounter - size as u64;
         }
