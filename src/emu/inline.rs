@@ -802,7 +802,7 @@ pub fn bswap(a:u64, bits:u8) -> u64 {
 }
 
 pub fn movzx(b:u64) -> u64 {
-    let mut r:u64 = 0;
+    let mut r:u64;
     
     unsafe {   
         asm!("movzx {}, {}", out(reg) r, in(reg) b);
@@ -812,7 +812,7 @@ pub fn movzx(b:u64) -> u64 {
 }
 
 pub fn movsx(b:u64, bits0:u8, bits1:u8) -> u64 {
-    let mut r:u64 = 0;
+    let r:u64;
     let b32 = b as u32;
     let b16 = b as u16;
     let b8 = b as u8;
@@ -821,9 +821,7 @@ pub fn movsx(b:u64, bits0:u8, bits1:u8) -> u64 {
         64 => {
             match bits1 {
                 32 => {
-                    unsafe {   
-                        asm!("movsx {}, {:e}", out(reg) r, in(reg) b32);
-                    }   
+                    panic!("this movsx case doesn't exist");
                 }
                 16 => {
                     unsafe {   
@@ -839,7 +837,7 @@ pub fn movsx(b:u64, bits0:u8, bits1:u8) -> u64 {
             }
         }
         32 => {
-            let r32:u32 = 0;
+            let mut r32:u32;
             match bits1 {
                 16 => {
                     unsafe {   
@@ -856,7 +854,7 @@ pub fn movsx(b:u64, bits0:u8, bits1:u8) -> u64 {
             r = r32 as u64;
         }
         16 => {
-            let r16:u16 = 0;
+            let mut r16:u16;
             unsafe {   
                 asm!("movsx {:x}, {}", out(reg) r16, in(reg_byte) b8);
             }   

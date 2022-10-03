@@ -5190,12 +5190,14 @@ impl Emu {
                 result = value1;
 
                 //println!("0x{:x}: MOVZX 0x{:x}", ins.ip32(), result);
+                    
+                /*
                 if self.cfg.test_mode {
                     if result != inline::movzx(value1) {
                         panic!("MOVZX sz:{}->{} 0x{:x} should be 0x{:x}", 
                                sz1, sz0, result, inline::movzx(value1));
                     }
-                }
+                }*/
 
                 if !self.set_operand_value(&ins, 0, result) {
                     return;
