@@ -3433,9 +3433,16 @@ impl Emu {
                         // registers
                         if self.cfg.is_64bits {
                             self.capture_pre_op_registers_64bits();
-                            println!("\trax: 0x{:x} rbx: 0x{:x} rcx: 0x{:x} rdx: 0x{:x} rsi: 0x{:x} rdi: 0x{:x} rbp: 0x{:x} rsp: 0x{:x}",
+                            println!(
+                            "\trax: 0x{:x} rbx: 0x{:x} rcx: 0x{:x} rdx: 0x{:x} rsi: 0x{:x} rdi: 0x{:x} rbp: 0x{:x} rsp: 0x{:x}",
                               self.regs.rax, self.regs.rbx, self.regs.rcx,
-                              self.regs.rdx, self.regs.rsi, self.regs.rdi, self.regs.rbp, self.regs.rsp);
+                              self.regs.rdx, self.regs.rsi, self.regs.rdi, self.regs.rbp, self.regs.rsp
+                            );
+                            println!(
+                            "\tr8: 0x{:x} r9: 0x{:x} r10: 0x{:x} r11: 0x{:x} r12: 0x{:x} r13: 0x{:x} r14: 0x{:x} r15: 0x{:x}",
+                              self.regs.r8, self.regs.r9, self.regs.r10, self.regs.r11, self.regs.r12, self.regs.r13, self.regs.r14,
+                              self.regs.r15,
+                            );
                         } else {
                             // TODO: capture pre_op_registers 32-bits?
                             println!("\teax: 0x{:x} ebx: 0x{:x} ecx: 0x{:x} edx: 0x{:x} esi: 0x{:x} edi: 0x{:x} ebp: 0x{:x} esp: 0x{:x}",
