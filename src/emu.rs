@@ -5150,7 +5150,7 @@ impl Emu {
                     }
                 }
 
-                if self.test_mode {
+                if self.cfg.test_mode {
                     if result != inline::movsx(value1, sz0, sz1) {
                         panic!("MOVSX sz:{}->{}  0x{:x} should be 0x{:x}",
                                sz0, sz1, result, inline::movsx(value1, sz0, sz1));
@@ -5191,8 +5191,8 @@ impl Emu {
 
                 //println!("0x{:x}: MOVZX 0x{:x}", ins.ip32(), result);
                 if self.cfg.test_mode {
-                    if result == inline::movzx(value1) {
-                        panic!("MOVZX sz:{}->{} 0x{:x} should be 0x(:x)", 
+                    if result != inline::movzx(value1) {
+                        panic!("MOVZX sz:{}->{} 0x{:x} should be 0x{:x}", 
                                sz1, sz0, result, inline::movzx(value1));
                     }
                 }
