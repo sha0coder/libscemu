@@ -1456,7 +1456,7 @@ impl Emu {
     }
 
 
-    fn rol(&self, val:u64, rot2:u64, bits:u8) -> u64 {
+    fn rol(&mut self, val:u64, rot2:u64, bits:u8) -> u64 {
         let mut ret:u64 = val;
         let rot;
         if bits == 64 {
@@ -1470,10 +1470,14 @@ impl Emu {
             //println!("last bit: {}", last_bit);
             let mut ret2:u64 = ret;
 
+            //  For the ROL and ROR instructions, the original value of the CF flag is not a part of the result, but the CF flag receives a copy of the bit that was shifted from one end to the other.
+            self.flags.f_cf = last_bit == 1;
+
             for j in 0..bits-1 {
                 let bit = get_bit!(ret, j);
                 set_bit!(ret2, j+1, bit);
             }
+
 
             set_bit!(ret2, 0, last_bit);
             ret = ret2;
@@ -1517,7 +1521,7 @@ impl Emu {
         (ret & (a.pow(bits as u32)-1) ) as u64
     }
 
-    fn ror(&self, val:u64, rot2:u64, bits:u8) -> u64 {
+    fn ror(&mut self, val:u64, rot2:u64, bits:u8) -> u64 {
         let mut ret:u64 = val;
         let rot;
         if bits == 64 {
@@ -1529,6 +1533,9 @@ impl Emu {
         for _ in 0..rot {
             let first_bit = get_bit!(ret, 0);
             let mut ret2:u64 = ret;
+
+            //  For the ROL and ROR instructions, the original value of the CF flag is not a part of the result, but the CF flag receives a copy of the bit that was shifted from one end to the other.
+            self.flags.f_cf = first_bit == 1;
 
             for j in (1..bits).rev() {
                 let bit = get_bit!(ret, j);
@@ -4493,7 +4500,20 @@ impl Emu {
                     }
 
                     if masked_counter > 0 {
-                        self.flags.calc_flags(result, sz);
+                        if masked_counter == 1 {
+                            // the OF flag is set to the exclusive OR of the two most-significant bits of the result.
+                            let of = match sz {
+                                64 => (result >> 62) ^ ((result >> 63) & 0b1),
+                                32 => (result >> 31) ^ ((result >> 30) & 0b1),
+                                16 => (result >> 15) ^ ((result >> 14) & 0b1),
+                                8 =>  (result >> 7) ^ ((result >> 6) & 0b1),
+                                _ => panic!("weird size"),
+                            };
+                            self.flags.f_of = of == 1;
+
+                        } else {
+                            // OF flag is undefined?
+                        }
                     }
 
                 }
@@ -4589,6 +4609,13 @@ impl Emu {
                         None => return,
                     };
 
+                    let pre_cf;
+                    if self.flags.f_cf {
+                        pre_cf = 1;
+                    } else {
+                        pre_cf = 0;
+                    }
+
                     result = self.rol(value0, value1, sz);
 
                     if self.cfg.test_mode {
@@ -4612,20 +4639,17 @@ impl Emu {
                         if masked_counter == 1 {
                             // the OF flag is set to the exclusive OR of the two most-significant bits of the result.
                             let of = match sz {
-                                64 => (result >> 62) ^ ((result >> 63) & 0b1),
-                                32 => (result >> 31) ^ ((result >> 30) & 0b1),
-                                16 => (result >> 15) ^ ((result >> 14) & 0b1),
-                                8 =>  (result >> 7) ^ ((result >> 6) & 0b1),
+                                64 => (result >> 62) ^ pre_cf,
+                                32 => (result >> 31) ^ pre_cf,
+                                16 => (result >> 15) ^ pre_cf,
+                                8 =>  (result >> 7) ^ pre_cf,
                                 _ => panic!("weird size"),
                             };
                             self.flags.f_of = of == 1;
 
                         } else {
                             // OF flag is undefined?
-                            
-
                         }
-                        // TODO: CF flag
                     }
                 }
                 
