@@ -4610,9 +4610,20 @@ impl Emu {
                     // The SF, ZF, AF, and PF flags are always unaffected.
                     if masked_counter > 0 {
                         if masked_counter == 1 {
-                            // TODO: OF flag
+                            // the OF flag is set to the exclusive OR of the two most-significant bits of the result.
+                            let of = match sz {
+                                64 => (result >> 62) ^ ((result >> 63) & 0b1),
+                                32 => (result >> 31) ^ ((result >> 30) & 0b1),
+                                16 => (result >> 15) ^ ((result >> 14) & 0b1),
+                                8 =>  (result >> 7) ^ ((result >> 6) & 0b1),
+                                _ => panic!("weird size"),
+                            };
+                            self.flags.f_of = of == 1;
+
                         } else {
                             // OF flag is undefined?
+                            
+
                         }
                         // TODO: CF flag
                     }
