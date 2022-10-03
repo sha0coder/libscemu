@@ -5138,7 +5138,7 @@ impl Emu {
                     if sz1 == 8 {
                         result = value1 as u8 as i8 as i64 as u64;
                     } else if sz1 == 16 {
-                        result = value1 as u8 as i8 as i16 as u16 as u64;
+                        result = value1 as i16 as u16 as u64;
                     }
                 } else if sz0 == 64 {
                     if sz1 == 8 {
