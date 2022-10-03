@@ -4906,7 +4906,28 @@ impl Emu {
                 }
             }
 
-            Mnemonic::Bt | Mnemonic::Bts | Mnemonic::Btr | Mnemonic::Btc => {
+            Mnemonic::Bt => {
+                self.show_instruction(&self.colors.green, &ins);
+                assert!(ins.op_count() == 2);
+
+                let mut bit = match self.get_operand_value(&ins, 1, true) {
+                    Some(v) => v,
+                    None => return,
+                };
+
+                let value = match self.get_operand_value(&ins, 0, true) {
+                    Some(v) => v,
+                    None => return,
+                };
+
+                if bit >= 64 {
+                    bit = 63;
+                }
+
+                self.flags.f_cf = (value & (1 << bit)) == 1;
+            }
+
+            Mnemonic::Bts | Mnemonic::Btr | Mnemonic::Btc => {
                 self.show_instruction(&self.colors.green, &ins);
                 assert!(ins.op_count() == 2);
 
