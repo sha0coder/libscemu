@@ -4927,26 +4927,26 @@ impl Emu {
                 self.show_instruction(&self.colors.green, &ins);
                 assert!(ins.op_count() == 2);
 
-                let mut bit = match self.get_operand_value(&ins, 1, true) {
+                let mut bitpos = match self.get_operand_value(&ins, 1, true) {
                     Some(v) => v,
                     None => return,
                 };
 
-                let value = match self.get_operand_value(&ins, 0, true) {
+                let value0 = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
                     None => return,
                 };
 
-                let sz = self.get_operand_sz(&ins, 1);
-                if sz > 8 {
-                    bit = bit % sz as u64;
-                }
+                let sz = self.get_operand_sz(&ins, 0);
+                bitpos = bitpos % sz as u64;
 
-                let cf = get_bit!(value, bit);
+                let cf = get_bit!(value0, bitpos);
                 self.flags.f_cf = cf == 1;
 
-                let mut result = value;
-                set_bit!(result, bit, !cf);
+                println!("BTC bitpos {} bit {}", bitpos, cf);
+
+                let mut result = value0;
+                set_bit!(result, bitpos, !cf);
 
                 if !self.set_operand_value(&ins, 0, result) {
                     return;
