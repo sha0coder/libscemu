@@ -4915,11 +4915,12 @@ impl Emu {
                     None => return,
                 };
 
-                if bit >= 64 {
-                    bit = 63;
+                let sz = self.get_operand_sz(&ins, 1);
+                if sz > 8 {
+                    bit = bit % sz;
                 }
 
-                self.flags.f_cf = (value & (1 << bit)) == 1;
+                self.flags.f_cf = get_bit!(value, bit) == 1;
             }
 
             Mnemonic::Btc => {
@@ -4936,8 +4937,9 @@ impl Emu {
                     None => return,
                 };
 
-                if bit >= 64 {
-                    bit = 63;
+                let sz = self.get_operand_sz(&ins, 1);
+                if sz > 8 {
+                    bit = bit % sz;
                 }
 
                 let cf = get_bit!(value, bit);
@@ -4965,8 +4967,9 @@ impl Emu {
                     None => return,
                 };
 
-                if bit >= 64 {
-                    bit = 63;
+                let sz = self.get_operand_sz(&ins, 1);
+                if sz > 8 {
+                    bit = bit % sz;
                 }
 
                 let cf = get_bit!(value, bit);
@@ -4994,8 +4997,9 @@ impl Emu {
                     None => return,
                 };
 
-                if bit >= 64 {
-                    bit = 63;
+                let sz = self.get_operand_sz(&ins, 1);
+                if sz > 8 {
+                    bit = bit % sz;
                 }
 
                 let cf = get_bit!(value, bit);
