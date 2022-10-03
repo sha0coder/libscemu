@@ -4946,7 +4946,7 @@ impl Emu {
                 println!("BTC bitpos {} bit {}", bitpos, cf);
 
                 let mut result = value0;
-                set_bit!(result, bitpos, !cf);
+                set_bit!(result, bitpos, cf ^ 1);
 
                 if !self.set_operand_value(&ins, 0, result) {
                     return;
@@ -4967,10 +4967,8 @@ impl Emu {
                     None => return,
                 };
 
-                let sz = self.get_operand_sz(&ins, 1);
-                if sz > 8 {
-                    bit = bit % sz as u64;
-                }
+                let sz = self.get_operand_sz(&ins, 0);
+                bit = bit % sz as u64;
 
                 let cf = get_bit!(value, bit);
                 self.flags.f_cf = cf == 1;
@@ -4997,10 +4995,8 @@ impl Emu {
                     None => return,
                 };
 
-                let sz = self.get_operand_sz(&ins, 1);
-                if sz > 8 {
-                    bit = bit % sz as u64;
-                }
+                let sz = self.get_operand_sz(&ins, 0);
+                bit = bit % sz as u64;
 
                 let cf = get_bit!(value, bit);
                 self.flags.f_cf = cf == 1;
