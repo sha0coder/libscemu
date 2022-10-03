@@ -4957,9 +4957,6 @@ impl Emu {
                         dest += 1;
                         bitpos += 1;
                     }
-                    if dest > 0 {
-                        dest -= 1;
-                    }
 
                     if dest == sz as u64 {
                         self.flags.f_cf = true;
