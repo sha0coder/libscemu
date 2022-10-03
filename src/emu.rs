@@ -1911,13 +1911,7 @@ impl Emu {
             if self.cfg.verbose >= 1 {
                 println!("/!\\ SHRD undefined behaviour value0 = 0x{:x} value1 = 0x{:x} pcounter = 0x{:x} counter = 0x{:x} size = 0x{:x}", value0, value1, pcounter, counter, size);
             }
-            // DTS9_PatcherV patch
-            if pcounter == 0xd4 && size == 0x10 && value0 == 0x76A4 && value1 == 0xf430 {
-                self.flags.calc_flags(0x4f43, size);
-                return (0x4f43, true);
-            } else {
-                return (value0, true);
-            }
+            return (inline::shrd(value0, value1, pcounter, size), true);
         }
 
         self.flags.f_cf = get_bit!(value0, counter - 1) == 1;
@@ -1967,16 +1961,6 @@ impl Emu {
             counter = counter % 32;
         }
 
-        /*
-        match size {
-            64 => counter = counter % 64,
-
-            32 => counter = counter % 32,
-            16 => counter = counter % 32,
-            }
-            _ => {},
-        }*/
-
         if counter == 0 {
             return (value0, false);
         }
@@ -1991,7 +1975,8 @@ impl Emu {
             if self.cfg.verbose >= 1 {
                 println!("/!\\ undefined behaviour on shld");
             }
-            return (value0, true);
+
+            return (inline::shld(value0, value1, pcounter, size), true);
             //counter = pcounter - size as u64;
         }
 
