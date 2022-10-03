@@ -801,21 +801,70 @@ pub fn bswap(a:u64, bits:u8) -> u64 {
     r
 }
 
-pub fn movzx(a:u64, b:u64) -> u64 {
-    let mut r:u64 = a;
+pub fn movzx(b:u64) -> u64 {
+    let mut r:u64 = 0;
+    
     unsafe {   
-        asm!("movzx {}, {}", inout(reg) r, in(reg) b);
+        asm!("movzx {}, {}", out(reg) r, in(reg) b);
     }   
     
     r
 }
 
-pub fn movsx(a:u64, b:u64) -> u64 {
-    let mut r:u64 = a;
-    unsafe {   
-        asm!("movsx {}, {}", inout(reg) r, in(reg) b);
-    }   
-    
+pub fn movsx(b:u64, bits0:u8, bits1:u8) -> u64 {
+    let mut r:u64 = 0;
+    let b32 = b as u32;
+    let b16 = b as u16;
+    let b8 = b as u8;
+
+    match bits0 {
+        64 => {
+            match bits1 {
+                32 => {
+                    unsafe {   
+                        asm!("movsx {}, {:e}", out(reg) r, in(reg) b32);
+                    }   
+                }
+                16 => {
+                    unsafe {   
+                        asm!("movsx {}, {:x}", out(reg) r, in(reg) b16);
+                    }   
+                }
+                8 => {
+                    unsafe {   
+                        asm!("movsx {}, {}", out(reg) r, in(reg_byte) b8);
+                    }   
+                }
+                _ => panic!("wrong case"),
+            }
+        }
+        32 => {
+            let r32:u32 = 0;
+            match bits1 {
+                16 => {
+                    unsafe {   
+                        asm!("movsx {:e}, {:x}", out(reg) r32, in(reg) b16);
+                    }   
+                }
+                8 => {
+                    unsafe {   
+                        asm!("movsx {:e}, {}", out(reg) r32, in(reg_byte) b8);
+                    }   
+                }
+                _ => panic!("wrong case"),
+            }
+            r = r32 as u64;
+        }
+        16 => {
+            let r16:u16 = 0;
+            unsafe {   
+                asm!("movsx {:x}, {}", out(reg) r16, in(reg_byte) b8);
+            }   
+            r = r16 as u64
+        }
+        _ => panic!("wrong case"),
+    }
+
     r
 }
 

@@ -4730,7 +4730,6 @@ impl Emu {
                     _ => unimplemented!("wrong size"),
                 }
 
-                /*
                 if self.cfg.test_mode {
                     let (post_rdx, post_rax) = inline::mul(value0, pre_rax, pre_rdx, sz);
                     if post_rax != self.regs.rax || post_rdx != self.regs.rdx {
@@ -4739,7 +4738,7 @@ impl Emu {
                         println!("mul rdx is 0x{:x} and should be 0x{:x}", self.regs.rdx, post_rdx); 
                         panic!("inline asm test failed");
                     }
-                }*/
+                }
             }
 
             Mnemonic::Div => {
@@ -4764,7 +4763,6 @@ impl Emu {
                     _ => unimplemented!("wrong size"),
                 }
 
-                /*
                 if self.cfg.test_mode {
                     let (post_rdx, post_rax) = inline::div(value0, pre_rax, pre_rdx, sz);
                     if post_rax != self.regs.rax || post_rdx != self.regs.rdx {
@@ -4775,7 +4773,6 @@ impl Emu {
                         panic!("inline asm test failed");
                     }
                 }
-                */
             }
 
             Mnemonic::Idiv => {
@@ -5153,6 +5150,13 @@ impl Emu {
                     }
                 }
 
+                if self.test_mode {
+                    if result != inline::movsx(value1, sz0, sz1) {
+                        panic!("MOVSX sz:{}->{}  0x{:x} should be 0x{:x}",
+                               sz0, sz1, result, inline::movsx(value1, sz0, sz1));
+                    }
+                }
+
                 if !self.set_operand_value(&ins, 0, result) {
                     return;
                 }
@@ -5186,6 +5190,12 @@ impl Emu {
                 result = value1;
 
                 //println!("0x{:x}: MOVZX 0x{:x}", ins.ip32(), result);
+                if self.cfg.test_mode {
+                    if result == inline::movzx(value1) {
+                        panic!("MOVZX sz:{}->{} 0x{:x} should be 0x(:x)", 
+                               sz1, sz0, result, inline::movzx(value1));
+                    }
+                }
 
                 if !self.set_operand_value(&ins, 0, result) {
                     return;
@@ -8549,7 +8559,7 @@ impl Emu {
             Mnemonic::Lahf => {
                 self.show_instruction(&self.colors.red, &ins);
 
-                println!("\tlahf: flags = {:?}", self.flags);
+                //println!("\tlahf: flags = {:?}", self.flags);
 
                 let mut result: u8 = 0;
                 set_bit!(result, 0, self.flags.f_cf as u8);
