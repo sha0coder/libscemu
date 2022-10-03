@@ -4922,7 +4922,7 @@ impl Emu {
                 self.flags.f_cf = (value & (1 << bit)) == 1;
             }
 
-            Mnemonic::Bts | Mnemonic::Btr | Mnemonic::Btc => {
+            Mnemonic::Btc => {
                 self.show_instruction(&self.colors.green, &ins);
                 assert!(ins.op_count() == 2);
 
@@ -4940,10 +4940,70 @@ impl Emu {
                     bit = 63;
                 }
 
-                self.flags.f_cf = (value & (1 << bit)) == 1;
+                let cf = get_bit!(value, bit);
+                self.flags.f_cf = cf == 1;
 
                 let mut result = value;
-                set_bit!(result, bit, !self.flags.f_cf as u8);
+                set_bit!(result, bit, !cf);
+
+                if !self.set_operand_value(&ins, 0, result) {
+                    return;
+                }
+            }
+
+            Mnemonic::Bts => {
+                self.show_instruction(&self.colors.green, &ins);
+                assert!(ins.op_count() == 2);
+
+                let mut bit = match self.get_operand_value(&ins, 1, true) {
+                    Some(v) => v,
+                    None => return,
+                };
+
+                let value = match self.get_operand_value(&ins, 0, true) {
+                    Some(v) => v,
+                    None => return,
+                };
+
+                if bit >= 64 {
+                    bit = 63;
+                }
+
+                let cf = get_bit!(value, bit);
+                self.flags.f_cf = cf == 1;
+
+                let mut result = value;
+                set_bit!(result, bit, 1);
+
+                if !self.set_operand_value(&ins, 0, result) {
+                    return;
+                }
+            }
+
+            Mnemonic::Btr => {
+                self.show_instruction(&self.colors.green, &ins);
+                assert!(ins.op_count() == 2);
+
+                let mut bit = match self.get_operand_value(&ins, 1, true) {
+                    Some(v) => v,
+                    None => return,
+                };
+
+                let value = match self.get_operand_value(&ins, 0, true) {
+                    Some(v) => v,
+                    None => return,
+                };
+
+                if bit >= 64 {
+                    bit = 63;
+                }
+
+                let cf = get_bit!(value, bit);
+                self.flags.f_cf = cf == 1;
+
+                let mut result = value;
+                set_bit!(result, bit, 0);
+
                 if !self.set_operand_value(&ins, 0, result) {
                     return;
                 }
