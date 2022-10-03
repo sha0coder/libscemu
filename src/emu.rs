@@ -4917,7 +4917,7 @@ impl Emu {
 
                 let sz = self.get_operand_sz(&ins, 1);
                 if sz > 8 {
-                    bit = bit % sz;
+                    bit = bit % sz as u64;
                 }
 
                 self.flags.f_cf = get_bit!(value, bit) == 1;
@@ -4939,7 +4939,7 @@ impl Emu {
 
                 let sz = self.get_operand_sz(&ins, 1);
                 if sz > 8 {
-                    bit = bit % sz;
+                    bit = bit % sz as u64;
                 }
 
                 let cf = get_bit!(value, bit);
@@ -4969,7 +4969,7 @@ impl Emu {
 
                 let sz = self.get_operand_sz(&ins, 1);
                 if sz > 8 {
-                    bit = bit % sz;
+                    bit = bit % sz as u64;
                 }
 
                 let cf = get_bit!(value, bit);
@@ -4999,7 +4999,7 @@ impl Emu {
 
                 let sz = self.get_operand_sz(&ins, 1);
                 if sz > 8 {
-                    bit = bit % sz;
+                    bit = bit % sz as u64;
                 }
 
                 let cf = get_bit!(value, bit);
