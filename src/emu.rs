@@ -1907,11 +1907,12 @@ impl Emu {
         }
 
         if counter >= size as u64 {
-            self.flags.calc_flags(storage0, size);
             if self.cfg.verbose >= 1 {
                 println!("/!\\ SHRD undefined behaviour value0 = 0x{:x} value1 = 0x{:x} pcounter = 0x{:x} counter = 0x{:x} size = 0x{:x}", value0, value1, pcounter, counter, size);
             }
-            return (inline::shrd(value0, value1, pcounter, size), true);
+            let result = inline::shrd(value0, value1, pcounter, size);
+            self.flags.calc_flags(result, size);
+            return (result, true);
         }
 
         self.flags.f_cf = get_bit!(value0, counter - 1) == 1;
@@ -1971,12 +1972,14 @@ impl Emu {
         }*/
 
         if counter > size as u64 {
-            self.flags.calc_flags(value0, size);
             if self.cfg.verbose >= 1 {
                 println!("/!\\ undefined behaviour on shld");
             }
 
-            return (inline::shld(value0, value1, pcounter, size), true);
+            let result = inline::shld(value0, value1, pcounter, size);
+            self.flags.calc_flags(result, size);
+
+            return (result, true);
             //counter = pcounter - size as u64;
         }
 
