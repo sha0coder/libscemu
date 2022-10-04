@@ -125,16 +125,14 @@ impl Flags {
     }
 
     pub fn load(&mut self, flags:u32) {
-        self.f_cf = flags & 1 == 1;
-        self.f_pf = flags & 4 >> 2 == 1;
-        self.f_af = flags & 0x10 >> 4 == 1;
-        self.f_zf = flags & 0x40 >> 6 == 1;
-        self.f_sf = flags & 0x80 >> 7 == 1;
-        self.f_tf = flags & 0x100 >> 8 == 1;
-        self.f_of = flags & 0x800 >> 11 == 1;
+        self.f_cf = (flags & 1) == 1;
+        self.f_pf = ((flags & 4) >> 2) == 1;
+        self.f_af = ((flags & 0x10) >> 4) == 1;
+        self.f_zf = ((flags & 0x40) >> 6) == 1;
+        self.f_sf = ((flags & 0x80) >> 7) == 1;
+        self.f_tf = ((flags & 0x100) >> 8) == 1;
+        self.f_of = ((flags & 0x800) >> 11) == 1;
     }
-
-
 
     /// FLAGS ///
     /// 
