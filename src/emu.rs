@@ -5028,11 +5028,27 @@ impl Emu {
                 self.show_instruction(&self.colors.green, &ins);
                 assert!(ins.op_count() == 2);
 
-                let src = match self.get_operand_value(&ins, 1, true) {
+                let value1 = match self.get_operand_value(&ins, 1, true) {
                     Some(v) => v,
                     None => return,
                 };
 
+                let value0 = match self.get_operand_value(&ins, 1, true) {
+                    Some(v) => v,
+                    None => return,
+                };
+
+                let sz = self.get_operand_sz(&ins, 0); 
+
+                let (result, new_flags) = inline::bsf(value0, value1, sz, self.flags.dump());
+
+                self.flags.load(new_flags);
+
+                if !self.set_operand_value(&ins, 0, result) {
+                    return;
+                }
+
+                /*
                 if src == 0 {
                     self.flags.f_zf = true;
                     if self.cfg.verbose >= 1 {
@@ -5057,7 +5073,7 @@ impl Emu {
                     if !self.set_operand_value(&ins, 0, dest) {
                         return;
                     }
-                }
+                }*/
             }
 
             Mnemonic::Bsr => {
@@ -5069,6 +5085,22 @@ impl Emu {
                     None => return,
                 };
 
+                let value0 = match self.get_operand_value(&ins, 1, true) {
+                    Some(v) => v,
+                    None => return,
+                };
+
+                let sz = self.get_operand_sz(&ins, 0); 
+
+                let (result, new_flags) = inline::bsr(value0, value1, sz, self.flags.dump());
+
+                self.flags.load(new_flags);
+
+                if !self.set_operand_value(&ins, 0, result) {
+                    return;
+                }
+                
+                /*
                 if value1 == 0 {
                     self.flags.f_zf = true;
                     if self.cfg.verbose >= 1 {
@@ -5091,7 +5123,7 @@ impl Emu {
                     if !self.set_operand_value(&ins, 0, dest) {
                         return;
                     }
-                }
+                }*/
             }
 
             Mnemonic::Bswap => {

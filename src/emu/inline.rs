@@ -912,76 +912,7 @@ pub fn bts(a:u64, b:u64) -> u64 {
     r
 }
 
-
-pub fn bsf32(a:u64, b:u64, bits:u64, flags:u32) -> (u64, u32) {
-    let new_flags:u32;
-    let mut r:u64 = a;
-    match bits {
-        64 => {
-            unsafe {   
-                asm!(
-                    "xor rax, rax",
-                    "mov eax, {:e}",
-                    "push rax",
-                    "popfd",
-                    "bsf {}, {}",
-                    "pushfd",
-                    "pop rax",
-                    "mov {:e}, eax", 
-                    in(reg) flags, 
-                    inout(reg) r, in(reg) b,
-                    out(reg) new_flags,
-                );
-            }   
-        }
-        32 => {
-            let mut r32 = a as u32;
-            let b32 = b as u32;
-            unsafe {   
-                asm!(
-                    "xor rax, rax",
-                    "mov eax, {:e}",
-                    "push rax",
-                    "popfd",
-                    "bsf {:e}, {:e}",
-                    "pushfd",
-                    "pop rax",
-                    "mov {:e}, eax", 
-                    in(reg) flags, 
-                    inout(reg) r32, in(reg) b32,
-                    out(reg) new_flags,
-                );
-            }   
-            r = r32 as u64;
-        }
-        16 => {
-            let mut r16 = a as u16;
-            let b16 = b as u16;
-            unsafe {   
-                asm!(
-                    "xor rax, rax",
-                    "mov eax, {:e}",
-                    "push rax",
-                    "popfd",
-                    "bsf {:x}, {:x}",
-                    "pushfd",
-                    "pop rax",
-                    "mov {:e}, eax", 
-                    in(reg) flags, 
-                    inout(reg) r16, in(reg) b16,
-                    out(reg) new_flags,
-                );
-            }   
-            r = r16 as u64;
-        }
-        _ => panic!("weird size"),
-    }
-    
-    (r, new_flags)
-}
-
-
-pub fn bsf64(a:u64, b:u64, bits:u64, flags:u32) -> (u64, u32) {
+pub fn bsf(a:u64, b:u64, bits:u8, flags:u32) -> (u64, u32) {
     let new_flags:u32;
     let mut r:u64 = a;
     match bits {
@@ -1048,74 +979,7 @@ pub fn bsf64(a:u64, b:u64, bits:u64, flags:u32) -> (u64, u32) {
     (r, new_flags)
 }
 
-pub fn bsr32(a:u64, b:u64, bits:u64, flags:u32) -> (u64, u32) {
-    let new_flags:u32;
-    let mut r:u64 = a;
-    match bits {
-        64 => {
-            unsafe {   
-                asm!(
-                    "xor rax, rax",
-                    "mov eax, {:e}",
-                    "push rax",
-                    "popfd",
-                    "bsr {}, {}",
-                    "pushfd",
-                    "pop rax",
-                    "mov {:e}, eax", 
-                    in(reg) flags, 
-                    inout(reg) r, in(reg) b,
-                    out(reg) new_flags,
-                );
-            }   
-        }
-        32 => {
-            let mut r32 = a as u32;
-            let b32 = b as u32;
-            unsafe {   
-                asm!(
-                    "xor rax, rax",
-                    "mov eax, {:e}",
-                    "push rax",
-                    "popfd",
-                    "bsr {:e}, {:e}",
-                    "pushfd",
-                    "pop rax",
-                    "mov {:e}, eax", 
-                    in(reg) flags, 
-                    inout(reg) r32, in(reg) b32,
-                    out(reg) new_flags,
-                );
-            }   
-            r = r32 as u64;
-        }
-        16 => {
-            let mut r16 = a as u16;
-            let b16 = b as u16;
-            unsafe {   
-                asm!(
-                    "xor rax, rax",
-                    "mov eax, {:e}",
-                    "push rax",
-                    "popfd",
-                    "bsr {:x}, {:x}",
-                    "pushfd",
-                    "pop rax",
-                    "mov {:e}, eax", 
-                    in(reg) flags, 
-                    inout(reg) r16, in(reg) b16,
-                    out(reg) new_flags,
-                );
-            }   
-            r = r16 as u64;
-        }
-        _ => panic!("weird size"),
-    }
-    
-    (r, new_flags)
-}
-
-pub fn bsr64(a:u64, b:u64, bits:u64, flags:u32) -> (u64, u32) {
+pub fn bsr(a:u64, b:u64, bits:u8, flags:u32) -> (u64, u32) {
     let new_flags:u32;
     let mut r:u64 = a;
     match bits {
