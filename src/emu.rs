@@ -3431,6 +3431,21 @@ impl Emu {
                               self.regs.r8, self.regs.r9, self.regs.r10, self.regs.r11, self.regs.r12, self.regs.r13, self.regs.r14,
                               self.regs.r15,
                             );
+                            println!(
+                            "\tr8d: 0x{:x} r9d: 0x{:x} r10d: 0x{:x} r11d: 0x{:x} r12d: 0x{:x} r13d: 0x{:x} r14d: 0x{:x} r15d: 0x{:x}",
+                              self.regs.get_r8d(), self.regs.get_r9d(), self.regs.get_r10d(), self.regs.get_r11d(), self.regs.get_r12d(), self.regs.get_r13d(), self.regs.get_r14d(),
+                              self.regs.get_r15d(),
+                            );
+                            println!(
+                            "\tr8l: 0x{:x} r9l: 0x{:x} r10l: 0x{:x} r11l: 0x{:x} r12l: 0x{:x} r13l: 0x{:x} r14l: 0x{:x} r15l: 0x{:x}",
+                              self.regs.get_r8l(), self.regs.get_r9l(), self.regs.get_r10l(), self.regs.get_r11l(), self.regs.get_r12l(), self.regs.get_r13l(), self.regs.get_r14l(),
+                              self.regs.get_r15l(),
+                            );
+                            println!(
+                            "\tr8w: 0x{:x} r9w: 0x{:x} r10w: 0x{:x} r11w: 0x{:x} r12w: 0x{:x} r13w: 0x{:x} r14w: 0x{:x} r15w: 0x{:x}",
+                              self.regs.get_r8w(), self.regs.get_r9w(), self.regs.get_r10w(), self.regs.get_r11w(), self.regs.get_r12w(), self.regs.get_r13w(), self.regs.get_r14w(),
+                              self.regs.get_r15w(),
+                            );
                         } else {
                             // TODO: capture pre_op_registers 32-bits?
                             println!("\teax: 0x{:x} ebx: 0x{:x} ecx: 0x{:x} edx: 0x{:x} esi: 0x{:x} edi: 0x{:x} ebp: 0x{:x} esp: 0x{:x}",
