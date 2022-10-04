@@ -5033,7 +5033,7 @@ impl Emu {
                     None => return,
                 };
 
-                let value0 = match self.get_operand_value(&ins, 1, true) {
+                let value0 = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
                     None => return,
                 };
@@ -5085,7 +5085,7 @@ impl Emu {
                     None => return,
                 };
 
-                let value0 = match self.get_operand_value(&ins, 1, true) {
+                let value0 = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
                     None => return,
                 };
