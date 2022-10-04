@@ -438,8 +438,8 @@ pub fn shld(a:u64, b:u64, c:u64, bits:u8, flags:u32) -> (u64, u32) {
                     "popfq",
 
                     "mov cl, {}", 
-                    "mov rbx, {}",
-                    "shld {}, rbx, cl",
+                    "mov rdx, {}",
+                    "shld {}, rdx, cl",
 
                     "pushfq",
                     "pop rax",
@@ -453,7 +453,6 @@ pub fn shld(a:u64, b:u64, c:u64, bits:u8, flags:u32) -> (u64, u32) {
         }
         32 => {
             let mut rr:u32 = r as u32;
-            let b32 = b as u32;
             unsafe {   
                 asm!(
                     "xor rax, rax",
@@ -462,15 +461,15 @@ pub fn shld(a:u64, b:u64, c:u64, bits:u8, flags:u32) -> (u64, u32) {
                     "popfq",
 
                     "mov cl, {}",
-                    "mov ebx, {:e}",
-                    "shld {:e}, ebx, cl", 
+                    "mov rdx, {}",
+                    "shld {:e}, edx, cl", 
 
                     "pushfq",
                     "pop rax",
                     "mov {:e}, eax",
 
                     in(reg) flags,
-                    in(reg_byte) c8, in(reg) b32, inout(reg) rr,
+                    in(reg_byte) c8, in(reg) b, inout(reg) rr,
                     out(reg) new_flags,
                 );
             }   
@@ -478,7 +477,6 @@ pub fn shld(a:u64, b:u64, c:u64, bits:u8, flags:u32) -> (u64, u32) {
         }
         16 => {
             let mut rr:u16 = r as u16;
-            let b16 = b as u16;
             unsafe {   
                 asm!(
                     "xor rax, rax",
@@ -487,15 +485,15 @@ pub fn shld(a:u64, b:u64, c:u64, bits:u8, flags:u32) -> (u64, u32) {
                     "popfq",
 
                     "mov cl, {}", 
-                    "mov bx, {:x}",
-                    "shld {:x}, bx, cl",
+                    "mov rdx, {}",
+                    "shld {:x}, dx, cl",
 
                     "pushfq",
                     "pop rax",
                     "mov {:e}, eax",
 
                     in(reg) flags,
-                    in(reg_byte) c8, in(reg) b16, inout(reg) rr,
+                    in(reg_byte) c8, in(reg) b, inout(reg) rr,
                     out(reg) new_flags,
                 );
             }   
@@ -529,8 +527,8 @@ pub fn shrd(a:u64, b:u64, c:u64, bits:u8, flags:u32) -> (u64, u32) {
                     "popfq",
 
                     "mov cl, {}", 
-                    "mov rbx, {}",
-                    "shrd {}, rbx, cl",
+                    "mov rdx, {}",
+                    "shrd {}, rdx, cl",
 
                     "pushfq",
                     "pop rax",
@@ -544,7 +542,6 @@ pub fn shrd(a:u64, b:u64, c:u64, bits:u8, flags:u32) -> (u64, u32) {
         }
         32 => {
             let mut rr:u32 = r as u32;
-            let b32 = b as u32;
             unsafe {   
                 asm!(
                     "xor rax, rax",
@@ -553,15 +550,15 @@ pub fn shrd(a:u64, b:u64, c:u64, bits:u8, flags:u32) -> (u64, u32) {
                     "popfq",
 
                     "mov cl, {}",
-                    "mov ebx, {:e}",
-                    "shrd {:e}, ebx, cl", 
+                    "mov rdx, {}",
+                    "shrd {:e}, edx, cl", 
 
                     "pushfq",
                     "pop rax",
                     "mov {:e}, eax",
 
                     in(reg) flags,
-                    in(reg_byte) c8, in(reg) b32, inout(reg) rr,
+                    in(reg_byte) c8, in(reg) b, inout(reg) rr,
                     out(reg) new_flags,
                 );
             }   
@@ -569,7 +566,6 @@ pub fn shrd(a:u64, b:u64, c:u64, bits:u8, flags:u32) -> (u64, u32) {
         }
         16 => {
             let mut rr:u16 = r as u16;
-            let b16 = b as u16;
             unsafe {   
                 asm!(
                     "xor rax, rax",
@@ -578,15 +574,15 @@ pub fn shrd(a:u64, b:u64, c:u64, bits:u8, flags:u32) -> (u64, u32) {
                     "popfq",
 
                     "mov cl, {}", 
-                    "mov bx, {:x}",
-                    "shrd {:x}, bx, cl",
+                    "mov rdx, {}",
+                    "shrd {:x}, dx, cl",
 
                     "pushfq",
                     "pop rax",
                     "mov {:e}, eax",
 
                     in(reg) flags,
-                    in(reg_byte) c8, in(reg) b16, inout(reg) rr,
+                    in(reg_byte) c8, in(reg) b, inout(reg) rr,
                     out(reg) new_flags,
                 );
             }   
