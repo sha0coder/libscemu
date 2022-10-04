@@ -1975,9 +1975,11 @@ impl Emu {
             if self.cfg.verbose >= 1 {
                 println!("/!\\ undefined behaviour on shld");
             }
+    
 
-            let result = inline::shld(value0, value1, pcounter, size);
-            self.flags.calc_flags(result, size);
+            let result = 0;
+            //let result = inline::shld(value0, value1, pcounter, size);
+             self.flags.calc_flags(result, size);
 
             return (result, true);
             //counter = pcounter - size as u64;
@@ -8241,13 +8243,15 @@ impl Emu {
                 };
 
                 let sz = self.get_operand_sz(&ins, 0);
-                let (result, undef) = self.shld(value0, value1, counter, sz);
+                let (result, new_flags) = inline::shld(value0, value1, counter, sz, self.flags.dump());
+                self.flags.load(new_flags);
 
+                /*
                 if self.cfg.test_mode { //&& !undef {
                     if result != inline::shld(value0, value1, counter, sz) {
                         panic!("SHLD{} 0x{:x} should be 0x{:x}", sz, result, inline::shld(value0, value1, counter, sz));
                     }
-                }
+                }*/
 
                 //println!("0x{:x} SHLD 0x{:x}, 0x{:x}, 0x{:x} = 0x{:x}", ins.ip32(), value0, value1, counter, result);
 

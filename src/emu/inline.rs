@@ -439,14 +439,14 @@ pub fn shld(a:u64, b:u64, c:u64, bits:u8, flags:u32) -> (u64, u32) {
 
                     "mov cl, {}", 
                     "mov rbx, {}",
-                    "shld {}, rbx, cl"
+                    "shld {}, rbx, cl",
 
                     "pushfq",
                     "pop rax",
                     "mov {:e}, eax",
 
                     in(reg) flags,
-                    in(reg_byte) c8, in(reg) b, inout(reg) r 
+                    in(reg_byte) c8, in(reg) b, inout(reg) r,
                     out(reg) new_flags,
                 );
             }   
@@ -470,7 +470,7 @@ pub fn shld(a:u64, b:u64, c:u64, bits:u8, flags:u32) -> (u64, u32) {
                     "mov {:e}, eax",
 
                     in(reg) flags,
-                    in(reg_byte) c8, in(reg) b32, inout(reg) rr);
+                    in(reg_byte) c8, in(reg) b32, inout(reg) rr,
                     out(reg) new_flags,
                 );
             }   
@@ -510,7 +510,7 @@ pub fn shld(a:u64, b:u64, c:u64, bits:u8, flags:u32) -> (u64, u32) {
         }
     }
     
-    r
+    (r, new_flags)
 }
 
 
