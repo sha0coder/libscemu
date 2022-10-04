@@ -5048,12 +5048,6 @@ impl Emu {
                         bitpos += 1;
                     }
 
-                    if dest == sz as u64 {
-                        self.flags.f_cf = true;
-                    } else {
-                        self.flags.f_cf = false;
-                    }
-
                     if dest == 0 {
                         self.flags.f_zf = true;
                     } else {
@@ -5086,12 +5080,6 @@ impl Emu {
 
                     while dest > 0 && get_bit!(value1, dest) == 0 {
                         dest -= 1;
-                    }
-
-                    if dest != sz as u64 {
-                        self.flags.f_cf = true;
-                    } else {
-                        self.flags.f_cf = false;
                     }
 
                     if dest == 0 {
