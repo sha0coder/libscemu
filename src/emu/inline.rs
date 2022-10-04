@@ -514,25 +514,56 @@ pub fn shld(a:u64, b:u64, c:u64, bits:u8, flags:u32) -> (u64, u32) {
 }
 
 
-pub fn shrd(a:u64, b:u64, c:u64, bits:u8) -> u64 {
+pub fn shrd(a:u64, b:u64, c:u64, bits:u8, flags:u32) -> (u64, u32) {
     let mut r:u64 = a;
     let c8 = c as u8;
+    let new_flags:u32;
 
     match bits {
         64 => {
             unsafe {   
-                asm!("mov cl, {}", in(reg_byte) c8);
-                asm!("mov rbx, {}", in(reg) b);
-                asm!("shrd {}, rbx, cl", inout(reg) r);
+                asm!(
+                    "xor rax, rax",
+                    "mov eax, {:e}",
+                    "push rax",
+                    "popfq",
+
+                    "mov cl, {}", 
+                    "mov rbx, {}",
+                    "shrd {}, rbx, cl",
+
+                    "pushfq",
+                    "pop rax",
+                    "mov {:e}, eax",
+
+                    in(reg) flags,
+                    in(reg_byte) c8, in(reg) b, inout(reg) r,
+                    out(reg) new_flags,
+                );
             }   
         }
         32 => {
             let mut rr:u32 = r as u32;
             let b32 = b as u32;
             unsafe {   
-                asm!("mov cl, {}", in(reg_byte) c8);
-                asm!("mov ebx, {:e}", in(reg) b32);
-                asm!("shrd {:e}, ebx, cl", inout(reg) rr);
+                asm!(
+                    "xor rax, rax",
+                    "mov eax, {:e}",
+                    "push rax",
+                    "popfq",
+
+                    "mov cl, {}",
+                    "mov ebx, {:e}",
+                    "shrd {:e}, ebx, cl", 
+
+                    "pushfq",
+                    "pop rax",
+                    "mov {:e}, eax",
+
+                    in(reg) flags,
+                    in(reg_byte) c8, in(reg) b32, inout(reg) rr,
+                    out(reg) new_flags,
+                );
             }   
             r = rr as u64;
         }
@@ -540,9 +571,24 @@ pub fn shrd(a:u64, b:u64, c:u64, bits:u8) -> u64 {
             let mut rr:u16 = r as u16;
             let b16 = b as u16;
             unsafe {   
-                asm!("mov cl, {}", in(reg_byte) c8);
-                asm!("mov bx, {:x}", in(reg) b16);
-                asm!("shrd {:x}, bx, cl", inout(reg) rr);
+                asm!(
+                    "xor rax, rax",
+                    "mov eax, {:e}",
+                    "push rax",
+                    "popfq",
+
+                    "mov cl, {}", 
+                    "mov bx, {:x}",
+                    "shrd {:x}, bx, cl",
+
+                    "pushfq",
+                    "pop rax",
+                    "mov {:e}, eax",
+
+                    in(reg) flags,
+                    in(reg_byte) c8, in(reg) b16, inout(reg) rr,
+                    out(reg) new_flags,
+                );
             }   
             r = rr as u64;
         }
@@ -555,7 +601,7 @@ pub fn shrd(a:u64, b:u64, c:u64, bits:u8) -> u64 {
         }
     }
     
-    r
+    (r, new_flags)
 }
 
 pub fn div(a:u64, rax:u64, rdx:u64, bits:u8) -> (u64, u64) {
