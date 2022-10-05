@@ -8628,9 +8628,22 @@ impl Emu {
 
             // end SSE
 
+            Mnemonic::Xgetbv => {
+                self.show_instruction(&self.colors.green, &ins);
+
+                match self.regs.ecx {
+                    0 => {
+                        self.regs.set_edx(0);
+                        self.regs.set_eax(7);
+                    }
+                    _ => {
+                        self.regs.set_edx(0);
+                        self.regs.set_eax(7);
+                    }
+                }
+            }
 
             Mnemonic::Arpl => {
-                self.show_instruction(&self.colors.green, &ins);
 
                 let value0 = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
