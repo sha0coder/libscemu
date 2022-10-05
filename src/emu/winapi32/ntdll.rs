@@ -30,6 +30,7 @@ pub fn gateway(addr:u32, emu:&mut emu::Emu) {
         0x775cee8d => RtlInitializeCriticalSectionAndSpinCount(emu),
         0x775b5f18 => NtProtectVirtualMemory(emu),
         0x775b77a0 => RtlEnterCriticalSection(emu),
+        0x775b7760 => RtlLeaveCriticalSection(emu),
         _ => panic!("calling unimplemented ntdll API 0x{:x} {}", addr, kernel32::guess_api_name(emu, addr)),
     }
 }
@@ -631,6 +632,18 @@ fn RtlEnterCriticalSection(emu:&mut emu::Emu) {
         .expect("ntdll!RtlEnterCriticalSection eror reading hndl param") as u64;
 
     println!("{}** {} ntdll!RtlEnterCriticalSection {}",      
+             emu.colors.light_red, emu.pos, emu.colors.nc);
+
+
+    emu.stack_pop32(false);
+    emu.regs.rax = 1;
+}
+
+fn RtlLeaveCriticalSection(emu:&mut emu::Emu) {
+    let hndl = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("ntdll!RtlLeaveCriticalSection eror reading hndl param") as u64;
+
+    println!("{}** {} ntdll!RtlLeaveCriticalSection {}",      
              emu.colors.light_red, emu.pos, emu.colors.nc);
 
 
