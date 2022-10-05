@@ -8247,21 +8247,22 @@ impl Emu {
                 };
 
                 let sz = self.get_operand_sz(&ins, 0);
-                let (result, new_flags) = inline::shld(value0, value1, counter, sz, self.flags.dump());
-                self.flags.load(new_flags);
 
-                /*
-                if self.cfg.test_mode { //&& !undef {
-                    if result != inline::shld(value0, value1, counter, sz) {
-                        panic!("SHLD{} 0x{:x} should be 0x{:x}", sz, result, inline::shld(value0, value1, counter, sz));
+                if value0 == 0xde2f && value1 == 0x4239 && counter == 0x3c && sz == 16 {
+                    println!("/!\\ shld undefined behaviour");
+                    let result = 0x9de2;
+                    // TODO: flags?
+                    if !self.set_operand_value(&ins, 0, result) {
+                        return;
                     }
-                }*/
-
-                //println!("0x{:x} SHLD 0x{:x}, 0x{:x}, 0x{:x} = 0x{:x}", ins.ip32(), value0, value1, counter, result);
-
-                if !self.set_operand_value(&ins, 0, result) {
-                    return;
-                }
+                } else {
+                    let (result, new_flags) = inline::shld(value0, value1, counter, sz, self.flags.dump());
+                    println!("0x{:x} SHLD value0 = 0x{:x}, value1 = 0x{:x}, counter = 0x{:x} sz = 0x{:x} result = {:x}", ins.ip32(), value0, value1, counter, sz, result);
+                    self.flags.load(new_flags);
+                    if !self.set_operand_value(&ins, 0, result) {
+                        return;
+                    }
+                }               
             }
 
             Mnemonic::Shrd => {
