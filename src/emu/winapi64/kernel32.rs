@@ -38,6 +38,7 @@ pub fn gateway(addr:u64, emu:&mut emu::Emu) {
         0x76dc1120 => CreateEventA(emu),
         0x76dc6580 => CreateThread(emu),
         0x76dd2b70 => Sleep(emu),
+        0x76dc47c0 => LocalAlloc(emu),
         _ => panic!("calling unimplemented kernel32 64bits API 0x{:x} {}", addr, guess_api_name(emu, addr)),
     }
 }
@@ -730,3 +731,21 @@ fn Sleep(emu:&mut emu::Emu) {
     println!("{}** {} kernel32!Sleep millis: {} {}", emu.colors.light_red, emu.pos, millis, emu.colors.nc);
 
 }
+
+fn LocalAlloc(emu:&mut emu::Emu) {
+    let flags = emu.regs.rcx;
+    let bytes = emu.regs.rdx;
+
+    println!("{}** {} kernel32!LocalAlloc flags: {:x} sz: {} {}", emu.colors.light_red, emu.pos, flags, bytes, emu.colors.nc);
+
+    let base = emu.maps.alloc(bytes).expect("kernel32!LocalAlloc out of memory");                          
+    let alloc = emu.maps.create_map(format!("alloc_{:x}", base).as_str());
+    alloc.set_base(base);
+    alloc.set_size(bytes);           
+    
+    emu.regs.rax = base;
+}
+
+
+
+
