@@ -227,12 +227,12 @@ impl Flags {
         self.f_zf = final_value == 0;
         self.f_tf = false;
 
-        self.calc_pf();
+        self.calc_pf(final_value);
 
         //self.f_pf = (final_value & 0xff) % 2 == 0;
     }
 
-    pub fn calc_pf(&mut self) {
+    pub fn calc_pf(&mut self, final_value:u64) {
         //TODO: use this everywhere and optimize in a macro.
         let mut ones = 0;
         for i in 0..16 {
