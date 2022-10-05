@@ -348,13 +348,33 @@ fn LoadLibraryExA(emu:&mut emu::Emu) {
         .expect("kernel32_LoadLibraryExA: error reading libname ptr param") as u64;
     let libname = emu.maps.read_string(libname_ptr);
 
-    println!("{}** {} LoadLibraryExA '{}' {}", emu.colors.light_red, emu.pos, libname, 
+    println!("{}** {} kernel32!LoadLibraryExA '{}' {}", emu.colors.light_red, emu.pos, libname, 
              emu.colors.nc);
-    panic!();
+
+     emu.regs.rax = load_library(emu, &libname);
+
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
 }
 
 fn LoadLibraryExW(emu:&mut emu::Emu) {
-    println!("{}** {} LoadLibraryExW {}", emu.colors.light_red, emu.pos, emu.colors.nc);
+    let libname_ptr = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("kernel32!LoadLibraryExW: error reading libname ptr param") as u64;
+    let hfile = emu.maps.read_dword(emu.regs.get_esp() + 4)
+        .expect("kernel32!LoadLibraryExW: error reading hFile") as u64;
+    let flags = emu.maps.read_dword(emu.regs.get_esp() + 8)
+        .expect("kernel32!LoadLibraryExW: error reading flags") as u64;
+
+    let libname = emu.maps.read_wide_string(libname_ptr);
+
+    println!("{}** {} LoadLibraryExW '{}' {}", emu.colors.light_red, emu.pos, libname, emu.colors.nc);
+
+    emu.regs.rax = load_library(emu, &libname);
+
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
 }
 
 fn LoadLibraryW(emu:&mut emu::Emu) {
