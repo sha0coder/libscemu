@@ -5854,12 +5854,9 @@ impl Emu {
                         return;
                     }
                 } else {
-                    let sz = self.get_operand_sz(&ins, 0);
-                    if (sz == 32) {
-                        // clear upper bits of 64-bit register?
-                        if !self.set_operand_value(&ins, 0, value0 as u32 as u64) {
-                            return;
-                        }
+                    // clear upper bits of register?
+                    if !self.set_operand_value(&ins, 0, value0) {
+                        return;
                     }
                 }
             }
