@@ -3428,26 +3428,37 @@ impl Emu {
                               self.regs.rax, self.regs.rbx, self.regs.rcx,
                               self.regs.rdx, self.regs.rsi, self.regs.rdi, self.regs.rbp, self.regs.rsp
                             );
+                            // 64-bits (bytes 0-8)
                             println!(
                               "\tr8: 0x{:x} r9: 0x{:x} r10: 0x{:x} r11: 0x{:x} r12: 0x{:x} r13: 0x{:x} r14: 0x{:x} r15: 0x{:x}",
                               self.regs.r8, self.regs.r9, self.regs.r10, self.regs.r11, self.regs.r12, self.regs.r13, self.regs.r14,
                               self.regs.r15,
                             );
+                            // 32-bits (upper, unofficial, bytes 4-7)
+                            println!(
+                              "\tr8u: 0x{:x} r9u: 0x{:x} r10u: 0x{:x} r11u: 0x{:x} r12u: 0x{:x} r13u: 0x{:x} r14u: 0x{:x} r15u: 0x{:x}",
+                              self.regs.get_r8u(), self.regs.get_r9u(), self.regs.get_r10u(), self.regs.get_r11u(), self.regs.get_r12u(), self.regs.get_r13u(), self.regs.get_r14u(),
+                              self.regs.get_r15u(),
+                            );
+                            // 32-bits (lower, bytes 0-3)
                             println!(
                               "\tr8d: 0x{:x} r9d: 0x{:x} r10d: 0x{:x} r11d: 0x{:x} r12d: 0x{:x} r13d: 0x{:x} r14d: 0x{:x} r15d: 0x{:x}",
                               self.regs.get_r8d(), self.regs.get_r9d(), self.regs.get_r10d(), self.regs.get_r11d(), self.regs.get_r12d(), self.regs.get_r13d(), self.regs.get_r14d(),
                               self.regs.get_r15d(),
                             );
-                            println!(
-                              "\tr8l: 0x{:x} r9l: 0x{:x} r10l: 0x{:x} r11l: 0x{:x} r12l: 0x{:x} r13l: 0x{:x} r14l: 0x{:x} r15l: 0x{:x}",
-                              self.regs.get_r8l(), self.regs.get_r9l(), self.regs.get_r10l(), self.regs.get_r11l(), self.regs.get_r12l(), self.regs.get_r13l(), self.regs.get_r14l(),
-                              self.regs.get_r15l(),
-                            );
+                            // 16-bits (bytes 0-1)
                             println!(
                               "\tr8w: 0x{:x} r9w: 0x{:x} r10w: 0x{:x} r11w: 0x{:x} r12w: 0x{:x} r13w: 0x{:x} r14w: 0x{:x} r15w: 0x{:x}",
                               self.regs.get_r8w(), self.regs.get_r9w(), self.regs.get_r10w(), self.regs.get_r11w(), self.regs.get_r12w(), self.regs.get_r13w(), self.regs.get_r14w(),
                               self.regs.get_r15w(),
                             );
+                            // 8-bits (bytes 0, should end in b and not l)
+                            println!(
+                              "\tr8l: 0x{:x} r9l: 0x{:x} r10l: 0x{:x} r11l: 0x{:x} r12l: 0x{:x} r13l: 0x{:x} r14l: 0x{:x} r15l: 0x{:x}",
+                              self.regs.get_r8l(), self.regs.get_r9l(), self.regs.get_r10l(), self.regs.get_r11l(), self.regs.get_r12l(), self.regs.get_r13l(), self.regs.get_r14l(),
+                              self.regs.get_r15l(),
+                            );
+                            // flags
                             println!(
                               "\tcf: {:?} pf: {:?} af: {:?} zf: {:?} sf: {:?} tf: {:?} if: {:?} df: {:?} of: {:?} nt: {:?}",
                               self.flags.f_cf, self.flags.f_pf, self.flags.f_af, self.flags.f_zf, self.flags.f_sf, self.flags.f_tf, self.flags.f_if, self.flags.f_df, self.flags.f_of, self.flags.f_nt
@@ -5828,15 +5839,18 @@ impl Emu {
             Mnemonic::Cmovs => {
                 self.show_instruction(&self.colors.orange, &ins);
 
-                if self.flags.f_sf {
-                    let value1 = match self.get_operand_value(&ins, 1, true) {
-                        Some(v) => v,
-                        None => return,
-                    };
+                let value1 = match self.get_operand_value(&ins, 1, true) {
+                    Some(v) => v,
+                    None => return,
+                };
 
+                if self.flags.f_sf {
                     if !self.set_operand_value(&ins, 0, value1) {
                         return;
                     }
+                } else {
+                    let sz = self.get_operand_sz(&ins, 0);
+                    println!("CMOVS no-op zero upper bits? sz = {}", sz);
                 }
             }
 
@@ -8691,7 +8705,8 @@ impl Emu {
 
             Mnemonic::Pushfq => {
                 self.show_instruction(&self.colors.blue, &ins);
-                self.stack_push64(self.flags.dump() as u64);
+                //self.stack_push64(self.flags.dump() as u64);
+                self.stack_push64(0x246);
             }
 
             Mnemonic::Bound => {
