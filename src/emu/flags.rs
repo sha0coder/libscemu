@@ -35,6 +35,8 @@ macro_rules! set_bit {
     };
 }
 
+
+
 #[derive(Clone, Copy, Debug)]
 pub struct Flags {
     pub f_cf: bool,
@@ -227,12 +229,12 @@ impl Flags {
         self.f_zf = final_value == 0;
         self.f_tf = false;
 
-        self.calc_pf(final_value);
+        self.calc_pf(final_value as u8);
 
         //self.f_pf = (final_value & 0xff) % 2 == 0;
     }
 
-    pub fn calc_pf(&mut self, final_value:u64) {
+    pub fn calc_pf(&mut self, final_value:u8) {
         //TODO: use this everywhere and optimize in a macro.
         let mut ones = 0;
         for i in 0..16 {
@@ -243,14 +245,13 @@ impl Flags {
         self.f_pf = ones % 2 == 0;
     }
 
-    
-
     pub fn add64(&mut self, value1:u64, value2:u64) -> u64 {
         let unsigned:u128 = value1 as u128 + value2 as u128;
 
         self.f_sf = (unsigned as i64) < 0;
         self.f_zf = unsigned == 0;
-        self.f_pf = (unsigned & 0xff) % 2 == 0;
+        //self.f_pf = (unsigned & 0xff) % 2 == 0;
+        self.calc_pf(unsigned as u8);
         self.f_of = (value1 as i64) > 0 && (unsigned as i64) < 0;
         self.f_cf = unsigned > 0xffffffffffffffff;
 
@@ -262,7 +263,8 @@ impl Flags {
 
         self.f_sf = (unsigned as i32) < 0;
         self.f_zf = unsigned == 0;
-        self.f_pf = (unsigned & 0xff) % 2 == 0;
+        //self.f_pf = (unsigned & 0xff) % 2 == 0;
+        self.calc_pf(unsigned as u8);
         self.f_of = (value1 as i32) > 0 && (unsigned as i32) < 0;
         self.f_cf = unsigned > 0xffffffff;
 
@@ -278,7 +280,8 @@ impl Flags {
 
         self.f_sf = (unsigned as i16) < 0;
         self.f_zf = unsigned == 0;
-        self.f_pf = (unsigned & 0xff) % 2 == 0;
+        self.calc_pf(unsigned as u8);
+        //self.f_pf = (unsigned & 0xff) % 2 == 0;
         self.f_of = (value1 as i16) > 0 && (unsigned as i16) < 0;
         self.f_cf = unsigned > 0xffff;
 
@@ -294,7 +297,8 @@ impl Flags {
 
         self.f_sf = (unsigned as i8) < 0;
         self.f_zf = unsigned == 0;
-        self.f_pf = unsigned % 2 == 0;
+        self.calc_pf(unsigned as u8);
+        //self.f_pf = unsigned % 2 == 0;
         self.f_of = (value1 as i8) > 0 && (unsigned as i8) < 0;
         self.f_cf = unsigned > 0xff;
 
@@ -309,7 +313,8 @@ impl Flags {
         self.f_zf = value1 == value2;
 
         self.f_sf = r < 0;
-        self.f_pf = ((r as u64) & 0xff) % 2 == 0;
+        self.calc_pf(r as u64 as u8);
+        //self.f_pf = ((r as u64) & 0xff) % 2 == 0;
 
         r as u64
     }
@@ -325,7 +330,8 @@ impl Flags {
         self.f_zf = value1 == value2;
 
         self.f_sf = r < 0;
-        self.f_pf = ((r as u32) & 0xff) % 2 == 0;
+        self.calc_pf(r as u32 as u8);
+        //self.f_pf = ((r as u32) & 0xff) % 2 == 0;
 
         r as u64
     }
@@ -341,7 +347,8 @@ impl Flags {
         self.f_zf = val1 == val2;
 
         self.f_sf = r < 0;
-        self.f_pf = ((r as u16) & 0xff) % 2 == 0;
+        self.calc_pf(r as u16 as u8);
+        //self.f_pf = ((r as u16) & 0xff) % 2 == 0;
 
         (r as u16) as u64
     }
@@ -357,7 +364,8 @@ impl Flags {
         self.f_zf = val1 == val2;
 
         self.f_sf = r < 0;
-        self.f_pf = (r as u8) % 2 == 0;
+        self.calc_pf(r as u8);
+        //self.f_pf = (r as u8) % 2 == 0;
         (r as u8) as u64
     }
 
@@ -368,9 +376,11 @@ impl Flags {
             self.f_af = true;
             return 0;
         }
-        self.f_of = value == 0x7fffffffffffffff;
-        self.f_sf = value > 0x7fffffffffffffff;
-        self.f_pf = (((value as i64) +1) & 0xff) % 2 == 0;
+
+        self.f_of = value == 0x7fffffff_ffffffff;
+        self.f_sf = value > 0x7fffffff_ffffffff;
+        self.calc_pf((value + 1) as u8);
+        //self.f_pf = (((value as i64) +1) & 0xff) % 2 == 0;
         self.f_zf = false;
         value + 1
     }
@@ -384,7 +394,8 @@ impl Flags {
         }
         self.f_of = value == 0x7fffffff;
         self.f_sf = value > 0x7fffffff;
-        self.f_pf = (((value as i32) +1) & 0xff) % 2 == 0;
+        self.calc_pf((value + 1) as u8);
+        //self.f_pf = (((value as i32) +1) & 0xff) % 2 == 0;
         self.f_zf = false;
         value + 1
     }
@@ -398,7 +409,8 @@ impl Flags {
         }
         self.f_of = value == 0x7fff;
         self.f_sf = value > 0x7fff;
-        self.f_pf = (((value as i32) +1) & 0xff) % 2 == 0;
+        self.calc_pf((value + 1) as u8);
+        //self.f_pf = (((value as i32) +1) & 0xff) % 2 == 0;
         self.f_zf = false;
         value + 1
     }
@@ -412,7 +424,8 @@ impl Flags {
         }
         self.f_of = value == 0x7f;
         self.f_sf = value > 0x7f;
-        self.f_pf = (((value as i32) +1) & 0xff) % 2 == 0;
+        self.calc_pf((value + 1) as u8);
+        //self.f_pf = (((value as i32) +1) & 0xff) % 2 == 0;
         self.f_zf = false;
         value + 1
     }
@@ -425,10 +438,10 @@ impl Flags {
             return 0xffffffffffffffff;
         }
         self.f_of = value == 0x8000000000000000;
-        self.f_pf = (((value as i64) -1) & 0xff) % 2 == 0;
+        self.calc_pf((value - 1) as u8);
+        //self.f_pf = (((value as i64) -1) & 0xff) % 2 == 0;
         self.f_af = false;
         self.f_sf = false;
-
         self.f_zf = value == 1;
 
         value - 1
@@ -442,7 +455,8 @@ impl Flags {
             return 0xffffffff;
         }
         self.f_of = value == 0x80000000;
-        self.f_pf = (((value as i32) -1) & 0xff) % 2 == 0;
+        self.calc_pf((value - 1) as u8);
+        //self.f_pf = (((value as i32) -1) & 0xff) % 2 == 0;
         self.f_af = false;
         self.f_sf = false;
 
@@ -459,7 +473,8 @@ impl Flags {
             return 0xffff;
         }
         self.f_of = value == 0x8000;
-        self.f_pf = (((value as i32) -1) & 0xff) % 2 == 0;
+        self.calc_pf((value - 1) as u8);
+        //self.f_pf = (((value as i32) -1) & 0xff) % 2 == 0;
         self.f_af = false;
         self.f_sf = false;
 
@@ -476,10 +491,10 @@ impl Flags {
             return 0xff;
         }
         self.f_of = value == 0x80;
-        self.f_pf = (((value as i32) -1) & 0xff) % 2 == 0;
+        self.calc_pf((value - 1) as u8);
+        //self.f_pf = (((value as i32) -1) & 0xff) % 2 == 0;
         self.f_af = false;
         self.f_sf = false;
-
         self.f_zf = value == 1;
 
         value - 1
