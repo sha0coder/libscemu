@@ -29,6 +29,7 @@ pub fn gateway(addr:u32, emu:&mut emu::Emu) {
         0x775b54c8 => NtClose(emu),
         0x775cee8d => RtlInitializeCriticalSectionAndSpinCount(emu),
         0x775b5f18 => NtProtectVirtualMemory(emu),
+        0x775b77a0 => RtlEnterCriticalSection(emu),
         _ => panic!("calling unimplemented ntdll API 0x{:x} {}", addr, kernel32::guess_api_name(emu, addr)),
     }
 }
@@ -581,6 +582,10 @@ fn NtClose(emu:&mut emu::Emu) {
 
 fn RtlInitializeCriticalSectionAndSpinCount(emu:&mut emu::Emu) { 
 
+    println!("{}** {} ntdll!RtlInitializeCriticalSectionAndSpinCount {}",
+             emu.colors.light_red, emu.pos, emu.colors.nc);
+
+    unimplemented!("compensate the stack? how many params?");
 }
 
 fn NtProtectVirtualMemory(emu:&mut emu::Emu) {
@@ -607,8 +612,29 @@ fn NtProtectVirtualMemory(emu:&mut emu::Emu) {
 
 fn CheckRemoteDebuggerPresent(emu:&mut emu::Emu) {
     let hndl = emu.maps.read_dword(emu.regs.get_esp())
-        .expect("ntdll!NtProtectVirtualMemory error reading hndl param") as u64;
+        .expect("ntdll! CheckRemoteDebuggerPresenterror reading hndl param") as u64;
     let bool_ptr = emu.maps.read_dword(emu.regs.get_esp() + 4)
-        .expect("ntdll!NtProtectVirtualMemory error reading bool ptr param") as u64;
+        .expect("ntdll!CheckRemoteDebuggerPresent reading bool ptr param") as u64;
 
+    println!("{}** {} ntdll!CheckRemoteDebuggerPresent  {}",
+             emu.colors.light_red, emu.pos, emu.colors.nc); 
+
+    emu.maps.write_dword(bool_ptr, 0);
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+
+    emu.regs.rax = 1;
 }
+
+fn RtlEnterCriticalSection(emu:&mut emu::Emu) {
+    let hndl = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("ntdll!RtlEnterCriticalSection eror reading hndl param") as u64;
+
+    println!("{}** {} ntdll!RtlEnterCriticalSection {}",      
+             emu.colors.light_red, emu.pos, emu.colors.nc);
+
+
+    emu.stack_pop32(false);
+    emu.regs.rax = 1;
+}
+
