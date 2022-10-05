@@ -5034,12 +5034,12 @@ impl Emu {
                 self.show_instruction(&self.colors.green, &ins);
                 assert!(ins.op_count() == 2);
 
-                let value1 = match self.get_operand_value(&ins, 1, true) {
+                let value0 = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
                     None => return,
                 };
 
-                let value0 = match self.get_operand_value(&ins, 0, true) {
+                let value1 = match self.get_operand_value(&ins, 1, true) {
                     Some(v) => v,
                     None => return,
                 };
@@ -5047,12 +5047,19 @@ impl Emu {
                 let sz = self.get_operand_sz(&ins, 0); 
 
                 let (result, new_flags) = inline::bsf(value0, value1, sz, self.flags.dump());
-
                 self.flags.load(new_flags);
+
+                // cf flag undefined behavior apple mac x86_64 problem
+                if self.regs.rip == 0x144ed424a {
+                    println!("warning: f_cf undefined disaster");
+                    self.flags.f_cf = false;
+                }
 
                 if !self.set_operand_value(&ins, 0, result) {
                     return;
                 }
+
+                println!("\tbsf: value0 = {:x} value1 = {:x} sz = {} result = {:x} new_flags = {:x}", value0, value1, sz, result, new_flags);
 
                 /*
                 if src == 0 {
