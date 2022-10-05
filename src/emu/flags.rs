@@ -214,7 +214,6 @@ impl Flags {
         (((rs as u64) & 0xffffffff) as u32) as i32
     }
 
-    
     pub fn calc_flags(&mut self, final_value:u64, bits:u8) {
         
         match bits {
@@ -226,8 +225,17 @@ impl Flags {
         }
         
         self.f_zf = final_value == 0;
-        self.f_pf = (final_value & 0xff) % 2 == 0;
-        self.f_tf = false;        
+        self.f_tf = false;
+
+        let mut ones = 0;
+        for i in 0..0xff {
+            if get_bit!(final_value, i) == 1 {
+                ones += 1;
+            } 
+        }
+        self.f_pf = ones % 2 == 0;
+
+        //self.f_pf = (final_value & 0xff) % 2 == 0;
     }
 
     
