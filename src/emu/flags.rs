@@ -237,7 +237,7 @@ impl Flags {
     pub fn calc_pf(&mut self, final_value:u8) {
         //TODO: use this everywhere and optimize in a macro.
         let mut ones = 0;
-        for i in 0..16 {
+        for i in 0..8 {
             if get_bit!(final_value, i) == 1 {
                 ones += 1;
             } 
