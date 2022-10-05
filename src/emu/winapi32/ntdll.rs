@@ -274,15 +274,16 @@ fn NtQueryPerformanceCounter(emu:&mut emu::Emu) {
 }
 
 fn RtlGetProcessHeaps(emu:&mut emu::Emu) {
+    /*
     let count = emu.maps.read_dword(emu.regs.get_esp())
         .expect("ntdll!RtlGetProcessHeaps error reading count param");
     let hndl = emu.maps.read_dword(emu.regs.get_esp()+4)
         .expect("ntdll!RtlGetProcessHeaps error reading handle param");
-
+    */
     println!("{}** {} ntdll!RtlGetProcessHeaps {}", emu.colors.light_red, emu.pos, emu.colors.nc);
 
-    emu.stack_pop32(false);
-    emu.stack_pop32(false);
+    //emu.stack_pop32(false);
+    //emu.stack_pop32(false);
 
     emu.regs.rax = 1; // number of handlers
 }

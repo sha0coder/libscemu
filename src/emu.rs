@@ -3842,6 +3842,8 @@ impl Emu {
                 }
 
                 self.flags.calc_flags(result, sz);
+                self.flags.f_of = false;
+                self.flags.f_cf = false;
 
                 if !self.set_operand_value(&ins, 0, result) {
                     return;
