@@ -5839,6 +5839,11 @@ impl Emu {
             Mnemonic::Cmovs => {
                 self.show_instruction(&self.colors.orange, &ins);
 
+                let value0 = match self.get_operand_value(&ins, 0, true) {
+                    Some(v) => v,
+                    None => return,
+                };
+
                 let value1 = match self.get_operand_value(&ins, 1, true) {
                     Some(v) => v,
                     None => return,
@@ -5849,8 +5854,10 @@ impl Emu {
                         return;
                     }
                 } else {
-                    let sz = self.get_operand_sz(&ins, 0);
-                    println!("CMOVS no-op zero upper bits? sz = {}", sz);
+                    // clear upper bits of register?
+                    if !self.set_operand_value(&ins, 0, value0) {
+                        return;
+                    }
                 }
             }
 
