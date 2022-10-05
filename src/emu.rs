@@ -3516,6 +3516,11 @@ impl Emu {
                         }
                     }
 
+                    //let mut info_factory = InstructionInfoFactory::new();
+                    //let info = info_factory.info(&ins);
+
+                    self.emulate_instruction(&ins, sz, false);
+
                     if self.cfg.inspect {
                         let addr:u64 = self.memory_operand_to_address(self.cfg.inspect_seq.clone().as_str());
                         let bits = self.get_size(self.cfg.inspect_seq.clone().as_str());
@@ -3523,13 +3528,6 @@ impl Emu {
                         println!("\t{} {} (0x{:x}): 0x{:x} {} '{}' {{{}}}", self.pos, self.cfg.inspect_seq, addr, value, value,
                             self.maps.read_string(addr), self.maps.read_string_of_bytes(addr, constants::NUM_BYTES_TRACE));
                     }
-
-                    //let mut info_factory = InstructionInfoFactory::new();
-                    //let info = info_factory.info(&ins);
-
-
-                    self.emulate_instruction(&ins, sz, false);
-
 
                     if self.cfg.trace_regs {
                         // flags
