@@ -106,6 +106,7 @@ pub fn gateway(addr:u32, emu:&mut emu::Emu) {
         0x75e976b5 => IsProcessorFeaturePresent(emu),
         0x75e93879 => InitializeCriticalSectionEx(emu),
         0x75e9418d => FlsAlloc(emu),
+        0x75e976e6 => FlsSetValue(emu),
 
         _ => panic!("calling unimplemented kernel32 API 0x{:x} {}", addr, guess_api_name(emu, addr)),
     }
@@ -1740,3 +1741,27 @@ fn FlsAlloc(emu:&mut emu::Emu) {
     emu.stack_pop32(false);
     emu.regs.rax = 1;
 }
+
+
+fn FlsSetValue(emu:&mut emu::Emu) { 
+    let idx = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("kernel32!FlsSetValue cannot read index");
+    let val = emu.maps.read_dword(emu.regs.get_esp() + 4)
+        .expect("kernel32!FlsSetValue cannot read value");
+
+    println!("{}** {} kernel32!FlsSetValue idx: {} val: {} {}", emu.colors.light_red, emu.pos, idx, val, emu.colors.nc);
+
+    if emu.fls.len() > idx as usize {
+        emu.fls[idx as usize] = val;
+    } else {
+        for _ in 0..=idx {
+            emu.fls.push(0);
+        }
+        emu.fls[idx as usize] = val;
+    }
+
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+    emu.regs.rax = 1;
+}
+
