@@ -29,9 +29,16 @@ macro_rules! set_reg8h {
     )
 }
 
-macro_rules! get_reg32 {
+macro_rules! get_reg32l {
     ($reg:expr) => (
         return $reg & 0x00000000ffffffff;
+
+    )
+}
+
+macro_rules! get_reg32h {
+    ($reg:expr) => (
+        return $reg >> 32;
     )
 }
 
@@ -570,71 +577,104 @@ impl Regs64 {
     // get 32bits
 
     pub fn get_eax(&self) -> u64 {
-        get_reg32!(self.rax);
+        get_reg32l!(self.rax);
     }
 
     pub fn get_ebx(&self) -> u64 {
-        get_reg32!(self.rbx);
+        get_reg32l!(self.rbx);
     }
 
     pub fn get_ecx(&self) -> u64 {
-        get_reg32!(self.rcx);
+        get_reg32l!(self.rcx);
     }
 
     pub fn get_edx(&self) -> u64 {
-        get_reg32!(self.rdx);
+        get_reg32l!(self.rdx);
     }
 
     pub fn get_esi(&self) -> u64 {
-        get_reg32!(self.rsi);
+        get_reg32l!(self.rsi);
     }
 
     pub fn get_edi(&self) -> u64 {
-        get_reg32!(self.rdi);
+        get_reg32l!(self.rdi);
     }
 
     pub fn get_esp(&self) -> u64 {
-        get_reg32!(self.rsp);
+        get_reg32l!(self.rsp);
     }
 
     pub fn get_ebp(&self) -> u64 {
-        get_reg32!(self.rbp);
+        get_reg32l!(self.rbp);
     }
 
     pub fn get_eip(&self) -> u64 {
-        get_reg32!(self.rip);
+        get_reg32l!(self.rip);
     }
 
     pub fn get_r8d(&self) -> u64 {
-        get_reg32!(self.r8);
+        get_reg32l!(self.r8);
     }
 
     pub fn get_r9d(&self) -> u64 {
-        get_reg32!(self.r9);
+        get_reg32l!(self.r9);
     }
 
     pub fn get_r10d(&self) -> u64 {
-        get_reg32!(self.r10);
+        get_reg32l!(self.r10);
     }
 
     pub fn get_r11d(&self) -> u64 {
-        get_reg32!(self.r11);
+        get_reg32l!(self.r11);
     }
 
     pub fn get_r12d(&self) -> u64 {
-        get_reg32!(self.r12);
+        get_reg32l!(self.r12);
     }
 
     pub fn get_r13d(&self) -> u64 {
-        get_reg32!(self.r13);
+        get_reg32l!(self.r13);
     }
 
     pub fn get_r14d(&self) -> u64 {
-        get_reg32!(self.r14);
+        get_reg32l!(self.r14);
     }
 
     pub fn get_r15d(&self) -> u64 {
-        get_reg32!(self.r15);
+        get_reg32l!(self.r15);
+    }
+
+    // get 32-bits (upper)
+    pub fn get_r8u(&self) -> u64 {
+        get_reg32h!(self.r8);
+    }
+
+    pub fn get_r9u(&self) -> u64 {
+        get_reg32h!(self.r9);
+    }
+
+    pub fn get_r10u(&self) -> u64 {
+        get_reg32h!(self.r10);
+    }
+
+    pub fn get_r11u(&self) -> u64 {
+        get_reg32h!(self.r11);
+    }
+
+    pub fn get_r12u(&self) -> u64 {
+        get_reg32h!(self.r12);
+    }
+
+    pub fn get_r13u(&self) -> u64 {
+        get_reg32h!(self.r13);
+    }
+
+    pub fn get_r14u(&self) -> u64 {
+        get_reg32h!(self.r14);
+    }
+
+    pub fn get_r15u(&self) -> u64 {
+        get_reg32h!(self.r15);
     }
 
     // set 16bits
