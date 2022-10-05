@@ -107,6 +107,7 @@ pub fn gateway(addr:u32, emu:&mut emu::Emu) {
         0x75e93879 => InitializeCriticalSectionEx(emu),
         0x75e9418d => FlsAlloc(emu),
         0x75e976e6 => FlsSetValue(emu),
+        0x75e8bb08 => SetLastError(emu),
 
         _ => panic!("calling unimplemented kernel32 API 0x{:x} {}", addr, guess_api_name(emu, addr)),
     }
@@ -1783,5 +1784,14 @@ fn FlsSetValue(emu:&mut emu::Emu) {
     emu.stack_pop32(false);
     emu.stack_pop32(false);
     emu.regs.rax = 1;
+}
+
+fn SetLastError(emu:&mut emu::Emu) {
+    let err_code = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("kernel32!SetLastError cannot read err_code"); 
+
+    println!("{}** {} kernel32!SetLastError err: {} {}", emu.colors.light_red, emu.pos, err_code, emu.colors.nc);
+
+    emu.stack_pop32(false);
 }
 
