@@ -105,6 +105,7 @@ pub fn gateway(addr:u32, emu:&mut emu::Emu) {
         0x75e93891 => GetStartupInfoW(emu),
         0x75e976b5 => IsProcessorFeaturePresent(emu),
         0x75e93879 => InitializeCriticalSectionEx(emu),
+        0x75e9418d => FlsAlloc(emu),
 
         _ => panic!("calling unimplemented kernel32 API 0x{:x} {}", addr, guess_api_name(emu, addr)),
     }
@@ -1729,3 +1730,13 @@ fn InitializeCriticalSectionEx(emu:&mut emu::Emu) {
     emu.regs.rax = 1;
 }
 
+
+fn FlsAlloc(emu:&mut emu::Emu) { 
+    let callback = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("kernel32!FlsAlloc cannot read callback");
+
+    println!("{}** {} kernel32!FlsAlloc callback: 0x{:x} {}", emu.colors.light_red, emu.pos, callback, emu.colors.nc);
+
+    emu.stack_pop32(false);
+    emu.regs.rax = 1;
+}
