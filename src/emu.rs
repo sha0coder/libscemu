@@ -8200,8 +8200,8 @@ impl Emu {
             Mnemonic::Popfq => {
                 self.show_instruction(&self.colors.blue, &ins);
 
-                let rflags = self.stack_pop64(true);
-                // TODO: rflags
+                let eflags = self.stack_pop64(true);
+                self.flags.load(eflags as u32);
             }
 
 
@@ -8691,13 +8691,7 @@ impl Emu {
 
             Mnemonic::Pushfq => {
                 self.show_instruction(&self.colors.blue, &ins);
-
-                // internal reserved register RFLAGS not very documented
-                if self.cfg.is_64bits { // 64bits only instruction
-                    self.stack_push64(0x00000346);
-                } else {
-                    self.stack_push32(0x00000346);
-                }
+                self.stack_push64(self.flags.dump() as u64);
             }
 
             Mnemonic::Bound => {
