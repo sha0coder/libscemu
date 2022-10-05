@@ -8631,7 +8631,7 @@ impl Emu {
             Mnemonic::Xgetbv => {
                 self.show_instruction(&self.colors.green, &ins);
 
-                match self.regs.ecx {
+                match self.regs.get_ecx() {
                     0 => {
                         self.regs.set_edx(0);
                         self.regs.set_eax(7);
