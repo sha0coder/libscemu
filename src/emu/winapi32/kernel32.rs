@@ -104,6 +104,7 @@ pub fn gateway(addr:u32, emu:&mut emu::Emu) {
         0x75e91e16 => FlsGetValue(emu),
         0x75e93891 => GetStartupInfoW(emu),
         0x75e976b5 => IsProcessorFeaturePresent(emu),
+        0x75e93879 => InitializeCriticalSectionEx(emu),
 
         _ => panic!("calling unimplemented kernel32 API 0x{:x} {}", addr, guess_api_name(emu, addr)),
     }
@@ -1707,6 +1708,23 @@ fn IsProcessorFeaturePresent(emu:&mut emu::Emu) {
     };
 
     println!("{}** {} kernel32!IsProcessorFeaturePresent feature: {} {} {}", emu.colors.light_red, emu.pos, feature, msg, emu.colors.nc);
+
+    emu.regs.rax = 1;
+}
+
+fn InitializeCriticalSectionEx(emu:&mut emu::Emu) {
+    let ptr_crit_sect = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("kernel32!InitializeCriticalSectionEx cannot read ptr_crit_sect");
+    let spin_count = emu.maps.read_dword(emu.regs.get_esp() + 4)
+        .expect("kernel32!InitializeCriticalSectionEx cannot read spin_count");
+    let flags = emu.maps.read_dword(emu.regs.get_esp() + 8)
+        .expect("kernel32!InitializeCriticalSectionEx cannot read flags");
+
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+
+    println!("{}** {} kernel32!InitializeCriticalSectionEx ptr: 0x{:x} {}", emu.colors.light_red, emu.pos, ptr_crit_sect, emu.colors.nc);
 
     emu.regs.rax = 1;
 }
