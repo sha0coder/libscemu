@@ -3460,8 +3460,11 @@ impl Emu {
                             );
                             // flags
                             println!(
-                              "\tcf: {:?} pf: {:?} af: {:?} zf: {:?} sf: {:?} tf: {:?} if: {:?} df: {:?} of: {:?} nt: {:?}",
-                              self.flags.f_cf, self.flags.f_pf, self.flags.f_af, self.flags.f_zf, self.flags.f_sf, self.flags.f_tf, self.flags.f_if, self.flags.f_df, self.flags.f_of, self.flags.f_nt
+                              "\tzf: {:?} pf: {:?} af: {:?} of: {:?} sf: {:?} df: {:?} cf: {:?} tf: {:?} if: {:?} nt: {:?}",
+                              self.flags.f_zf, self.flags.f_pf, self.flags.f_af,
+                              self.flags.f_of, self.flags.f_sf, self.flags.f_df,
+                              self.flags.f_cf, self.flags.f_tf, self.flags.f_if,
+                              self.flags.f_nt
                             );
                         } else {
                             // TODO: capture pre_op_registers 32-bits?
@@ -4066,6 +4069,9 @@ impl Emu {
                 if !self.set_operand_value(&ins, 0, res) {
                     return;
                 }
+
+                // always set f_af?
+                self.flags.f_af = true;
             }
 
             Mnemonic::Not => {
@@ -7524,6 +7530,9 @@ impl Emu {
                 // TODO: actually mock a timestamp?
                 self.regs.rdx = 0x1BC2B;
                 self.regs.rax = 0xE6668424;
+                // TODO: actually calculate flags correctly?
+                self.flags.f_pf = true;
+                self.flags.f_af = false;
             }
 
             Mnemonic::Loop => {
