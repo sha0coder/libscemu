@@ -2975,7 +2975,7 @@ impl Emu {
                             Some(n) => n,
                             None => "not mapped".to_string(),
                         };
-                        println!("{} mem trace read {} bits ->  0x{:x}: 0x{:x}  map:'{}'", self.pos, sz, mem_addr, value, name);
+                        println!("\tmem_trace: rip = {:x} read {} bits ->  0x{:x}: 0x{:x}  map:'{}'", self.regs.rip, sz, mem_addr, value, name);
                     }
 
                     if mem_addr == self.bp.get_mem_read() {
@@ -3060,7 +3060,7 @@ impl Emu {
                             Some(n) => n,
                             None => "not mapped".to_string(),
                         };
-                        println!("{} mem trace write {} bits ->  0x{:x}: 0x{:x}  map:'{}'", self.pos, sz, mem_addr, value, name);
+                        println!("\tmem_trace: rip = {:x} write {} bits ->  0x{:x}: 0x{:x}  map:'{}'", self.regs.rip, sz, mem_addr, value, name);
                     }
 
                     let name = match self.maps.get_addr_name(mem_addr) {
@@ -8721,8 +8721,7 @@ impl Emu {
 
             Mnemonic::Pushfq => {
                 self.show_instruction(&self.colors.blue, &ins);
-                //self.stack_push64(self.flags.dump() as u64);
-                self.stack_push64(0x246);
+                self.stack_push64(self.flags.dump() as u64);
             }
 
             Mnemonic::Bound => {
