@@ -114,26 +114,37 @@ impl Flags {
     pub fn dump(&self) -> u32 {
         let mut flags:u32 = 0;
 
-        if self.f_cf { flags |= 1; }
-        if self.f_pf { flags |= 4; }
+        if self.f_cf { flags |= 0x01; }
+        if self.f_pf { flags |= 0x04; }
         if self.f_af { flags |= 0x10; }
+
         if self.f_zf { flags |= 0x40; }
         if self.f_sf { flags |= 0x80; }
         if self.f_tf { flags |= 0x100; }
+
         if self.f_if { flags |= 0x200; }
+        if self.f_df { flags |= 0x400; }
         if self.f_of { flags |= 0x800; }
+
+        if self.f_nt { flags |= 0x4000; }
 
         flags
     }
 
     pub fn load(&mut self, flags:u32) {
-        self.f_cf = (flags & 1) == 1;
-        self.f_pf = ((flags & 4) >> 2) == 1;
+        self.f_cf = (flags & 0x01) == 1;
+        self.f_pf = ((flags & 0x04) >> 2) == 1;
         self.f_af = ((flags & 0x10) >> 4) == 1;
+
         self.f_zf = ((flags & 0x40) >> 6) == 1;
         self.f_sf = ((flags & 0x80) >> 7) == 1;
         self.f_tf = ((flags & 0x100) >> 8) == 1;
+
+        self.f_if = ((flags & 0x200) >> 9) == 1;
+        self.f_df = ((flags & 0x400) >> 10) == 1;
         self.f_of = ((flags & 0x800) >> 11) == 1;
+
+        self.f_nt = ((flags & 0x4000) >> 14) == 1;
     }
 
     /// FLAGS ///
