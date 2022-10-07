@@ -35,8 +35,6 @@ macro_rules! set_bit {
     };
 }
 
-
-
 #[derive(Clone, Copy, Debug)]
 pub struct Flags {
     pub f_cf: bool,
@@ -114,26 +112,35 @@ impl Flags {
     pub fn dump(&self) -> u32 {
         let mut flags:u32 = 0;
 
-        if self.f_cf { flags |= 1; }
-        if self.f_pf { flags |= 4; }
-        if self.f_af { flags |= 0x10; }
-        if self.f_zf { flags |= 0x40; }
-        if self.f_sf { flags |= 0x80; }
-        if self.f_tf { flags |= 0x100; }
-        if self.f_if { flags |= 0x200; }
-        if self.f_of { flags |= 0x800; }
+        if self.f_cf { set_bit!(flags, 0, 1); }
+        set_bit!(flags, 1, 1); // always 1 in EFLAGS
+        if self.f_pf { set_bit!(flags, 2, 1); }
+        // 3 is reserved
+        if self.f_af { set_bit!(flags, 4, 1); }
+        // 5 is reserved
+        if self.f_zf { set_bit!(flags, 6, 1); }
+        if self.f_sf { set_bit!(flags, 7, 1); }
+        if self.f_tf { set_bit!(flags, 8, 1); }
+        if self.f_if { set_bit!(flags, 9, 1); }
+        if self.f_df { set_bit!(flags, 10, 1); }
+        if self.f_of { set_bit!(flags, 11, 1); }
+        // 12 + 13 are iopl
+        if self.f_nt { set_bit!(flags, 14, 1); }
 
         flags
     }
 
     pub fn load(&mut self, flags:u32) {
-        self.f_cf = (flags & 1) == 1;
-        self.f_pf = ((flags & 4) >> 2) == 1;
-        self.f_af = ((flags & 0x10) >> 4) == 1;
-        self.f_zf = ((flags & 0x40) >> 6) == 1;
-        self.f_sf = ((flags & 0x80) >> 7) == 1;
-        self.f_tf = ((flags & 0x100) >> 8) == 1;
-        self.f_of = ((flags & 0x800) >> 11) == 1;
+        self.f_cf = get_bit!(flags, 0) == 1;
+        self.f_pf = get_bit!(flags, 2) == 1;
+        self.f_af = get_bit!(flags, 4) == 1;
+        self.f_zf = get_bit!(flags, 6) == 1;
+        self.f_sf = get_bit!(flags, 7) == 1;
+        self.f_tf = get_bit!(flags, 8) == 1;
+        self.f_if = get_bit!(flags, 9) == 1;
+        self.f_df = get_bit!(flags, 10) == 1;
+        self.f_of = get_bit!(flags, 11) == 1;
+        self.f_nt = get_bit!(flags, 14) == 1;
     }
 
     /// FLAGS ///
