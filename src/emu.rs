@@ -243,6 +243,20 @@ impl Emu {
         self.regs.r14 = 0x0000000140000000;
     }
 
+    pub fn init_flags_tests(&mut self) {
+        self.flags.f_zf = true;
+        self.flags.f_pf = true;
+        self.flags.f_af = false;
+
+        self.flags.f_of = false;
+        self.flags.f_sf = false;
+        self.flags.f_df = false;
+
+        self.flags.f_cf = false;
+        self.flags.f_tf = false;
+        self.flags.f_if = true;
+    }
+
     pub fn init(&mut self) {
 
         if !atty::is(Stream::Stdout) {
@@ -263,6 +277,7 @@ impl Emu {
             self.init_mem64();
             //self.init_stack64();
             self.init_stack64_tests();
+            self.init_flags_tests();
 
         } else { // 32bits
             self.regs.sanitize32();
@@ -271,7 +286,7 @@ impl Emu {
             self.init_stack32();
         }
 
-        self.init_tests();
+        //self.init_tests();
     }
 
     pub fn init_mem32(&mut self) {
@@ -1246,7 +1261,7 @@ impl Emu {
                                 Some(n) => n,
                                 None => "not mapped".to_string(),
                             };
-                            println!("mem trace read -> '{}' 0x{:x}: 0x{:x}  map:'{}'", operand, addr, v, name);
+                            println!("\tmem_trace: rip = {:x} read -> '{}' 0x{:x}: 0x{:x}  map:'{}'", self.regs.rip, operand, addr, v, name);
                         }
                         return Some(v);
                     }
@@ -1261,7 +1276,7 @@ impl Emu {
                                 Some(n) => n,
                                 None => "not mapped".to_string(),
                             };
-                            println!("mem trace read -> '{}' 0x{:x}: 0x{:x}  map:'{}'", operand, addr, v, name);
+                            println!("\tmem_trace: rip = {:x} read -> '{}' 0x{:x}: 0x{:x}  map:'{}'", self.regs.rip, operand, addr, v, name);
                         }
                         return Some(v.into());
                     },
@@ -1276,7 +1291,7 @@ impl Emu {
                                 Some(n) => n,
                                 None => "not mapped".to_string(),
                             };
-                            println!("mem trace read -> '{}' 0x{:x}: 0x{:x}  map:'{}'", operand, addr, v, name);
+                            println!("\tmem_trace: rip = {:x} read -> '{}' 0x{:x}: 0x{:x}  map:'{}'", self.regs.rip, operand, addr, v, name);
                         }
                         return Some(v.into());
                     },
@@ -1291,7 +1306,7 @@ impl Emu {
                                 Some(n) => n,
                                 None => "not mapped".to_string(),
                             };
-                            println!("mem trace read -> '{}' 0x{:x}: 0x{:x}  map:'{}'", operand, addr, v, name);
+                            println!("\tmem_trace: rip = {:x} read -> '{}' 0x{:x}: 0x{:x}  map:'{}'", self.regs.rip, operand, addr, v, name);
                         }
                         return Some(v.into());
                     },
@@ -1330,7 +1345,7 @@ impl Emu {
         }
 
         if self.cfg.trace_mem {
-            println!("mem trace write -> '{}' 0x{:x}: 0x{:x}  map:'{}'", operand, addr, value, name);
+            println!("\tmem_trace: rip = {:x} write -> '{}' 0x{:x}: 0x{:x}  map:'{}'", self.regs.rip, operand, addr, value, name);
         }
 
         let bits = self.get_size(operand);
@@ -3257,12 +3272,12 @@ impl Emu {
 
     pub fn diff_pre_op_post_op_registers_64bits(&mut self) {
         self.post_op_regs = self.regs.clone();
-        Regs64::diff(self.pre_op_regs, self.post_op_regs);
+        Regs64::diff(self.pre_op_regs.rip, self.pre_op_regs, self.post_op_regs);
     }
 
     pub fn diff_pre_op_post_op_flags(&mut self) {
         self.post_op_flags = self.flags.clone();
-        Flags::diff(self.regs.rip, self.pre_op_flags, self.post_op_flags);
+        Flags::diff(self.pre_op_regs.rip, self.pre_op_flags, self.post_op_flags);
     }
 
     pub fn step(&mut self) {
@@ -3539,8 +3554,8 @@ impl Emu {
                         let addr:u64 = self.memory_operand_to_address(self.cfg.inspect_seq.clone().as_str());
                         let bits = self.get_size(self.cfg.inspect_seq.clone().as_str());
                         let value = self.memory_read(self.cfg.inspect_seq.clone().as_str()).unwrap_or(0);
-                        println!("\t{} {} (0x{:x}): 0x{:x} {} '{}' {{{}}}", self.pos, self.cfg.inspect_seq, addr, value, value,
-                            self.maps.read_string(addr), self.maps.read_string_of_bytes(addr, constants::NUM_BYTES_TRACE));
+                        println!("\tmem_inspect: rip = {:x} (0x{:x}): 0x{:x} {} '{}' {{{}}}", self.regs.rip, addr, value, value,
+                        self.maps.read_string(addr), self.maps.read_string_of_bytes(addr, constants::NUM_BYTES_TRACE));
                     }
 
                     if self.cfg.trace_regs {
