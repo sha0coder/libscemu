@@ -8721,14 +8721,21 @@ impl Emu {
 
             Mnemonic::Pushfq => {
                 self.show_instruction(&self.colors.blue, &ins);
+                self.flags.f_tf = false;
                 self.stack_push64(self.flags.dump() as u64);
             }
 
             Mnemonic::Bound => {
                 self.show_instruction(&self.colors.red, &ins);
 
-                let val0_src = self.get_operand_value(&ins, 0, true);
+                let array_index = self.get_operand_value(&ins, 0, true)
+                    .expect("cannot read first opreand of bound");
+                let lower_upper_bound = self.get_operand_value(&ins, 1, true)
+                    .expect("cannot read second opreand of bound");
 
+                println!("bound idx:{} lower_upper:{}", array_index, lower_upper_bound);
+                unimplemented!("Bound unimplemented");
+                // https://www.felixcloutier.com/x86/bound
             }
 
             Mnemonic::Lahf => {
