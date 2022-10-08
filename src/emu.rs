@@ -1022,6 +1022,15 @@ impl Emu {
             self.maps.dump_dwords(self.regs.get_esp(), 5);
         }
 
+        if self.cfg.trace_mem {
+            let name = match self.maps.get_addr_name(emu.regs.get_esp()) {
+                Some(n) => n,
+                None => "not mapped".to_string(),
+            };
+            println!("\tmem_trace: rip = {:x} read {} bits ->  0x{:x}: 0x{:x}  map:'{}'", self.regs.rip, 32, emu.regs.get_esp(), value, name);
+        }
+
+
         self.regs.set_esp(self.regs.get_esp() - 4);
         let stack = self.maps.get_mem("stack");
         if stack.inside(self.regs.get_esp()) {
@@ -1043,6 +1052,14 @@ impl Emu {
         if self.cfg.stack_trace {
             println!("--- stack push64  ---");
             self.maps.dump_qwords(self.regs.rsp, 5);
+        }
+
+        if self.cfg.trace_mem {
+            let name = match self.maps.get_addr_name(emu.regs.rsp) {
+                Some(n) => n,
+                None => "not mapped".to_string(),
+            };
+            println!("\tmem_trace: rip = {:x} read {} bits ->  0x{:x}: 0x{:x}  map:'{}'", self.regs.rip, 64, emu.regs.rsp, value, name);
         }
 
 
