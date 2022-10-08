@@ -46,7 +46,15 @@ pub struct Flags {
     pub f_if: bool,
     pub f_df: bool,
     pub f_of: bool,
+    pub f_iopl1: bool,
+    pub f_iopl2: bool,
     pub f_nt: bool,
+    pub f_rf: bool,
+    pub f_vm: bool,
+    pub f_ac: bool,
+    pub f_vif: bool,
+    pub f_vip: bool,
+    pub f_id: bool,
 }
 
 impl Flags {
@@ -61,7 +69,15 @@ impl Flags {
             f_if: false,
             f_df: false,
             f_of: false,
+            f_iopl1: false,
+            f_iopl2: false,
             f_nt: false, 
+            f_rf: false,
+            f_vm: false,
+            f_ac: false,
+            f_vif: false,
+            f_vip: false,
+            f_id: false,
         }
     }
 
@@ -76,7 +92,16 @@ impl Flags {
         if a.f_if != b.f_if { output = format!("{}{} {:x} -> {:x}; ", output, "f_if", a.f_if as u8, b.f_if as u8); }
         if a.f_df != b.f_df { output = format!("{}{} {:x} -> {:x}; ", output, "f_df", a.f_df as u8, b.f_df as u8); }
         if a.f_of != b.f_of { output = format!("{}{} {:x} -> {:x}; ", output, "f_of", a.f_of as u8, b.f_of as u8); }
+        if a.f_iopl1 != b.f_iopl1 { output = format!("{}{} {:x} -> {:x}; ", output, "f_iopl1", a.f_iopl1 as u8, b.f_iopl1 as u8); }
+        if a.f_iopl2 != b.f_iopl2 { output = format!("{}{} {:x} -> {:x}; ", output, "f_iopl2", a.f_iopl2 as u8, b.f_iopl2 as u8); }
         if a.f_nt != b.f_nt { output = format!("{}{} {:x} -> {:x}; ", output, "f_nt", a.f_nt as u8, b.f_nt as u8); }
+        if a.f_rf != b.f_rf { output = format!("{}{} {:x} -> {:x}; ", output, "f_rf", a.f_rf as u8, b.f_rf as u8); }
+        if a.f_vm != b.f_vm { output = format!("{}{} {:x} -> {:x}; ", output, "f_vm", a.f_vm as u8, b.f_vm as u8); }
+        if a.f_ac != b.f_ac { output = format!("{}{} {:x} -> {:x}; ", output, "f_ac", a.f_ac as u8, b.f_ac as u8); }
+        if a.f_vif != b.f_vif { output = format!("{}{} {:x} -> {:x}; ", output, "f_vif", a.f_vif as u8, b.f_vif as u8); }
+        if a.f_vip != b.f_vip { output = format!("{}{} {:x} -> {:x}; ", output, "f_vip", a.f_vip as u8, b.f_vip as u8); }
+        if a.f_id != b.f_id { output = format!("{}{} {:x} -> {:x}; ", output, "f_id", a.f_id as u8, b.f_id as u8); }
+
         println!("{}", output);
     }
 
@@ -91,7 +116,15 @@ impl Flags {
         self.f_if = false;
         self.f_df = false;
         self.f_of = false;
+        self.f_iopl1 = false;
+        self.f_iopl2 = false;
         self.f_nt = false;
+        self.f_rf = false;
+        self.f_vm = false;
+        self.f_ac = false;
+        self.f_vif = false;
+        self.f_vip = false;
+        self.f_id = false;
     }
 
     pub fn print(&self) {
@@ -105,7 +138,15 @@ impl Flags {
         println!("if: {}", self.f_if);
         println!("df: {}", self.f_df);
         println!("of: {}", self.f_of);
+        println!("iopl1: {}", self.f_iopl1);
+        println!("iopl2: {}", self.f_iopl2);
         println!("nt: {}", self.f_nt);
+        println!("rf: {}", self.f_rf);
+        println!("vm: {}", self.f_vm);
+        println!("ac: {}", self.f_ac);
+        println!("vif: {}", self.f_vif);
+        println!("vip: {}", self.f_vip);
+        println!("id: {}", self.f_id);
         println!("---");
     }
 
@@ -124,8 +165,18 @@ impl Flags {
         if self.f_if { set_bit!(flags, 9, 1); }
         if self.f_df { set_bit!(flags, 10, 1); }
         if self.f_of { set_bit!(flags, 11, 1); }
-        // 12 + 13 are iopl
+
+        if self.f_iopl1 { set_bit!(flags, 12, 1); }
+        if self.f_iopl2 { set_bit!(flags, 13, 1); }
+
         if self.f_nt { set_bit!(flags, 14, 1); }
+        set_bit!(flags, 15, 0);
+        if self.f_rf { set_bit!(flags, 16, 1); }
+        if self.f_vm { set_bit!(flags, 17, 1); }
+        if self.f_ac { set_bit!(flags, 18, 1); }
+        if self.f_vif { set_bit!(flags, 19, 1); }
+        if self.f_vip { set_bit!(flags, 20, 1); }
+        if self.f_id { set_bit!(flags, 21, 1); }
 
         flags
     }
@@ -140,13 +191,21 @@ impl Flags {
         self.f_if = get_bit!(flags, 9) == 1;
         self.f_df = get_bit!(flags, 10) == 1;
         self.f_of = get_bit!(flags, 11) == 1;
+        self.f_iopl1 = get_bit!(flags, 12) == 1;
+        self.f_iopl2 = get_bit!(flags, 13) == 1;
         self.f_nt = get_bit!(flags, 14) == 1;
+        self.f_rf = get_bit!(flags, 16) == 1;
+        self.f_vm = get_bit!(flags, 17) == 1;
+        self.f_ac = get_bit!(flags, 18) == 1;
+        self.f_vif = get_bit!(flags, 19) == 1;
+        self.f_vip = get_bit!(flags, 20) == 1;
+        self.f_id = get_bit!(flags, 21) == 1;
     }
 
     /// FLAGS ///
     /// 
     /// overflow 0xffffffff + 1     
-    /// carry    0x7fffffff + 1     o  0x80000000 - 1       o    0 - 1
+    /// carry    0x7fffffff + 1     or  0x80000000 - 1       or   0 - 1
     
 
 
