@@ -1023,11 +1023,11 @@ impl Emu {
         }
 
         if self.cfg.trace_mem {
-            let name = match self.maps.get_addr_name(emu.regs.get_esp()) {
+            let name = match self.maps.get_addr_name(self.regs.get_esp()) {
                 Some(n) => n,
                 None => "not mapped".to_string(),
             };
-            println!("\tmem_trace: rip = {:x} read {} bits ->  0x{:x}: 0x{:x}  map:'{}'", self.regs.rip, 32, emu.regs.get_esp(), value, name);
+            println!("\tmem_trace: rip = {:x} read {} bits ->  0x{:x}: 0x{:x}  map:'{}'", self.regs.rip, 32, self.regs.get_esp(), value, name);
         }
 
 
@@ -1055,11 +1055,11 @@ impl Emu {
         }
 
         if self.cfg.trace_mem {
-            let name = match self.maps.get_addr_name(emu.regs.rsp) {
+            let name = match self.maps.get_addr_name(self.regs.rsp) {
                 Some(n) => n,
                 None => "not mapped".to_string(),
             };
-            println!("\tmem_trace: rip = {:x} read {} bits ->  0x{:x}: 0x{:x}  map:'{}'", self.regs.rip, 64, emu.regs.rsp, value, name);
+            println!("\tmem_trace: rip = {:x} read {} bits ->  0x{:x}: 0x{:x}  map:'{}'", self.regs.rip, 64, self.regs.rsp, value, name);
         }
 
 
