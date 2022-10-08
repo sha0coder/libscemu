@@ -1027,7 +1027,7 @@ impl Emu {
                 Some(n) => n,
                 None => "not mapped".to_string(),
             };
-            println!("\tmem_trace: rip = {:x} read {} bits ->  0x{:x}: 0x{:x}  map:'{}'", self.regs.rip, 32, self.regs.get_esp(), value, name);
+            println!("\tmem_trace: rip = {:x} write {} bits ->  0x{:x}: 0x{:x}  map:'{}'", self.regs.rip, 32, self.regs.get_esp(), value, name);
         }
 
 
@@ -1059,7 +1059,7 @@ impl Emu {
                 Some(n) => n,
                 None => "not mapped".to_string(),
             };
-            println!("\tmem_trace: rip = {:x} read {} bits ->  0x{:x}: 0x{:x}  map:'{}'", self.regs.rip, 64, self.regs.rsp, value, name);
+            println!("\tmem_trace: rip = {:x} write {} bits ->  0x{:x}: 0x{:x}  map:'{}'", self.regs.rip, 64, self.regs.rsp, value, name);
         }
 
 
@@ -1086,6 +1086,7 @@ impl Emu {
             self.maps.dump_dwords(self.regs.get_esp(), 5);
         }
 
+
         let stack = self.maps.get_mem("stack");
         if stack.inside(self.regs.get_esp()) {
             let value = stack.read_dword(self.regs.get_esp());
@@ -1102,7 +1103,17 @@ impl Emu {
         };
 
         let value = mem.read_dword(self.regs.get_esp());
+
+        if self.cfg.trace_mem {
+            let name = match self.maps.get_addr_name(self.regs.get_esp()) {
+                Some(n) => n,
+                None => "not mapped".to_string(),
+            };
+            println!("\tmem_trace: rip = {:x} read {} bits ->  0x{:x}: 0x{:x}  map:'{}'", self.regs.rip, 32, self.regs.get_esp(), value, name);
+        }
+
         self.regs.set_esp(self.regs.get_esp() + 4);
+
         value
     }
 
@@ -1128,6 +1139,15 @@ impl Emu {
         };
 
         let value = mem.read_qword(self.regs.rsp);
+
+        if self.cfg.trace_mem {
+            let name = match self.maps.get_addr_name(self.regs.rsp) {
+                Some(n) => n,
+                None => "not mapped".to_string(),
+            };
+            println!("\tmem_trace: rip = {:x} read {} bits ->  0x{:x}: 0x{:x}  map:'{}'", self.regs.rip, 32, self.regs.rsp, value, name);
+        }
+
         self.regs.rsp += 8;
         value
     }
