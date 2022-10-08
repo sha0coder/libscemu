@@ -244,6 +244,8 @@ impl Emu {
     }
 
     pub fn init_flags_tests(&mut self) {
+        self.flags.clear();
+
         self.flags.f_zf = true;
         self.flags.f_pf = true;
         self.flags.f_af = false;
@@ -255,6 +257,8 @@ impl Emu {
         self.flags.f_cf = false;
         self.flags.f_tf = false;
         self.flags.f_if = true;
+
+        self.flags.f_nt = false;
     }
 
     pub fn init(&mut self) {
