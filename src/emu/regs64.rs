@@ -206,8 +206,8 @@ impl Regs64 {
         }
     }
 
-    pub fn diff(rip: u64, a: Regs64, b: Regs64) {
-        let mut output = format!("\tdiff_reg: rip = {:x} ", rip);
+    pub fn diff(rip: u64, pos: u64, a: Regs64, b: Regs64) {
+        let mut output = format!("\tdiff_reg: pos = {} rip = {:x} ", pos, rip);
         if a.dr0 != b.dr0 { output = format!("{}{} {:x} -> {:x}; ", output, "dr0", a.dr0, b.dr0); }
         if a.dr1 != b.dr1 { output = format!("{}{} {:x} -> {:x}; ", output, "dr1", a.dr1, b.dr1); }
         if a.dr2 != b.dr2 { output = format!("{}{} {:x} -> {:x}; ", output, "dr2", a.dr2, b.dr2); }
