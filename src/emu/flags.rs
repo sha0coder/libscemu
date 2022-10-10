@@ -315,7 +315,7 @@ impl Flags {
         let unsigned:u128 = value1 as u128 + value2 as u128;
 
         self.f_sf = (unsigned as i64) < 0;
-        self.f_zf = unsigned == 0;
+        self.f_zf = (unsigned & 0xffffffff_ffffffff) == 0;
         //self.f_pf = (unsigned & 0xff) % 2 == 0;
         self.calc_pf(unsigned as u8);
         self.f_of = (value1 as i64) > 0 && (unsigned as i64) < 0;
@@ -328,7 +328,7 @@ impl Flags {
         let unsigned:u64 = value1 + value2;
 
         self.f_sf = (unsigned as i32) < 0;
-        self.f_zf = unsigned == 0;
+        self.f_zf = (unsigned & 0xffffffff) == 0;
         //self.f_pf = (unsigned & 0xff) % 2 == 0;
         self.calc_pf(unsigned as u8);
         self.f_of = (value1 as i32) > 0 && (unsigned as i32) < 0;
@@ -345,7 +345,7 @@ impl Flags {
         let unsigned:u32 = value1 as u32 + value2 as u32;
 
         self.f_sf = (unsigned as i16) < 0;
-        self.f_zf = unsigned == 0;
+        self.f_zf = (unsigned & 0xffff) == 0;
         self.calc_pf(unsigned as u8);
         //self.f_pf = (unsigned & 0xff) % 2 == 0;
         self.f_of = (value1 as i16) > 0 && (unsigned as i16) < 0;
@@ -362,7 +362,7 @@ impl Flags {
         let unsigned:u16 = value1 as u16 + value2 as u16;
 
         self.f_sf = (unsigned as i8) < 0;
-        self.f_zf = unsigned == 0;
+        self.f_zf = (unsigned & 0xff) == 0;
         self.calc_pf(unsigned as u8);
         //self.f_pf = unsigned % 2 == 0;
         self.f_of = (value1 as i8) > 0 && (unsigned as i8) < 0;
