@@ -129,6 +129,7 @@ impl Flags {
 
     pub fn print(&self) {
         println!("--- flags ---");
+        println!("0x{:x}", self.dump());
         println!("cf: {}", self.f_cf);
         println!("pf: {}", self.f_pf);
         println!("af: {}", self.f_af);
