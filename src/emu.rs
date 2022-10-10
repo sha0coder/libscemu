@@ -1027,7 +1027,7 @@ impl Emu {
                 Some(n) => n,
                 None => "not mapped".to_string(),
             };
-            println!("\tmem_trace: rip = {:x} write {} bits ->  0x{:x}: 0x{:x}  map:'{}'", self.regs.rip, 32, self.regs.get_esp(), value, name);
+            println!("\tmem_trace: pos = {} rip = {:x} op = write bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, 32, self.regs.get_esp(), value, name);
         }
 
 
@@ -1059,7 +1059,7 @@ impl Emu {
                 Some(n) => n,
                 None => "not mapped".to_string(),
             };
-            println!("\tmem_trace: rip = {:x} write {} bits ->  0x{:x}: 0x{:x}  map:'{}'", self.regs.rip, 64, self.regs.rsp, value, name);
+            println!("\tmem_trace: pos = {} rip = {:x} op = write bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, 64, self.regs.rsp, value, name);
         }
 
 
@@ -1109,7 +1109,7 @@ impl Emu {
                 Some(n) => n,
                 None => "not mapped".to_string(),
             };
-            println!("\tmem_trace: rip = {:x} read {} bits ->  0x{:x}: 0x{:x}  map:'{}'", self.regs.rip, 32, self.regs.get_esp(), value, name);
+            println!("\tmem_trace: pos = {} rip = {:x} op = read bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, 32, self.regs.get_esp(), value, name);
         }
 
         self.regs.set_esp(self.regs.get_esp() + 4);
@@ -1145,7 +1145,7 @@ impl Emu {
                 Some(n) => n,
                 None => "not mapped".to_string(),
             };
-            println!("\tmem_trace: rip = {:x} read {} bits ->  0x{:x}: 0x{:x}  map:'{}'", self.regs.rip, 32, self.regs.rsp, value, name);
+            println!("\tmem_trace: pos = {} rip = {:x} op = read bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, 32, self.regs.rsp, value, name);
         }
 
         self.regs.rsp += 8;
@@ -1302,7 +1302,7 @@ impl Emu {
                                 Some(n) => n,
                                 None => "not mapped".to_string(),
                             };
-                            println!("\tmem_trace: rip = {:x} read -> '{}' 0x{:x}: 0x{:x}  map:'{}'", self.regs.rip, operand, addr, v, name);
+                            println!("\tmem_trace: pos = {} rip = {:x} op = read bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, operand, addr, v, name);
                         }
                         return Some(v);
                     }
@@ -1317,7 +1317,7 @@ impl Emu {
                                 Some(n) => n,
                                 None => "not mapped".to_string(),
                             };
-                            println!("\tmem_trace: rip = {:x} read -> '{}' 0x{:x}: 0x{:x}  map:'{}'", self.regs.rip, operand, addr, v, name);
+                            println!("\tmem_trace: pos = {} rip = {:x} op = read bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, operand, addr, v, name);
                         }
                         return Some(v.into());
                     },
@@ -1332,7 +1332,7 @@ impl Emu {
                                 Some(n) => n,
                                 None => "not mapped".to_string(),
                             };
-                            println!("\tmem_trace: rip = {:x} read -> '{}' 0x{:x}: 0x{:x}  map:'{}'", self.regs.rip, operand, addr, v, name);
+                            println!("\tmem_trace: pos = {} rip = {:x} op = read bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, operand, addr, v, name);
                         }
                         return Some(v.into());
                     },
@@ -1347,7 +1347,7 @@ impl Emu {
                                 Some(n) => n,
                                 None => "not mapped".to_string(),
                             };
-                            println!("\tmem_trace: rip = {:x} read -> '{}' 0x{:x}: 0x{:x}  map:'{}'", self.regs.rip, operand, addr, v, name);
+                            println!("\tmem_trace: pos = {} rip = {:x} op = read bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, operand, addr, v, name);
                         }
                         return Some(v.into());
                     },
@@ -1386,7 +1386,7 @@ impl Emu {
         }
 
         if self.cfg.trace_mem {
-            println!("\tmem_trace: rip = {:x} write -> '{}' 0x{:x}: 0x{:x}  map:'{}'", self.regs.rip, operand, addr, value, name);
+            println!("\tmem_trace: pos = {} rip = {:x} op = write bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, operand, addr, value, name);
         }
 
         let bits = self.get_size(operand);
@@ -3031,7 +3031,7 @@ impl Emu {
                             Some(n) => n,
                             None => "not mapped".to_string(),
                         };
-                        println!("\tmem_trace: rip = {:x} read {} bits ->  0x{:x}: 0x{:x}  map:'{}'", self.regs.rip, sz, mem_addr, value, name);
+                        println!("\tmem_trace: pos = {} rip = {:x} op = read bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, sz, mem_addr, value, name);
                     }
 
                     if mem_addr == self.bp.get_mem_read() {
@@ -3116,7 +3116,7 @@ impl Emu {
                             Some(n) => n,
                             None => "not mapped".to_string(),
                         };
-                        println!("\tmem_trace: rip = {:x} write {} bits ->  0x{:x}: 0x{:x}  map:'{}'", self.regs.rip, sz, mem_addr, value, name);
+                        println!("\tmem_trace: pos = {} rip = {:x} op = write bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, sz, mem_addr, value, name);
                     }
 
                     let name = match self.maps.get_addr_name(mem_addr) {
@@ -3313,12 +3313,12 @@ impl Emu {
 
     pub fn diff_pre_op_post_op_registers_64bits(&mut self) {
         self.post_op_regs = self.regs.clone();
-        Regs64::diff(self.pre_op_regs.rip, self.pre_op_regs, self.post_op_regs);
+        Regs64::diff(self.pre_op_regs.rip, self.pos - 1, self.pre_op_regs, self.post_op_regs);
     }
 
     pub fn diff_pre_op_post_op_flags(&mut self) {
         self.post_op_flags = self.flags.clone();
-        Flags::diff(self.pre_op_regs.rip, self.pre_op_flags, self.post_op_flags);
+        Flags::diff(self.pre_op_regs.rip, self.pos - 1, self.pre_op_flags, self.post_op_flags);
     }
 
     pub fn step(&mut self) {
