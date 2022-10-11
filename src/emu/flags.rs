@@ -508,7 +508,7 @@ impl Flags {
         self.calc_pf((value - 1) as u8);
         //self.f_pf = (((value as i64) -1) & 0xff) % 2 == 0;
         self.f_af = false;
-        self.f_sf = false;
+        self.f_sf = ((value-1) as i64) < 0;
         self.f_zf = value == 1;
 
         value - 1
@@ -525,8 +525,7 @@ impl Flags {
         self.calc_pf((value - 1) as u8);
         //self.f_pf = (((value as i32) -1) & 0xff) % 2 == 0;
         self.f_af = false;
-        self.f_sf = false;
-
+        self.f_sf = ((value-1) as u32 as i32) < 0;
         self.f_zf = value == 1;
 
         value - 1
@@ -543,8 +542,7 @@ impl Flags {
         self.calc_pf((value - 1) as u8);
         //self.f_pf = (((value as i32) -1) & 0xff) % 2 == 0;
         self.f_af = false;
-        self.f_sf = false;
-
+        self.f_sf = ((value-1) as u16 as i16) < 0;
         self.f_zf = value == 1;
 
         value - 1
@@ -561,7 +559,7 @@ impl Flags {
         self.calc_pf((value - 1) as u8);
         //self.f_pf = (((value as i32) -1) & 0xff) % 2 == 0;
         self.f_af = false;
-        self.f_sf = false;
+        self.f_sf = ((value-1) as u8 as i8) < 0;
         self.f_zf = value == 1;
 
         value - 1
