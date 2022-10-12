@@ -319,10 +319,12 @@ impl Flags {
         self.f_zf = (unsigned & 0xffffffff_ffffffff) == 0;
         //self.f_pf = (unsigned & 0xff) % 2 == 0;
         self.calc_pf(unsigned as u8);
-        self.f_of = (value1 as i64) > 0 && (unsigned as i64) < 0;
-        self.f_cf = unsigned > 0xffffffffffffffff;
+        let (result, carry) = (value2).overflowing_add(value1);
+        let (_, overflow) = (value2 as i64).overflowing_add(value1 as i64);
+        self.f_of = overflow;
+        self.f_cf = carry;
 
-        (unsigned & 0xffffffffffffffff) as u64
+        result
     }
 
     pub fn add32(&mut self, value1:u64, value2:u64) -> u64 {
@@ -332,10 +334,12 @@ impl Flags {
         self.f_zf = (unsigned & 0xffffffff) == 0;
         //self.f_pf = (unsigned & 0xff) % 2 == 0;
         self.calc_pf(unsigned as u8);
-        self.f_of = (value1 as i32) > 0 && (unsigned as i32) < 0;
-        self.f_cf = unsigned > 0xffffffff;
+        let (result, carry) = (value2 as u32).overflowing_add(value1 as u32);
+        let (_, overflow) = (value2 as u32 as i32).overflowing_add(value1 as u32 as i32);
+        self.f_of = overflow;
+        self.f_cf = carry;
 
-        unsigned & 0xffffffff 
+        result as u64
     }
 
     pub fn add16(&mut self, value1:u64, value2:u64) -> u64 {
@@ -348,11 +352,12 @@ impl Flags {
         self.f_sf = (unsigned as i16) < 0;
         self.f_zf = (unsigned & 0xffff) == 0;
         self.calc_pf(unsigned as u8);
-        //self.f_pf = (unsigned & 0xff) % 2 == 0;
-        self.f_of = (value1 as i16) > 0 && (unsigned as i16) < 0;
-        self.f_cf = unsigned > 0xffff;
+        let (result, carry) = (value2 as u16).overflowing_add(value1 as u16);
+        let (_, overflow) = (value2 as u16 as i16).overflowing_add(value1 as u16 as i16);
+        self.f_of = overflow;
+        self.f_cf = carry;
 
-        (unsigned & 0xffff) as u64
+        result as u64
     }
 
     pub fn add8(&mut self, value1:u64, value2:u64) -> u64 {
@@ -365,11 +370,12 @@ impl Flags {
         self.f_sf = (unsigned as i8) < 0;
         self.f_zf = (unsigned & 0xff) == 0;
         self.calc_pf(unsigned as u8);
-        //self.f_pf = unsigned % 2 == 0;
-        self.f_of = (value1 as i8) > 0 && (unsigned as i8) < 0;
-        self.f_cf = unsigned > 0xff;
+        let (result, carry) = (value2 as u8).overflowing_add(value1 as u8);
+        let (_, overflow) = (value2 as u8 as i8).overflowing_add(value1 as u8 as i8);
+        self.f_of = overflow;
+        self.f_cf = carry;
 
-        (unsigned & 0xff) as u64
+        result as u64
     }
 
     pub fn sub64(&mut self, value1:u64, value2:u64) -> u64 {
