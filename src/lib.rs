@@ -28,21 +28,22 @@ pub fn emu32() -> Emu {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    //use super::*;
 
     #[test]
     fn test() {
 
+        /*
         let mut emu = emu64();
         emu.set_maps_folder("../scemu/maps64/");
         emu.cfg.test_mode = false;
         emu.init();
-        emu.load_code("../scemu/shellcodes64/DTS9_PatcherV.exe");
+        emu.load_code("../scemu/shellcodes64/");
         emu.cfg.nocolors = true;
         emu.set_verbose(0);
         emu.cfg.trace_regs = false;
         emu.spawn_console_at(2586);
-        emu.run(0);
+        emu.run(0);*/
 
         assert!(1 == 1); 
 

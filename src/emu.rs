@@ -4020,8 +4020,6 @@ impl Emu {
                     return;
                 }
 
-                self.flags.calc_flags(res, sz);
-
             }
 
             Mnemonic::Sub => {
