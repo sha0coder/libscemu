@@ -82,7 +82,7 @@ impl Flags {
     }
 
     pub fn diff(rip: u64, pos: u64, a: Flags, b: Flags) {
-        let mut output = format!("\tdiff_flags: pos = {} rip = {:x} ", rip, pos);
+        let mut output = format!("\tdiff_flags: pos = {} rip = {:x} in = {:x} out = {:x} ", pos, rip, a.dump(), b.dump());
         if a.f_cf != b.f_cf { output = format!("{}{} {:x} -> {:x}; ", output, "f_cf", a.f_cf as u8, b.f_cf as u8); }
         if a.f_pf != b.f_pf { output = format!("{}{} {:x} -> {:x}; ", output, "f_pf", a.f_pf as u8, b.f_pf as u8); }
         if a.f_af != b.f_af { output = format!("{}{} {:x} -> {:x}; ", output, "f_af", a.f_af as u8, b.f_af as u8); }
