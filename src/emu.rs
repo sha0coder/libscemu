@@ -4007,7 +4007,8 @@ impl Emu {
                 };
 
                 let res:u64;
-                match self.get_operand_sz(&ins, 1) {
+                let sz = self.get_operand_sz(&ins, 1);
+                match sz {
                     64 => res = self.flags.sub64(value0, value1 + cf),
                     32 => res = self.flags.sub32(value0, value1 + cf),
                     16 => res = self.flags.sub16(value0, value1 + cf),
@@ -4018,6 +4019,8 @@ impl Emu {
                 if !self.set_operand_value(&ins, 0, res) {
                     return;
                 }
+
+                self.flags.calc_flags(res, sz);
 
             }
 
