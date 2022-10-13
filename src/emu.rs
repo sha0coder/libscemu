@@ -5013,8 +5013,10 @@ impl Emu {
                 if sz > 8 {
                     bit = bit % sz as u64;
                 }
-
-                self.flags.f_cf = get_bit!(value, bit) == 1;
+                
+                if bit < 64 {
+                    self.flags.f_cf = get_bit!(value, bit) == 1;
+                }
             }
 
             Mnemonic::Btc => {
