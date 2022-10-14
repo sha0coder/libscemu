@@ -35,6 +35,12 @@ macro_rules! set_bit {
     };
 }
 
+macro_rules! xor2 {
+    ($val:expr) => {
+        ($val ^ (($val)>>1)) & 0x1
+    };
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct Flags {
     pub f_cf: bool,
@@ -1408,6 +1414,40 @@ impl Flags {
         let res = (uresult & 0xff) as u64;
 
         self.calc_flags(res, 8);
+        res
+    }
+
+    pub fn rcr(&mut self, value0:u64, value1:u64, sz:u8) -> u64 {
+        let mut res:u64 = value0;
+        let cnt = value1 % ((sz+1) as u64);
+        let mut ocf = 0;
+        let cf;
+
+        if cnt != 0 {
+            if cnt == 1 {
+                cf = (value0 & 1) == 1;
+                if self.f_cf {
+                    ocf = 1;
+                } else {
+                    ocf = 0;
+                }
+            } else {
+                cf = ((value0 >> (cnt - 1)) & 0x1) == 1;
+            }
+
+            let mask:u64 = (1 << ((sz as u64) - cnt)) - 1;
+            if cnt != 1 {
+                 res |= value0 << ((sz+1) as u64 - cnt);
+            }
+            if self.f_cf {
+                res |= 1 << (sz as u64 - cnt);
+            }
+            self.f_cf = cf;
+            if cnt == 1 {
+                self.f_of = xor2!(ocf + ((value0 >> (sz-2)) & 0x2)) == 1;
+            }
+        }
+        
         res
     }
 

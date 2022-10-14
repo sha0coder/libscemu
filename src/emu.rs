@@ -1605,7 +1605,7 @@ impl Emu {
         ret
     }
 
-    fn rcr(&self, val:u64, rot2:u64, bits:u8) -> u64 {
+    fn rcr(&mut self, val:u64, rot2:u64, bits:u8) -> u64 {
         let mut ret:u128 = val as u128;
         let rot;
         if bits == 64 {
@@ -1631,6 +1631,13 @@ impl Emu {
 
             set_bit!(ret2, bits, first_bit);
             ret = ret2;
+        }
+
+        let cnt = rot2 % (bits+1) as u64;
+        if cnt == 1 {
+            self.flags.f_cf = (val & 0x1) == 1;
+        } else {
+            self.flags.f_cf = ((val >> (cnt - 1)) & 0x1) == 1;
         }
 
         let a:u128 = 2;
@@ -5040,8 +5047,6 @@ impl Emu {
                 let cf = get_bit!(value0, bitpos);
                 self.flags.f_cf = cf == 1;
 
-                println!("BTC bitpos {} bit {}", bitpos, cf);
-
                 let mut result = value0;
                 set_bit!(result, bitpos, cf ^ 1);
 
@@ -8353,7 +8358,6 @@ impl Emu {
                     }
                 } else {
                     let (result, new_flags) = inline::shld(value0, value1, counter, sz, self.flags.dump());
-                    println!("0x{:x} SHLD value0 = 0x{:x}, value1 = 0x{:x}, counter = 0x{:x} sz = 0x{:x} result = {:x}", ins.ip32(), value0, value1, counter, sz, result);
                     self.flags.load(new_flags);
                     if !self.set_operand_value(&ins, 0, result) {
                         return;
