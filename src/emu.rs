@@ -4636,7 +4636,7 @@ impl Emu {
                         None => return,
                     };
 
-                    result = self.rcr(value0, 1, sz);
+                    result = self.flags.rcr(value0, 1, sz);
                     self.flags.calc_flags(result, sz);
 
                 } else { // 2 params
@@ -4650,7 +4650,7 @@ impl Emu {
                         None => return,
                     };
 
-                    result = self.rcr(value0, value1, sz);
+                    result = self.flags.rcr(value0, value1, sz);
 
                     let masked_counter;
                     if sz == 64 {
