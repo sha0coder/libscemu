@@ -5150,7 +5150,6 @@ impl Emu {
                     return;
                 }
 
-                println!("\tbsf: value0 = {:x} value1 = {:x} sz = {} result = {:x} new_flags = {:x}", value0, value1, sz, result, new_flags);
 
                 /*
                 if src == 0 {

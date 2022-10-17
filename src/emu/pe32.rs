@@ -709,7 +709,10 @@ impl PE32 {
             panic!("cannot found end of string");
         }
 
-        let s = str::from_utf8(raw.get(off..last).unwrap()).expect("utf8 error");
+        let s = match str::from_utf8(raw.get(off..last).unwrap()) {
+            Ok(s) => s,
+            Err(_) => "noname"
+        };
         s.to_string()
     }
 
@@ -753,7 +756,6 @@ impl PE32 {
                         panic!("the name of pe32 iid is out of buffer");
                     }
                     
-
                     let libname = PE32::read_string(&raw, off);
                     iid.name = libname.to_string();
 
