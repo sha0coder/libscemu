@@ -5137,8 +5137,20 @@ impl Emu {
 
                 let sz = self.get_operand_sz(&ins, 0); 
 
-                let (result, new_flags) = inline::bsf(value0, value1, sz, self.flags.dump());
-                self.flags.load(new_flags);
+                let mut result:u64 = value0;
+                let new_flags:u32;
+
+                if value1 == 0 {
+                    self.flags.f_zf = true;
+        
+                    if self.cfg.verbose >= 1 {
+                        println!("/!\\ undefined behavior on BSF with src == 0");
+                    }
+
+                } else {
+                    (result, new_flags) = inline::bsf(value0, value1, sz, self.flags.dump());
+                    self.flags.load(new_flags);
+                }
 
                 // cf flag undefined behavior apple mac x86_64 problem
                 if self.regs.rip == 0x144ed424a {
