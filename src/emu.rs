@@ -5154,7 +5154,9 @@ impl Emu {
 
                 // cf flag undefined behavior apple mac x86_64 problem
                 if self.regs.rip == 0x144ed424a {
-                    println!("warning: f_cf undefined disaster");
+                    if self.cfg.verbose >= 1 {
+                        println!("/!\\ f_cf undefined behaviour");
+                    }
                     self.flags.f_cf = false;
                 }
 
@@ -8371,7 +8373,9 @@ impl Emu {
                 let sz = self.get_operand_sz(&ins, 0);
 
                 if value0 == 0xde2f && value1 == 0x4239 && counter == 0x3c && sz == 16 {
-                    println!("/!\\ shld undefined behaviour");
+                    if self.cfg.verbose >= 1 {
+                        println!("/!\\ shld undefined behaviour");
+                    }
                     let result = 0x9de2;
                     // TODO: flags?
                     if !self.set_operand_value(&ins, 0, result) {
