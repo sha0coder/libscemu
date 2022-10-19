@@ -31,6 +31,7 @@ pub fn gateway(addr:u32, emu:&mut emu::Emu) {
         0x775b5f18 => NtProtectVirtualMemory(emu),
         0x775b77a0 => RtlEnterCriticalSection(emu),
         0x775b7760 => RtlLeaveCriticalSection(emu),
+        0x775d65e3 => RtlGetVersion(emu),
         _ => panic!("calling unimplemented ntdll API 0x{:x} {}", addr, kernel32::guess_api_name(emu, addr)),
     }
 }
@@ -650,4 +651,28 @@ fn RtlLeaveCriticalSection(emu:&mut emu::Emu) {
     emu.stack_pop32(false);
     emu.regs.rax = 1;
 }
+
+fn RtlGetVersion(emu:&mut emu::Emu) {
+    let versioninfo_ptr = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("ntdll!RtlLeaveCriticalSection eror reading versioninfo_ptr param") as u64;
+
+    println!("{}** {} ntdll!RtlGetVersion {}",      
+             emu.colors.light_red, emu.pos, emu.colors.nc);
+
+    /*
+     TODO:
+     typedef struct _OSVERSIONINFOW {
+          ULONG dwOSVersionInfoSize;
+          ULONG dwMajorVersion;
+          ULONG dwMinorVersion;
+          ULONG dwBuildNumber;
+          ULONG dwPlatformId;
+          WCHAR szCSDVersion[128];
+        } OSVERSIONINFOW, *POSVERSIONINFOW, *LPOSVERSIONINFOW, RTL_OSVERSIONINFOW, *PRTL_OSVERSIONINFOW;
+    */
+
+    emu.stack_pop32(false);
+    emu.regs.rax = 1;
+}
+
 
