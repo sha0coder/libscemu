@@ -131,6 +131,15 @@ pub struct Regs64 {
     pub xmm13: u128, 
     pub xmm14: u128, 
     pub xmm15: u128, 
+
+    pub mm0: u128,
+    pub mm1: u128,
+    pub mm2: u128,
+    pub mm3: u128,
+    pub mm4: u128,
+    pub mm5: u128,
+    pub mm6: u128,
+    pub mm7: u128,
 }
 
 impl Regs64 {
@@ -203,6 +212,15 @@ impl Regs64 {
             xmm13: 0,
             xmm14: 0,
             xmm15: 0,
+
+            mm0: 0,
+            mm1: 0,
+            mm2: 0,
+            mm3: 0,
+            mm4: 0,
+            mm5: 0,
+            mm6: 0,
+            mm7: 0,
         }
     }
 
@@ -269,6 +287,14 @@ impl Regs64 {
         if a.xmm13 != b.xmm13 { output = format!("{}{} {:x} -> {:x}; ", output, "xmm13", a.xmm13, b.xmm13); }
         if a.xmm14 != b.xmm14 { output = format!("{}{} {:x} -> {:x}; ", output, "xmm14", a.xmm14, b.xmm14); }
         if a.xmm15 != b.xmm15 { output = format!("{}{} {:x} -> {:x}; ", output, "xmm15", a.xmm15, b.xmm15); }
+        if a.mm0 != b.mm0 { output = format!("{}{} {:x} -> {:x}; ", output, "xmm0", a.mm0, b.mm0); }
+        if a.mm1 != b.mm1 { output = format!("{}{} {:x} -> {:x}; ", output, "xmm1", a.mm1, b.mm1); }
+        if a.mm2 != b.mm2 { output = format!("{}{} {:x} -> {:x}; ", output, "xmm2", a.mm2, b.mm2); }
+        if a.mm3 != b.mm3 { output = format!("{}{} {:x} -> {:x}; ", output, "xmm3", a.mm3, b.mm3); }
+        if a.mm4 != b.mm4 { output = format!("{}{} {:x} -> {:x}; ", output, "xmm4", a.mm4, b.mm4); }
+        if a.mm5 != b.mm5 { output = format!("{}{} {:x} -> {:x}; ", output, "xmm5", a.mm5, b.mm5); }
+        if a.mm6 != b.mm6 { output = format!("{}{} {:x} -> {:x}; ", output, "xmm6", a.mm6, b.mm6); }
+        if a.mm7 != b.mm7 { output = format!("{}{} {:x} -> {:x}; ", output, "xmm7", a.mm7, b.mm7); }
         println!("{}", output);
     }
 
@@ -944,6 +970,22 @@ impl Regs64 {
             Register::XMM5 => true,
             Register::XMM6 => true,
             Register::XMM7 => true,
+            Register::XMM8 => true,
+            Register::XMM9 => true,
+            Register::XMM10 => true,
+            Register::XMM11 => true,
+            Register::XMM12 => true,
+            Register::XMM13 => true,
+            Register::XMM14 => true,
+            Register::XMM15 => true,
+            Register::MM0 => true,
+            Register::MM1 => true,
+            Register::MM2 => true,
+            Register::MM3 => true,
+            Register::MM4 => true,
+            Register::MM5 => true,
+            Register::MM6 => true,
+            Register::MM7 => true,
             _ => false,
         };
         return result;
@@ -967,6 +1009,14 @@ impl Regs64 {
             Register::XMM13 => self.xmm13,
             Register::XMM14 => self.xmm14,
             Register::XMM15 => self.xmm15,
+            Register::MM0 => self.mm0,
+            Register::MM1 => self.mm1,
+            Register::MM2 => self.mm2,
+            Register::MM3 => self.mm3,
+            Register::MM4 => self.mm4,
+            Register::MM5 => self.mm5,
+            Register::MM6 => self.mm6,
+            Register::MM7 => self.mm7,
 
             _ => unimplemented!("SSE  XMM register: {:?} ", reg),
         };
@@ -991,6 +1041,14 @@ impl Regs64 {
             Register::XMM13 => self.xmm13 = value,
             Register::XMM14 => self.xmm14 = value,
             Register::XMM15 => self.xmm15 = value,
+            Register::MM0 => self.mm0 = value,
+            Register::MM1 => self.mm1 = value,
+            Register::MM2 => self.mm2 = value,
+            Register::MM3 => self.mm3 = value,
+            Register::MM4 => self.mm4 = value,
+            Register::MM5 => self.mm5 = value,
+            Register::MM6 => self.mm6 = value,
+            Register::MM7 => self.mm7 = value,
 
             _ => unimplemented!("SSE  XMM register: {:?} ", reg),
         };
@@ -1244,6 +1302,31 @@ impl Regs64 {
             Register::DIL => 8,
             Register::BPL => 8,
             Register::SPL => 8,
+            // sse
+            Register::XMM0 => 128,
+            Register::XMM1 => 128,
+            Register::XMM2 => 128,
+            Register::XMM3 => 128,
+            Register::XMM4 => 128,
+            Register::XMM5 => 128,
+            Register::XMM6 => 128,
+            Register::XMM7 => 128,
+            Register::XMM8 => 128,
+            Register::XMM9 => 128,
+            Register::XMM10 => 128,
+            Register::XMM11 => 128,
+            Register::XMM12 => 128,
+            Register::XMM13 => 128,
+            Register::XMM14 => 128,
+            Register::XMM15 => 128,
+            Register::MM0 => 128,
+            Register::MM1 => 128,
+            Register::MM2 => 128,
+            Register::MM3 => 128,
+            Register::MM4 => 128,
+            Register::MM5 => 128,
+            Register::MM6 => 128,
+            Register::MM7 => 128,
             _ => unimplemented!("unimplemented register {:?}", reg),
         };
 
