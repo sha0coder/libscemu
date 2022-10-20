@@ -8035,11 +8035,6 @@ impl Emu {
 
             ///// FPU /////  https://github.com/radare/radare/blob/master/doc/xtra/fpu
 
-            Mnemonic::Fwait => {
-                self.show_instruction(&self.colors.green, &ins);
-                self.fpu.check_pending_exceptions();
-            }
-
             Mnemonic::Ffree => {
                 self.show_instruction(&self.colors.green, &ins);
 
