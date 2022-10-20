@@ -101,9 +101,18 @@ impl FPU {
     }
     
     pub fn pop(&mut self) -> f32 {
-        return self.stack.pop();
+        return self.stack.pop().unwrap_or(0.0);
     }
 
+    pub fn fyl2x(&mut self) {
+        self.st[1] = self.st[1] * self.st[0].log2();
+        self.pop();
+    }
+
+    pub fn fyl2xp1(&mut self) {
+        self.st[1] = self.st[1] * (self.st[0].log2() + 1.0);
+        self.pop();
+    }
 }
 
 

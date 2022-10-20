@@ -8339,9 +8339,13 @@ impl Emu {
             Mnemonic::Fyl2x => {
                 self.show_instruction(&self.colors.green, &ins);
 
-                let r = self.fpu.get_st(1) * self.fpu.get_st(0).log2();
-                self.fpu.set_st(1, r);
-                self.fpu.pop();
+                self.fpu.fyl2x();
+            }
+
+            Mnemonic::Fyl2xp1 => {
+                self.show_instruction(&self.colors.green, &ins);
+
+                self.fpu.fyl2xp1();
             }
 
             // end fpu
