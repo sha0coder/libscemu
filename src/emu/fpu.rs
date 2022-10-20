@@ -88,6 +88,10 @@ impl FPU {
         self.st[0] = self.st[i];
     }
 
+    pub fn add_to_st0(&mut self, i:usize) {
+        self.st[0] = self.st[0] + self.st[i];
+    }
+
     pub fn push(&mut self, value:f32) {
         self.stack.push(value);
     }

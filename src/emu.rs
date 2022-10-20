@@ -8289,6 +8289,31 @@ impl Emu {
                 self.fpu.set_ip(self.regs.rip);
             }
 
+            Mnemonic::Fadd => {
+                self.show_instruction(&self.colors.green, &ins);
+
+                //TODO: cneck if operand is memory, or if two operands 
+                
+                if ins.op_count() == 1 {
+                    match ins.op_register(0) {
+                        Register::ST0 => self.fpu.add_to_st0(0),
+                        Register::ST1 => self.fpu.add_to_st0(1),
+                        Register::ST2 => self.fpu.add_to_st0(2),
+                        Register::ST3 => self.fpu.add_to_st0(3),
+                        Register::ST4 => self.fpu.add_to_st0(4),
+                        Register::ST5 => self.fpu.add_to_st0(5),
+                        Register::ST6 => self.fpu.add_to_st0(6),
+                        Register::ST7 => self.fpu.add_to_st0(7),
+                        _  => unimplemented!("impossible case"),
+                    }
+                } else {
+                    unimplemented!("Fadd with more operands not implemented");
+                }
+
+            }
+
+            // end fpu
+
             Mnemonic::Popf => {
                 self.show_instruction(&self.colors.blue, &ins);
 
