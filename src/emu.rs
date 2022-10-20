@@ -9109,14 +9109,16 @@ impl Emu {
             }
 
             _ =>  {
-                if self.cfg.is_64bits {
-                    println!("{}{} 0x{:x}: {}{}", self.colors.red, self.pos, ins.ip(), self.out, self.colors.nc);
-                } else {
-                    println!("{}{} 0x{:x}: {}{}", self.colors.red, self.pos, ins.ip32(), self.out, self.colors.nc);
+                if self.cfg.verbose >= 2 || !self.cfg.skip_unimplemented {
+                    if self.cfg.is_64bits {
+                        println!("{}{} 0x{:x}: {}{}", self.colors.red, self.pos, ins.ip(), self.out, self.colors.nc);
+                    } else {
+                        println!("{}{} 0x{:x}: {}{}", self.colors.red, self.pos, ins.ip32(), self.out, self.colors.nc);
+                    }
                 }
        
                 if !self.cfg.skip_unimplemented {
-                    println!("unimplemented or invalid instruction. use --banzai mode to skip");
+                    println!("unimplemented or invalid instruction. use --banzai (cfg.skip_unimplemented) mode to skip");
                     self.spawn_console();
                     //unimplemented!("unimplemented instruction");
                 }
