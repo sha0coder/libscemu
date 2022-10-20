@@ -8497,8 +8497,7 @@ impl Emu {
             // scalar simple: only 32b less significative part.
             // scalar double: only 54b less significative part.
             // packed: compute all parts.
-            // packed double:
-            //
+            // packed double
 
 
             Mnemonic::Pxor => {
@@ -8856,6 +8855,116 @@ impl Emu {
                 result |= (((value1 & 0xffffffff0000000000000000) >> 64) as u32 as i32 as i16 as u16 as u128) << 96;
                 result |= (((value1 & 0xffffffff000000000000000000000000) >> 96) as u32 as i32 as i16 as u16 as u128) << 112;
 
+                self.set_operand_xmm_value_128(&ins, 0, result);
+            }
+
+            Mnemonic::Psllw => {
+                self.show_instruction(&self.colors.green, &ins);
+                
+                let value0 = self.get_operand_xmm_value_128(&ins, 0, true).expect("error getting value0");
+                let value1 = self.get_operand_xmm_value_128(&ins, 1, true).expect("error getting velue1");
+                let mut result:u128;
+
+                if value1 > 15 {
+                    result = value0 & 0xffffffffffffffff_0000000000000000;
+                } else {
+                    result = (((value0 & 0xffff) as u16) << value1) as u128;
+                    result |= (((((value0 & 0xffff0000) >> 16) as u16) << value1) as u128) << 16;
+                    result |= (((((value0 & 0xffff00000000) >> 32) as u16) << value1) as u128) << 32;
+                    result |= (((((value0 & 0xffff000000000000) >> 48) as u16) << value1) as u128) << 48;
+                }
+                
+                self.set_operand_xmm_value_128(&ins, 0, result);
+            }
+
+            Mnemonic::Pslld => {
+                self.show_instruction(&self.colors.green, &ins);
+                
+                let value0 = self.get_operand_xmm_value_128(&ins, 0, true).expect("error getting value0");
+                let value1 = self.get_operand_xmm_value_128(&ins, 1, true).expect("error getting velue1");
+                let mut result:u128;
+
+                if value1 > 31 {
+                    result = value0 & 0xffffffffffffffff_0000000000000000;
+                } else {
+                    result = (((value0 & 0xffffffff) as u16) << value1) as u128;
+                    result |= (((((value0 & 0xffffffff00000000) >> 32) as u16) << value1) as u128) << 32;
+                }
+                
+                self.set_operand_xmm_value_128(&ins, 0, result);
+            }
+
+            Mnemonic::Paddusb | Mnemonic::Paddb => {
+                self.show_instruction(&self.colors.green, &ins);
+                
+                let value0 = self.get_operand_xmm_value_128(&ins, 0, true).expect("error getting value0");
+                let value1 = self.get_operand_xmm_value_128(&ins, 1, true).expect("error getting velue1");
+                let sz = self.get_operand_sz(&ins, 0);
+                let mut result:u128;
+    
+                if sz == 64 {
+                    result = ((value0 & 0xff) as u8 + (value1 & 0xff) as u8) as u128;
+                    result |= ((((value0 & 0xff00) >> 8) as u8 + ((value1 & 0xff00) >> 8) as u8) as u128) << 8;
+                    result |= ((((value0 & 0xff0000) >> 16) as u8 + ((value1 & 0xff0000) >> 16) as u8) as u128) << 16;
+                    result |= ((((value0 & 0xff000000) >> 24) as u8 + ((value1 & 0xff000000) >> 24) as u8) as u128) << 24;
+                    result |= ((((value0 & 0xff00000000) >> 32) as u8 + ((value1 & 0xff00000000) >> 32) as u8) as u128) << 32;
+                    result |= ((((value0 & 0xff0000000000) >> 40) as u8 + ((value1 & 0xff0000000000) >> 40) as u8) as u128) << 40;
+                    result |= ((((value0 & 0xff000000000000) >> 48) as u8 + ((value1 & 0xff000000000000) >> 48) as u8) as u128) << 48;
+                    result |= ((((value0 & 0xff00000000000000) >> 56) as u8 + ((value1 & 0xff00000000000000) >> 56) as u8) as u128) << 56;
+                } else if sz == 128 {
+                    result = ((value0 & 0xff) as u8 + (value1 & 0xff) as u8) as u128;
+                    result |= ((((value0 & 0xff00) >> 8) as u8 + ((value1 & 0xff00) >> 8) as u8) as u128) << 8;
+                    result |= ((((value0 & 0xff0000) >> 16) as u8 + ((value1 & 0xff0000) >> 16) as u8) as u128) << 16;
+                    result |= ((((value0 & 0xff000000) >> 24) as u8 + ((value1 & 0xff000000) >> 24) as u8) as u128) << 24;
+                    result |= ((((value0 & 0xff00000000) >> 32) as u8 + ((value1 & 0xff00000000) >> 32) as u8) as u128) << 32;
+                    result |= ((((value0 & 0xff0000000000) >> 40) as u8 + ((value1 & 0xff0000000000) >> 40) as u8) as u128) << 40;
+                    result |= ((((value0 & 0xff000000000000) >> 48) as u8 + ((value1 & 0xff000000000000) >> 48) as u8) as u128) << 48;
+                    result |= ((((value0 & 0xff00000000000000) >> 56) as u8 + ((value1 & 0xff00000000000000) >> 56) as u8) as u128) << 56;
+
+                    result |= ((((value0 & 0xff_0000000000000000) >> 64) as u8 + ((value1 & 0xff_0000000000000000) >> 64) as u8) as u128) << 64;
+                    result |= ((((value0 & 0xff00_0000000000000000) >> 72) as u8 + ((value1 & 0xff00_0000000000000000) >> 72) as u8) as u128) << 72;
+                    result |= ((((value0 & 0xff0000_0000000000000000) >> 80) as u8 + ((value1 & 0xff0000_0000000000000000) >> 80) as u8) as u128) << 80;
+                    result |= ((((value0 & 0xff000000_0000000000000000) >> 88) as u8 + ((value1 & 0xff000000_0000000000000000) >> 88) as u8) as u128) << 88;
+                    result |= ((((value0 & 0xff00000000_0000000000000000) >> 96) as u8 + ((value1 & 0xff00000000_0000000000000000) >> 96) as u8) as u128) << 96;
+                    result |= ((((value0 & 0xff0000000000_0000000000000000) >> 104) as u8 + ((value1 & 0xff0000000000_0000000000000000) >> 104) as u8) as u128) << 104;
+                    result |= ((((value0 & 0xff000000000000_0000000000000000) >> 112) as u8 + ((value1 & 0xff000000000000_0000000000000000) >> 112) as u8) as u128) << 112;
+                    result |= ((((value0 & 0xff00000000000000_0000000000000000) >> 120) as u8 + ((value1 & 0xff00000000000000_0000000000000000) >> 120) as u8) as u128) << 120;
+                } else {
+                    unimplemented!("bad operand size");
+                }
+                
+                self.set_operand_xmm_value_128(&ins, 0, result);
+            }
+
+            Mnemonic::Paddusw | Mnemonic::Paddw => {
+                self.show_instruction(&self.colors.green, &ins);
+                
+                let value0 = self.get_operand_xmm_value_128(&ins, 0, true).expect("error getting value0");
+                let value1 = self.get_operand_xmm_value_128(&ins, 1, true).expect("error getting velue1");
+                let sz = self.get_operand_sz(&ins, 0);
+                let mut result:u128;
+    
+                if sz == 64 {
+                    result = ((value0 & 0xffff) as u16 + (value1 & 0xffff) as u16) as u128;
+                    result |= ((((value0 & 0xffff0000) >> 16) as u16 + ((value1 & 0xffff0000) >> 16) as u16) as u128) << 16;
+                    result |= ((((value0 & 0xffff00000000) >> 32) as u16 + ((value1 & 0xffff00000000) >> 32) as u16) as u128) << 32;
+                    result |= ((((value0 & 0xffff000000000000) >> 48) as u16 + ((value1 & 0xffff000000000000) >> 48) as u16) as u128) << 48;
+
+                } else if sz == 128 {
+                    result = ((value0 & 0xffff) as u16 + (value1 & 0xffff) as u16) as u128;
+                    result |= ((((value0 & 0xffff0000) >> 16) as u16 + ((value1 & 0xffff0000) >> 16) as u16) as u128) << 16;
+                    result |= ((((value0 & 0xffff00000000) >> 32) as u16 + ((value1 & 0xffff00000000) >> 32) as u16) as u128) << 32;
+                    result |= ((((value0 & 0xffff000000000000) >> 48) as u16 + ((value1 & 0xffff000000000000) >> 48) as u16) as u128) << 48;
+
+                    result |= ((((value0 & 0xffff_0000000000000000) >> 64) as u16 + ((value1 & 0xffff_0000000000000000) >> 64) as u16) as u128) << 64;
+                    result |= ((((value0 & 0xffff0000_0000000000000000) >> 80) as u16 + ((value1 & 0xffff0000_0000000000000000) >> 80) as u16) as u128) << 80;
+                    result |= ((((value0 & 0xffff00000000_0000000000000000) >> 96) as u16 + ((value1 & 0xffff00000000_0000000000000000) >> 96) as u16) as u128) << 96;
+                    result |= ((((value0 & 0xffff0000000000_0000000000000000) >> 112) as u16 + ((value1 & 0xffff0000000000_0000000000000000) >> 112) as u16) as u128) << 112;
+
+                } else {
+                    unimplemented!("bad operand size");
+                }
+                
                 self.set_operand_xmm_value_128(&ins, 0, result);
             }
 
