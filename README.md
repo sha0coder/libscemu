@@ -51,7 +51,7 @@ Or if you prefer call specific function.
     emu.stack_push32(param2_out_buff);
     emu.stack_push32(param1);
     emu.stack_push32(ret_addr);
-    emu.run(ret_addr);
+    emu.run(ret_addr);   // emulate until arrive to ret_addr
 
     emu.step();
 
