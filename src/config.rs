@@ -25,6 +25,7 @@ pub struct Config {
     pub stack_trace: bool,
     pub test_mode: bool,
     pub console_enabled: bool,
+    pub skip_unimplemented: bool,
 }
 
 impl Config {
@@ -53,7 +54,8 @@ impl Config {
             is_64bits: false,
             stack_trace: false,
             test_mode: false,
-            console_enabled:true,
+            console_enabled: true,
+            skip_unimplemented: false,
         }
     }
 }

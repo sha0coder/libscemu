@@ -8035,6 +8035,11 @@ impl Emu {
 
             ///// FPU /////  https://github.com/radare/radare/blob/master/doc/xtra/fpu
 
+            Mnemonic::Fwait => {
+                self.show_instruction(&self.colors.green, &ins);
+                self.fpu.check_pending_exceptions();
+            }
+
             Mnemonic::Ffree => {
                 self.show_instruction(&self.colors.green, &ins);
 
@@ -9114,10 +9119,12 @@ impl Emu {
                 } else {
                     println!("{}{} 0x{:x}: {}{}", self.colors.red, self.pos, ins.ip32(), self.out, self.colors.nc);
                 }
-
-                println!("unimplemented or invalid instruction.");
-                self.spawn_console();
-                //unimplemented!("unimplemented instruction");
+       
+                if !self.cfg.skip_unimplemented {
+                    println!("unimplemented or invalid instruction. use --banzai mode to skip");
+                    self.spawn_console();
+                    //unimplemented!("unimplemented instruction");
+                }
             },
 
 

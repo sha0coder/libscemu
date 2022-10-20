@@ -113,6 +113,10 @@ impl FPU {
         self.st[1] = self.st[1] * (self.st[0].log2() + 1.0);
         self.pop();
     }
+
+    pub fn check_pending_exceptions(self) {
+    }
+
 }
 
 
