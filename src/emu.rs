@@ -2884,7 +2884,17 @@ impl Emu {
             OpKind::NearBranch16 => ins.near_branch16().into(),
             OpKind::FarBranch32 => ins.far_branch32().into(),
             OpKind::FarBranch16 => ins.far_branch16().into(),
-            OpKind::Immediate64 => ins.immediate64(),
+
+            OpKind::Immediate64 => ins.immediate64() as u64,
+            OpKind::Immediate8 => ins.immediate8() as u8 as u64,                                                       
+            OpKind::Immediate16 => ins.immediate16() as u16 as u64,
+            OpKind::Immediate32 => ins.immediate32() as u32 as u64,    
+            OpKind::Immediate8to64 => ins.immediate8to64() as u64,
+            OpKind::Immediate32to64 => ins.immediate32to64() as u64,
+            OpKind::Immediate8to32 => ins.immediate8to32() as u32 as u64,        
+            OpKind::Immediate8to16 => ins.immediate8to16() as u16 as u64,
+
+            /*OpKind::Immediate64 => ins.immediate64(),
             OpKind::Immediate8 => ins.immediate8().into(),
             OpKind::Immediate16 => ins.immediate16().into(),
             OpKind::Immediate32 => ins.immediate32() as u32 as u64,
@@ -2892,6 +2902,8 @@ impl Emu {
             OpKind::Immediate32to64 => ins.immediate32to64() as u64,
             OpKind::Immediate8to32 => ins.immediate8to32() as u32 as u64,
             OpKind::Immediate8to16 => ins.immediate8to16() as u16 as u64,
+            */
+
             OpKind::Register => self.regs.get_reg(ins.op_register(noperand)),
             OpKind::Memory => {
                 let mut derref = do_derref;
@@ -3164,6 +3176,16 @@ impl Emu {
 
         let value:u128 = match ins.op_kind(noperand) {
             OpKind::Register => self.regs.get_xmm_reg(ins.op_register(noperand)),
+
+            OpKind::Immediate64 => ins.immediate64() as u64 as u128,
+            OpKind::Immediate8 => ins.immediate8() as u8 as u128,                                                       
+            OpKind::Immediate16 => ins.immediate16() as u16 as u128,
+            OpKind::Immediate32 => ins.immediate32() as u32 as u128,    
+            OpKind::Immediate8to64 => ins.immediate8to64() as u128,
+            OpKind::Immediate32to64 => ins.immediate32to64() as u128,
+            OpKind::Immediate8to32 => ins.immediate8to32() as u32 as u128,        
+            OpKind::Immediate8to16 => ins.immediate8to16() as u16 as u128,
+
             OpKind::Memory => {
                 let mem_addr = match ins.virtual_address(noperand, 0, |reg,idx,_sz| {
                     Some(self.regs.get_reg(reg) as u64)
