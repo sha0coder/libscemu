@@ -8292,8 +8292,6 @@ impl Emu {
             Mnemonic::Fadd => {
                 self.show_instruction(&self.colors.green, &ins);
 
-                //TODO: cneck if operand is memory, or if two operands 
-                //
                 assert!(ins.op_count() == 2);
                
                 if ins.op_register(0) == Register::ST0 {
@@ -8336,6 +8334,14 @@ impl Emu {
                     self.fpu.add(i, j);
                 }
 
+            }
+
+            Mnemonic::Fyl2x => {
+                self.show_instruction(&self.colors.green, &ins);
+
+                let r = self.fpu.get_st(1) * self.fpu.get_st(0).log2();
+                self.fpu.set_st(1, r);
+                self.fpu.pop();
             }
 
             // end fpu

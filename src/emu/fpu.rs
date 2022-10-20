@@ -99,6 +99,10 @@ impl FPU {
     pub fn push(&mut self, value:f32) {
         self.stack.push(value);
     }
+    
+    pub fn pop(&mut self) -> f32 {
+        return self.stack.pop();
+    }
 
 }
 
