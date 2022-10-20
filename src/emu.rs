@@ -8752,6 +8752,52 @@ impl Emu {
                 self.set_operand_xmm_value_128(&ins, 0, r128);
             }
 
+            Mnemonic::Packsswb => {
+                self.show_instruction(&self.colors.green, &ins);
+                
+                let value0 = self.get_operand_xmm_value_128(&ins, 0, true).expect("error getting value0");
+                let value1 = self.get_operand_xmm_value_128(&ins, 1, true).expect("error getting velue1");
+                let mut result:u128;
+
+                result = (value0 & 0xffff) as u16 as i16 as i8 as u8 as u128;
+                result |= (((value0 & 0xffff0000) >> 16) as u16 as i16 as i8 as u8 as u128) << 8;
+                result |= (((value0 & 0xffff00000000) >> 32) as u16 as i16 as i8 as u8 as u128) << 16;
+                result |= (((value0 & 0xffff000000000000) >> 48) as u16 as i16 as i8 as u8 as u128) << 24;
+                result |= (((value0 & 0xffff0000000000000000) >> 64) as u16 as i16 as i8 as u8 as u128) << 32;
+                result |= (((value0 & 0xffff00000000000000000000) >> 80) as u16 as i16 as i8 as u8 as u128) << 40;
+                result |= (((value0 & 0xffff000000000000000000000000) >> 96) as u16 as i16 as i8 as u8 as u128) << 48;
+                result |= (((value0 & 0xffff0000000000000000000000000000) >> 112) as u16 as i16 as i8 as u8 as u128) << 56;
+                result |= ((value1 & 0xffff) as u16 as i16 as i8 as u8 as u128) << 64;
+                result |= (((value1 & 0xffff0000) >> 16) as u16 as i16 as i8 as u8 as u128) << 72;
+                result |= (((value1 & 0xffff00000000) >> 32) as u16 as i16 as i8 as u8 as u128) << 80;
+                result |= (((value1 & 0xffff000000000000) >> 48) as u16 as i16 as i8 as u8 as u128) << 88;
+                result |= (((value1 & 0xffff0000000000000000) >> 64) as u16 as i16 as i8 as u8 as u128) << 96;
+                result |= (((value1 & 0xffff00000000000000000000) >> 80) as u16 as i16 as i8 as u8 as u128) << 104;
+                result |= (((value1 & 0xffff000000000000000000000000) >> 96) as u16 as i16 as i8 as u8 as u128) << 112;
+                result |= (((value1 & 0xffff0000000000000000000000000000) >> 112) as u16 as i16 as i8 as u8 as u128) << 120;
+
+                self.set_operand_xmm_value_128(&ins, 0, result);
+            }
+
+            Mnemonic::Packssdw => {
+                self.show_instruction(&self.colors.green, &ins);
+                
+                let value0 = self.get_operand_xmm_value_128(&ins, 0, true).expect("error getting value0");
+                let value1 = self.get_operand_xmm_value_128(&ins, 1, true).expect("error getting velue1");
+                let mut result:u128;
+
+                result = (value0 & 0xffffffff) as u32 as i32 as i16 as u16 as u128;
+                result |= (((value0 & 0xffffffff00000000) >> 32) as u32 as i32 as i16 as u16 as u128) << 16;
+                result |= (((value0 & 0xffffffff0000000000000000) >> 64) as u32 as i32 as i16 as u16 as u128) << 32;
+                result |= (((value0 & 0xffffffff000000000000000000000000) >> 96) as u32 as i32 as i16 as u16 as u128) << 48;
+                result |= ((value1 & 0xffffffff) as u32 as i32 as i16 as u16 as u128) << 64;
+                result |= (((value1 & 0xffffffff00000000) >> 32) as u32 as i32 as i16 as u16 as u128) << 80;
+                result |= (((value1 & 0xffffffff0000000000000000) >> 64) as u32 as i32 as i16 as u16 as u128) << 96;
+                result |= (((value1 & 0xffffffff000000000000000000000000) >> 96) as u32 as i32 as i16 as u16 as u128) << 112;
+
+                self.set_operand_xmm_value_128(&ins, 0, result);
+            }
+
             // end SSE
 
             Mnemonic::Xgetbv => {
