@@ -8293,9 +8293,11 @@ impl Emu {
                 self.show_instruction(&self.colors.green, &ins);
 
                 //TODO: cneck if operand is memory, or if two operands 
-                
-                if ins.op_count() == 1 {
-                    match ins.op_register(0) {
+                //
+                assert!(ins.op_count() == 2);
+               
+                if ins.op_register(0) == Register::ST0 {
+                    match ins.op_register(1) {
                         Register::ST0 => self.fpu.add_to_st0(0),
                         Register::ST1 => self.fpu.add_to_st0(1),
                         Register::ST2 => self.fpu.add_to_st0(2),
@@ -8307,7 +8309,31 @@ impl Emu {
                         _  => unimplemented!("impossible case"),
                     }
                 } else {
-                    unimplemented!("Fadd with more operands not implemented");
+                    let i = match ins.op_register(0) {
+                        Register::ST0 => 0,
+                        Register::ST1 => 1,
+                        Register::ST2 => 2,
+                        Register::ST3 => 3,
+                        Register::ST4 => 4,
+                        Register::ST5 => 5,
+                        Register::ST6 => 6,
+                        Register::ST7 => 7,
+                        _  => unimplemented!("impossible case"),
+                    };
+
+                    let j = match ins.op_register(1) {
+                        Register::ST0 => 0,
+                        Register::ST1 => 1,
+                        Register::ST2 => 2,
+                        Register::ST3 => 3,
+                        Register::ST4 => 4,
+                        Register::ST5 => 5,
+                        Register::ST6 => 6,
+                        Register::ST7 => 7,
+                        _  => unimplemented!("impossible case"),
+                    };
+
+                    self.fpu.add(i, j);
                 }
 
             }
