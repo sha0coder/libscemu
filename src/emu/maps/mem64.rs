@@ -74,10 +74,18 @@ impl Mem64 {
         self.bottom_addr = base_addr;
     }
 
+    pub fn update_base(&mut self, base_addr:u64) {
+        self.base_addr = base_addr;
+    }
+
     pub fn set_bottom(&mut self, bottom_addr:u64) {
         self.bottom_addr = bottom_addr;
         let size = self.bottom_addr - self.base_addr;
         self.alloc(size as usize);
+    }
+
+    pub fn update_bottom(&mut self, bottom_addr:u64) {
+        self.bottom_addr = bottom_addr;
     }
 
     pub fn set_size(&mut self, size:u64) {
