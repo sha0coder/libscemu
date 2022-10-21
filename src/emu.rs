@@ -1004,10 +1004,11 @@ impl Emu {
         if self.cfg.entry_point != 0x3c0000 {
             self.regs.rip = self.cfg.entry_point;
         }
+        /*
         if self.cfg.code_base_addr != 0x3c0000 {
              let code = self.maps.get_mem("code");
              code.set_base(self.cfg.code_base_addr);
-        }
+        }*/
     }
 
     pub fn alloc(&mut self, name:&str, size:u64) -> u64 {
