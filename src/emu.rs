@@ -5160,8 +5160,6 @@ impl Emu {
 
                 let sz = self.get_operand_sz(&ins, 0); 
 
-                let mut result:u64 = value0;
-                let new_flags:u32;
 
                 if value1 == 0 {
                     self.flags.f_zf = true;
@@ -5171,8 +5169,12 @@ impl Emu {
                     }
 
                 } else {
-                    (result, new_flags) = inline::bsf(value0, value1, sz, self.flags.dump());
+                    let (result, new_flags) = inline::bsf(value0, value1, sz, self.flags.dump());
                     self.flags.load(new_flags);
+
+                    if !self.set_operand_value(&ins, 0, result) {
+                        return;
+                    }
                 }
 
                 // cf flag undefined behavior apple mac x86_64 problem
@@ -5183,9 +5185,6 @@ impl Emu {
                     self.flags.f_cf = false;
                 }
 
-                if !self.set_operand_value(&ins, 0, result) {
-                    return;
-                }
 
 
                 /*
