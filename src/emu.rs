@@ -4165,8 +4165,12 @@ impl Emu {
                     return;
                 }
 
-                // always set f_af?
-                self.flags.f_af = true;
+                self.flags.calc_flags(res, sz);
+                if value0 == 0 {
+                    self.flags.f_cf = false;
+                } else {
+                    self.flags.f_cf = true;
+                }
             }
 
             Mnemonic::Not => {
