@@ -3512,8 +3512,6 @@ impl Emu {
                     }
 
                     if self.cfg.trace_regs {
-                        // flags
-                        self.capture_pre_op_flags();
                         // registers
                         if self.cfg.is_64bits {
                             self.capture_pre_op_registers_64bits();
@@ -3567,6 +3565,8 @@ impl Emu {
                               self.regs.get_edx() as u32, self.regs.get_esi() as u32, self.regs.get_edi() as u32,
                               self.regs.get_ebp() as u32, self.regs.get_esp() as u32);
                         }
+                        // flags
+                        self.capture_pre_op_flags();
                     }
 
                     if self.cfg.trace_reg {
