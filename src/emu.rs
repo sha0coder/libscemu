@@ -4161,16 +4161,17 @@ impl Emu {
                     }
                 }
 
-                if !self.set_operand_value(&ins, 0, res) {
-                    return;
-                }
-
                 self.flags.calc_flags(res, sz);
                 if value0 == 0 {
                     self.flags.f_cf = false;
                 } else {
                     self.flags.f_cf = true;
                 }
+
+                if !self.set_operand_value(&ins, 0, res) {
+                    return;
+                }
+
             }
 
             Mnemonic::Not => {
