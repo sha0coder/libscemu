@@ -3341,21 +3341,18 @@ impl Emu {
         self.run(0);
     }
 
-    pub fn capture_pre_op_registers_64bits(&mut self) {
+    pub fn capture_pre_op(&mut self) {
         self.pre_op_regs = self.regs.clone();
-    }
-
-    pub fn capture_pre_op_flags(&mut self) {
         self.pre_op_flags = self.flags.clone();
     }
 
-    pub fn diff_pre_op_post_op_registers_64bits(&mut self) {
+    pub fn capture_post_op(&mut self) {
         self.post_op_regs = self.regs.clone();
-        Regs64::diff(self.pre_op_regs.rip, self.pos - 1, self.pre_op_regs, self.post_op_regs);
+        self.post_op_flags = self.flags.clone();
     }
 
-    pub fn diff_pre_op_post_op_flags(&mut self) {
-        self.post_op_flags = self.flags.clone();
+    pub fn diff_pre_op_post_op(&mut self) {
+        Regs64::diff(self.pre_op_regs.rip, self.pos - 1, self.pre_op_regs, self.post_op_regs);
         Flags::diff(self.pre_op_regs.rip, self.pos - 1, self.pre_op_flags, self.post_op_flags);
     }
 
@@ -3512,11 +3509,8 @@ impl Emu {
                     }
 
                     if self.cfg.trace_regs {
-                        // flags
-                        self.capture_pre_op_flags();
-                        // registers
                         if self.cfg.is_64bits {
-                            self.capture_pre_op_registers_64bits();
+                            self.capture_pre_op();
                             println!(
                               "\trax: 0x{:x} rbx: 0x{:x} rcx: 0x{:x} rdx: 0x{:x} rsi: 0x{:x} rdi: 0x{:x} rbp: 0x{:x} rsp: 0x{:x}",
                               self.regs.rax, self.regs.rbx, self.regs.rcx,
@@ -3638,11 +3632,10 @@ impl Emu {
                     }
 
                     if self.cfg.trace_regs {
-                        // flags
-                        self.diff_pre_op_post_op_flags();
                         // registers
                         if self.cfg.is_64bits {
-                            self.diff_pre_op_post_op_registers_64bits();
+                            self.capture_post_op();
+                            self.diff_pre_op_post_op();
                         } else {
                             // TODO: self.diff_pre_op_post_op_registers_32bits();
                         }
