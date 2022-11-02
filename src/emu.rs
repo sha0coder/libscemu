@@ -4161,6 +4161,12 @@ impl Emu {
                     self.flags.f_cf = true;
                 }
 
+                if ((res | value0) & 0x8) != 0 {
+                    self.flags.f_af = true;
+                } else {
+                    self.flags.f_af = false;
+                }
+
                 if !self.set_operand_value(&ins, 0, res) {
                     return;
                 }
