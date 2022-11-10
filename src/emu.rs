@@ -4154,7 +4154,6 @@ impl Emu {
                     }
                 }
 
-                self.flags.calc_flags(res, sz);
                 if value0 == 0 {
                     self.flags.f_cf = false;
                 } else {

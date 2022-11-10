@@ -153,11 +153,19 @@ impl Flink {
         }
 
         self.export_table = self.export_table_rva + self.mod_base;
-        self.num_of_funcs = emu.maps.read_dword(self.export_table + 0x18)
-            .expect("error reading the num_of_funcs") as u64;
-        self.func_name_tbl_rva = emu.maps.read_dword(self.export_table + 0x20)
-            .expect(" error reading func_name_tbl_rva") as u64;
-        self.func_name_tbl = self.func_name_tbl_rva + self.mod_base;
+        self.num_of_funcs = match emu.maps.read_dword(self.export_table + 0x18) {
+            Some(num_of_funcs) => num_of_funcs as u64,
+            None => {
+                println!("error reading export_table 0x{:x} = 0x{:x} + 0x{:x}", self.export_table, self.export_table_rva, self.mod_base);
+                0
+            },
+        };
+       
+        if self.num_of_funcs > 0 {
+            self.func_name_tbl_rva = emu.maps.read_dword(self.export_table + 0x20)
+                .expect(" error reading func_name_tbl_rva") as u64;
+            self.func_name_tbl = self.func_name_tbl_rva + self.mod_base;
+        }
     }
 
     pub fn get_function_ordinal(&self, emu: &mut emu::Emu, function_id: u64) -> OrdinalTable {
