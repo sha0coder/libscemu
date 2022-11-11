@@ -110,6 +110,7 @@ pub fn gateway(addr:u32, emu:&mut emu::Emu) {
         0x75e8bb08 => SetLastError(emu),
         0x75e8a611 => lstrlen(emu),
         0x75e9452b => MultiByteToWideChar(emu),
+        0x75e93728 => GetSystemInfo(emu),
 
         _ => panic!("calling unimplemented kernel32 API 0x{:x} {}", addr, guess_api_name(emu, addr)),
     }
@@ -1840,4 +1841,37 @@ fn MultiByteToWideChar(emu:&mut emu::Emu) {
     emu.maps.write_string(wide_ptr, &wide);
     emu.regs.rax = wide.len() as u64;
 }
+
+fn GetSystemInfo(emu:&mut emu::Emu) {
+    let out_sysinfo = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("kernel32!GetSystemInfo cannot read out_sysinfo") as u64;
+
+    println!("{}** {} kernel32!GetSystemInfo sysinfo: 0x{:x} {}", emu.colors.light_red, emu.pos, out_sysinfo, emu.colors.nc);
+
+    /*
+         sizeof(SYSTEM_INFO) = 72
+
+         typedef struct _SYSTEM_INFO {
+          union {
+            DWORD dwOemId;
+            struct {
+              WORD wProcessorArchitecture;
+              WORD wReserved;
+            } DUMMYSTRUCTNAME;
+          } DUMMYUNIONNAME;
+          DWORD     dwPageSize;
+          LPVOID    lpMinimumApplicationAddress;
+          LPVOID    lpMaximumApplicationAddress;
+          DWORD_PTR dwActiveProcessorMask;
+          DWORD     dwNumberOfProcessors;
+          DWORD     dwProcessorType;
+          DWORD     dwAllocationGranularity;
+          WORD      wProcessorLevel;
+          WORD      wProcessorRevision;
+        } SYSTEM_INFO, *LPSYSTEM_INFO;
+    */
+
+    emu.stack_pop32(false);
+}
+
 
