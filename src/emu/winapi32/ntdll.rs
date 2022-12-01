@@ -32,6 +32,7 @@ pub fn gateway(addr:u32, emu:&mut emu::Emu) {
         0x775b77a0 => RtlEnterCriticalSection(emu),
         0x775b7760 => RtlLeaveCriticalSection(emu),
         0x775d65e3 => RtlGetVersion(emu),
+        0x775c6db9 => RtlInitializeCriticalSectionEx(emu),
         _ => panic!("calling unimplemented ntdll API 0x{:x} {}", addr, kernel32::guess_api_name(emu, addr)),
     }
 }
@@ -630,7 +631,7 @@ fn CheckRemoteDebuggerPresent(emu:&mut emu::Emu) {
 
 fn RtlEnterCriticalSection(emu:&mut emu::Emu) {
     let hndl = emu.maps.read_dword(emu.regs.get_esp())
-        .expect("ntdll!RtlEnterCriticalSection eror reading hndl param") as u64;
+        .expect("ntdll!RtlEnterCriticalSection error reading hndl param") as u64;
 
     println!("{}** {} ntdll!RtlEnterCriticalSection {}",      
              emu.colors.light_red, emu.pos, emu.colors.nc);
@@ -642,7 +643,7 @@ fn RtlEnterCriticalSection(emu:&mut emu::Emu) {
 
 fn RtlLeaveCriticalSection(emu:&mut emu::Emu) {
     let hndl = emu.maps.read_dword(emu.regs.get_esp())
-        .expect("ntdll!RtlLeaveCriticalSection eror reading hndl param") as u64;
+        .expect("ntdll!RtlLeaveCriticalSection error reading hndl param") as u64;
 
     println!("{}** {} ntdll!RtlLeaveCriticalSection {}",      
              emu.colors.light_red, emu.pos, emu.colors.nc);
@@ -654,7 +655,7 @@ fn RtlLeaveCriticalSection(emu:&mut emu::Emu) {
 
 fn RtlGetVersion(emu:&mut emu::Emu) {
     let versioninfo_ptr = emu.maps.read_dword(emu.regs.get_esp())
-        .expect("ntdll!RtlLeaveCriticalSection eror reading versioninfo_ptr param") as u64;
+        .expect("ntdll!RtlLeaveCriticalSection error reading versioninfo_ptr param") as u64;
 
     println!("{}** {} ntdll!RtlGetVersion {}",      
              emu.colors.light_red, emu.pos, emu.colors.nc);
@@ -674,5 +675,27 @@ fn RtlGetVersion(emu:&mut emu::Emu) {
     emu.stack_pop32(false);
     emu.regs.rax = 1;
 }
+
+fn RtlInitializeCriticalSectionEx(emu:&mut emu::Emu) { 
+    let crit_sect_ptr = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("ntdll!RtlInitializeCriticalSectionEx error reading crit_sect_ptr") as u64;
+    let spin_count = emu.maps.read_dword(emu.regs.get_esp()+4)
+        .expect("ntdll!RtlInitializeCriticalSectionEx error reading spin_count");
+    let flags = emu.maps.read_dword(emu.regs.get_esp()+8)
+        .expect("ntdll!RtlInitializeCriticalSectionEx error reading flags");
+
+
+    println!("{}** {} ntdll!RtlInitializeCriticalSectionEx {}",      
+             emu.colors.light_red, emu.pos, emu.colors.nc);
+
+    
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+    emu.regs.rax = 1;
+}
+
+
+
 
 
