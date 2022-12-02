@@ -4,11 +4,17 @@ use crate::emu::winapi32::kernel32;
 //use crate::emu::endpoint;
 
 
-pub fn gateway(addr:u32, emu:&mut emu::Emu)  {
+pub fn gateway(addr:u32, emu:&mut emu::Emu) -> String {
     match addr {
         0x6dc2a9bc => DnsQuery_A(emu),
-        _ => panic!("calling unimplemented dnsapi API 0x{:x} {}", addr, kernel32::guess_api_name(emu, addr)),
+        _ => {
+            let apiname = kernel32::guess_api_name(emu, addr);
+            println!("calling unimplemented dnsapi API 0x{:x} {}", addr, apiname);
+            return apiname;
+        }
     }
+
+    return String::new();
 }
 
 

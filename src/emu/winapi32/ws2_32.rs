@@ -1,12 +1,13 @@
-use crate::emu;
+use crate::emu::winapi32::kernel32;
 use crate::emu::winapi32::helper;
 use crate::emu::endpoint;
+use crate::emu;
 
 use lazy_static::lazy_static; 
 use std::sync::Mutex;
 
 
-pub fn gateway(addr:u32, emu:&mut emu::Emu)  {
+pub fn gateway(addr:u32, emu:&mut emu::Emu) -> String {
     match addr {
         0x77483ab2 => WsaStartup(emu),
         0x7748c82a => WsaSocketA(emu),
@@ -33,8 +34,14 @@ pub fn gateway(addr:u32, emu:&mut emu::Emu)  {
         0x7748cc3f => WsaConnect(emu),
         */
 
-        _ => panic!("calling unimplemented ws2_32 API 0x{:x}", addr)
+        _ => {  
+            let apiname = kernel32::guess_api_name(emu, addr);
+            println!("calling unimplemented ws2_32 API 0x{:x} {}", addr, apiname);
+            return apiname;
+        }
     }
+
+    return String::new();
 }
 
 lazy_static! {

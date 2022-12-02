@@ -1,11 +1,13 @@
-use crate::emu;
+use crate::emu::winapi32::kernel32;
 use crate::emu::winapi32::helper;
-use crate::emu::endpoint;
 use crate::emu::constants;
+use crate::emu::endpoint;
+use crate::emu;
+
 use lazy_static::lazy_static; 
 use std::sync::Mutex;
 
-pub fn gateway(addr:u32, emu:&mut emu::Emu) {
+pub fn gateway(addr:u32, emu:&mut emu::Emu) -> String {
     match addr {
         0x7633f18e => InternetOpenA(emu),
         0x76339197 => InternetOpenW(emu),
@@ -19,8 +21,14 @@ pub fn gateway(addr:u32, emu:&mut emu::Emu) {
         0x7633ba12 => HttpSendRequestW(emu),
         0x7632b406 => InternetReadFile(emu),
         0x763b3328 => InternetErrorDlg(emu),
-        _ => panic!("calling unimplemented wininet API 0x{:x}", addr)
+        _ => {
+            let apiname = kernel32::guess_api_name(emu, addr);
+            println!("calling unimplemented wininet API 0x{:x} {}", addr, apiname);
+            return apiname;
+        }
     }
+
+    return String::new();
 }
 
 

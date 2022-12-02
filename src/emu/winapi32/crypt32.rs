@@ -7,11 +7,17 @@ use crate::emu::constants;
 use crate::emu::console;                                                                                                 
 */                                                                                                                       
                                                                                                                          
-pub fn gateway(addr:u32, emu:&mut emu::Emu) {                                                                            
+pub fn gateway(addr:u32, emu:&mut emu::Emu) -> String {
     match addr {
         0x719b1540 => PkiInitializeCriticalSection(emu),
-        _ => panic!("calling unimplemented kernel32 API 0x{:x} {}", addr, kernel32::guess_api_name(emu, addr)),
+        _ => {
+            let apiname = kernel32::guess_api_name(emu, addr);
+            println!("calling unimplemented kernel32 API 0x{:x} {}", addr, apiname);
+            return apiname;
+        }
     }
+
+    return String::new();
 }
 
 pub fn PkiInitializeCriticalSection(emu:&mut emu::Emu) {

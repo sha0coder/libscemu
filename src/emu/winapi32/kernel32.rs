@@ -8,7 +8,7 @@ use crate::emu::peb32;
 use lazy_static::lazy_static; 
 use std::sync::Mutex;
 
-pub fn gateway(addr:u32, emu:&mut emu::Emu) {
+pub fn gateway(addr:u32, emu:&mut emu::Emu) -> String {
     match addr {
         0x75e9395c => LoadLibraryA(emu),
         0x75e847fa => LoadLibraryExA(emu),
@@ -112,8 +112,14 @@ pub fn gateway(addr:u32, emu:&mut emu::Emu) {
         0x75e9452b => MultiByteToWideChar(emu),
         0x75e93728 => GetSystemInfo(emu),
 
-        _ => panic!("calling unimplemented kernel32 API 0x{:x} {}", addr, guess_api_name(emu, addr)),
+        _ => {
+            let apiname = guess_api_name(emu, addr);
+            println!("calling unimplemented kernel32 API 0x{:x} {}", addr, apiname);
+            return apiname;
+        }
     }
+
+    return String::new();
 }
 
 lazy_static! {

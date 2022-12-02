@@ -7,7 +7,7 @@ use crate::emu::context32::Context32;
 
 use scan_fmt::scan_fmt_some;
 
-pub fn gateway(addr:u32, emu:&mut emu::Emu) {
+pub fn gateway(addr:u32, emu:&mut emu::Emu) -> String {
     match addr {
         0x775b52d8 => NtAllocateVirtualMemory(emu),
         0x775b5a18 => NtGetContextThread(emu),
@@ -33,8 +33,14 @@ pub fn gateway(addr:u32, emu:&mut emu::Emu) {
         0x775b7760 => RtlLeaveCriticalSection(emu),
         0x775d65e3 => RtlGetVersion(emu),
         0x775c6db9 => RtlInitializeCriticalSectionEx(emu),
-        _ => panic!("calling unimplemented ntdll API 0x{:x} {}", addr, kernel32::guess_api_name(emu, addr)),
+        _ => { 
+            let apiname = kernel32::guess_api_name(emu, addr);
+            println!("calling unimplemented ntdll API 0x{:x} {}", addr, apiname);
+            return apiname;
+        }
     }
+
+    return String::new();
 }
 
 

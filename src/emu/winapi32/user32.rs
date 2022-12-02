@@ -3,13 +3,19 @@ use crate::emu::winapi32::kernel32;
 
 
 
-pub fn gateway(addr:u32, emu:&mut emu::Emu) {
+pub fn gateway(addr:u32, emu:&mut emu::Emu) -> String {
     match addr {
         0x7740ea11 => MessageBoxA(emu),
         0x773c01a9 => GetDesktopWindow(emu),
         0x773d426d => wsprintfW(emu),
-        _ => panic!("calling unimplemented user32 API 0x{:x} {}", addr, kernel32::guess_api_name(emu, addr))
+        _ => {
+            let apiname = kernel32::guess_api_name(emu, addr);
+            println!("calling unimplemented user32 API 0x{:x} {}", addr, apiname);
+            return apiname;
+        }
     }
+
+    return String::new();
 }
 
 fn MessageBoxA(emu:&mut emu::Emu) {
