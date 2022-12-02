@@ -3256,6 +3256,22 @@ pub fn gateway(addr:u32, name:String, emu:&mut emu::Emu) { //name:String, maps:&
 		api_params.insert("ZwUnloadDriver", 1);
 		api_params.insert("ZwUnmapViewOfSection", 2);
 		api_params.insert("ZwWriteFile", 9);
+		api_params.insert("HeapLock", 1);
+		api_params.insert("GetProcessHeap", 1);
+		api_params.insert("HeapFree", 3);
+		api_params.insert("HeapCreate", 3);
+		api_params.insert("HeapSetInformation", 4);
+		api_params.insert("HeapSize", 3);
+		api_params.insert("HeapWalk", 2);
+		api_params.insert("HeapValidate", 3);
+		api_params.insert("GetProcessHeaps", 2);
+		api_params.insert("HeapQueryInformation", 5);
+		api_params.insert("HeapDestroy", 1);
+		api_params.insert("HeapCompact", 2);
+		api_params.insert("HeapReAlloc", 4);
+		api_params.insert("HeapAlloc", 3);
+		api_params.insert("HeapUnlock", 1);
+
 
         if emu.cfg.skip_unimplemented {
             let params = api_params[unimplemented_api.as_str()];
@@ -3264,6 +3280,7 @@ pub fn gateway(addr:u32, name:String, emu:&mut emu::Emu) { //name:String, maps:&
             for _ in 0..params {
                 emu.stack_pop32(false);
             }
+            emu.regs.rax = 1;
 
         } else {
             panic!();
