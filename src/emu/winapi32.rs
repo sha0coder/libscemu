@@ -8,6 +8,7 @@ mod crypt32;
 mod dnsapi;
 mod mscoree;
 mod msvcrt;
+mod shlwapi;
 pub mod helper;
 
 use std::collections::HashMap;
@@ -27,6 +28,7 @@ pub fn gateway(addr:u32, name:String, emu:&mut emu::Emu) { //name:String, maps:&
         "dnsapi.text" => dnsapi::gateway(addr, emu),
         "mscoree.text" => mscoree::gateway(addr, emu),
         "msvcrt_text" => msvcrt::gateway(addr, emu),
+        "shlwapi_text" => msvcrt::gateway(addr, emu),
         _ => panic!("/!\\ trying to execute on {} at 0x{:x}", name, addr),
     };
 
@@ -3484,8 +3486,6 @@ pub fn gateway(addr:u32, name:String, emu:&mut emu::Emu) { //name:String, maps:&
 		api_params.insert("DeferWindowPos", 8);
 
 
-
-
         if emu.cfg.skip_unimplemented {
             let params = api_params[unimplemented_api.as_str()];
             println!("{} {} parameters", unimplemented_api, params);
@@ -3496,7 +3496,7 @@ pub fn gateway(addr:u32, name:String, emu:&mut emu::Emu) { //name:String, maps:&
             emu.regs.rax = 1;
 
         } else {
-            panic!();
+            panic!("function is not in emulation list.");
         }
     }
 
