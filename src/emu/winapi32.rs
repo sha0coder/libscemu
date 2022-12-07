@@ -7,6 +7,7 @@ mod advapi32;
 mod crypt32;
 mod dnsapi;
 mod mscoree;
+mod msvcrt;
 pub mod helper;
 
 use std::collections::HashMap;
@@ -25,6 +26,7 @@ pub fn gateway(addr:u32, name:String, emu:&mut emu::Emu) { //name:String, maps:&
         "crypt32.text" => crypt32::gateway(addr, emu),
         "dnsapi.text" => dnsapi::gateway(addr, emu),
         "mscoree.text" => mscoree::gateway(addr, emu),
+        "msvcrt_text" => msvcrt::gateway(addr, emu),
         _ => panic!("/!\\ trying to execute on {} at 0x{:x}", name, addr),
     };
 
