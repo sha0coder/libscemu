@@ -3484,8 +3484,6 @@ pub fn gateway(addr:u32, name:String, emu:&mut emu::Emu) { //name:String, maps:&
 		api_params.insert("GetSystemMetrics", 1);
 		api_params.insert("GetAltTabInfoW", 5);
 		api_params.insert("DeferWindowPos", 8);
-		api_params.insert("_initterm_e", 2);
-		api_params.insert("_initterm", 2);
 
 
         if emu.cfg.skip_unimplemented {
