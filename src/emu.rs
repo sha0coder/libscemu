@@ -3290,6 +3290,7 @@ impl Emu {
                     MemorySize::Packed128_UInt64 => 64, // 128bits packed in 2 qwords
                     MemorySize::Packed128_UInt32 => 32, // 128bits packed in 4 dwords
                     MemorySize::Packed128_UInt16 => 16, // 128bits packed in 8 words
+                    MemorySize::Bound32_DwordDword => 64,
                     _  => unimplemented!("memory size {:?}", mem.memory_size()),
                 };
 
