@@ -19,7 +19,15 @@ pub fn gateway(addr:u32, emu:&mut emu::Emu) -> String {
 }
 
 fn _initterm_e(emu:&mut emu::Emu) {
-    println!("{}** {} msvcrt!_initterm_e {}", emu.colors.light_red, emu.pos, emu.colors.nc);
+    let start_ptr = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("msvcrt!_initterm_e: error reading start pointer") as u64;
+    let end_ptr = emu.maps.read_dword(emu.regs.get_esp()+4)
+        .expect("msvcrt!_initterm_e: error reading en pointer") as u64;
+
+
+    println!("{}** {} msvcrt!_initterm_e 0x{:x} - 0x{:x} {}", 
+             emu.colors.light_red, emu.pos, start_ptr, end_ptr, emu.colors.nc);
+
     emu.stack_pop32(false);
     emu.stack_pop32(false);
     emu.regs.rax = 0;
@@ -27,7 +35,14 @@ fn _initterm_e(emu:&mut emu::Emu) {
 
 
 fn _initterm(emu:&mut emu::Emu) {
-    println!("{}** {} msvcrt!_initterm {}", emu.colors.light_red, emu.pos, emu.colors.nc);
+    let start_ptr = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("msvcrt!_initterm_e: error reading start pointer") as u64;
+    let end_ptr = emu.maps.read_dword(emu.regs.get_esp()+4)
+        .expect("msvcrt!_initterm_e: error reading en pointer") as u64;
+
+    println!("{}** {} msvcrt!_initterm 0x{:x} - 0x{:x} {}", 
+             emu.colors.light_red, emu.pos, start_ptr, end_ptr, emu.colors.nc);
+
     emu.stack_pop32(false);
     emu.stack_pop32(false);
     emu.regs.rax = 0;
