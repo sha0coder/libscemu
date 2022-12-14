@@ -8998,6 +8998,24 @@ impl Emu {
                 self.set_operand_xmm_value_128(&ins, 0, result);
             }
 
+            Mnemonic::Pshufd => {
+                self.show_instruction(&self.colors.green, &ins);
+                let source = self.get_operand_xmm_value_128(&ins, 1, true).expect("error getting velue1");
+                let order = self.get_operand_value(&ins, 2, true).expect("error getting order");
+
+                let order1 = get_bit!(order, 0) | (get_bit!(order, 1) << 1);
+                let order2 = get_bit!(order, 2) | (get_bit!(order, 3) << 1);
+                let order3 = get_bit!(order, 4) | (get_bit!(order, 5) << 1);
+                let order4 = get_bit!(order, 6) | (get_bit!(order, 7) << 1);
+
+                let mut dest:u128 = (source >> (order1 * 32)) as u32 as u128;
+                dest |= ((source >> (order2 * 32)) as u32 as u128) << 32;
+                dest |= ((source >> (order3 * 32)) as u32 as u128) << 64;
+                dest |= ((source >> (order4 * 32)) as u32 as u128) << 96;
+
+                self.set_operand_xmm_value_128(&ins, 0, dest);
+            }
+
             // end SSE
 
             Mnemonic::Xgetbv => {
