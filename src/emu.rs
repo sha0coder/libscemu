@@ -1504,10 +1504,11 @@ impl Emu {
             }
         };
 
-        let map_name = self.filename_to_mapname(&self.cfg.filename);
+        let map_name = self.filename_to_mapname(&self.filename);
         if name == "code" || addr < constants::LIBS_BARRIER || name.starts_with(&map_name) {
             if self.cfg.verbose >= 1 && addr >= constants::LIBS_BARRIER {
-                println!("/!\\ alert, jumping the barrier 0x{:x} name:{} map_name:{}", addr, name, map_name);
+                println!("/!\\ alert, jumping the barrier 0x{:x} name:{} map_name:{} filename:{}", 
+                         addr, name, map_name, &self.filename);
             }
             self.regs.set_eip(addr);
         } else {
