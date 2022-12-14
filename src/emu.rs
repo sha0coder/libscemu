@@ -9021,6 +9021,14 @@ impl Emu {
                 self.show_instruction(&self.colors.green, &ins);
 
                 let source = self.get_operand_xmm_value_128(&ins, 1, true).expect("error getting source");
+                
+                self.set_operand_xmm_value_128(&ins, 0, source);
+            }
+
+            Mnemonic::Movdqu => {
+                self.show_instruction(&self.colors.green, &ins);
+
+                let source = self.get_operand_xmm_value_128(&ins, 1, true).expect("error getting source");
 
                 self.set_operand_xmm_value_128(&ins, 0, source);
             }
