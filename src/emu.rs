@@ -9000,7 +9000,8 @@ impl Emu {
 
             Mnemonic::Pshufd => {
                 self.show_instruction(&self.colors.green, &ins);
-                let source = self.get_operand_xmm_value_128(&ins, 1, true).expect("error getting velue1");
+
+                let source = self.get_operand_xmm_value_128(&ins, 1, true).expect("error getting source");
                 let order = self.get_operand_value(&ins, 2, true).expect("error getting order");
 
                 let order1 = get_bit!(order, 0) | (get_bit!(order, 1) << 1);
@@ -9014,6 +9015,14 @@ impl Emu {
                 dest |= ((source >> (order4 * 32)) as u32 as u128) << 96;
 
                 self.set_operand_xmm_value_128(&ins, 0, dest);
+            }
+
+            Mnemonic::Movups => {
+                self.show_instruction(&self.colors.green, &ins);
+
+                let source = self.get_operand_xmm_value_128(&ins, 1, true).expect("error getting source");
+
+                self.set_operand_xmm_value_128(&ins, 0, source);
             }
 
             // end SSE
