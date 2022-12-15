@@ -16,6 +16,7 @@ pub fn gateway(addr:u64, emu:&mut emu::Emu) {
         0x77021540 => NtQueryVirtualMemory(emu),
         0x7700c5ec => stricmp(emu),
         0x77016930 => RtlExitUserThread(emu),
+        0x770233a0 => RtlAllocateHeap(emu),
         _ => {
             let apiname = kernel32::guess_api_name(emu, addr);
             panic!("calling unimplemented ntdll API 0x{:x} {}", addr, apiname);
@@ -55,7 +56,7 @@ fn NtAllocateVirtualMemory(emu:&mut emu::Emu) {
     if do_alloc {
         alloc_addr = match emu.maps.alloc(size) {
             Some(a) => a,
-            None => panic!("/!\\ out of memory   cannot allocate forntdll!NtAllocateVirtualMemory "),
+            None => panic!("/!\\ out of memory cannot allocate ntdll!NtAllocateVirtualMemory "),
         };
     } else { 
         alloc_addr = addr;
@@ -223,4 +224,24 @@ fn ZwQueueApcThread(emu:&mut emu::Emu) {
     emu.regs.rax = constants::STATUS_SUCCESS;
 }
 
+fn RtlAllocateHeap(emu:&mut emu::Emu) {
+    let handle = emu.regs.rcx;
+    let flags = emu.regs.rdx;
+    let size = emu.regs.r8;
+
+
+    let alloc_addr = match emu.maps.alloc(size) {
+        Some(a) => a,
+        None => panic!("/!\\ out of memory cannot allocate ntdll!RtlAllocateHeap"),
+    };
+
+    println!("{}** {} ntdll!RtlAllocateHeap  sz: {}   =addr: 0x{:x} {}",
+             emu.colors.light_red, emu.pos, size, alloc_addr, emu.colors.nc);
+
+    let alloc = emu.maps.create_map(format!("valloc_{:x}", alloc_addr).as_str());
+    alloc.set_base(alloc_addr);
+    alloc.set_size(size);
+
+    emu.regs.rax = emu::constants::STATUS_SUCCESS;
+}
 
