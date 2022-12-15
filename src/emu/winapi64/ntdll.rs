@@ -3,7 +3,7 @@ use crate::emu::winapi32::helper;
 use crate::emu::context64::Context64;
 use crate::emu::structures;
 use crate::emu::constants;
-
+use crate::emu::winapi64::kernel32;
 
 pub fn gateway(addr:u64, emu:&mut emu::Emu) {
     match addr {
@@ -16,7 +16,10 @@ pub fn gateway(addr:u64, emu:&mut emu::Emu) {
         0x77021540 => NtQueryVirtualMemory(emu),
         0x7700c5ec => stricmp(emu),
         0x77016930 => RtlExitUserThread(emu),
-        _ => panic!("calling unimplemented ntdll API 0x{:x}", addr),
+        _ => {
+            let apiname = kernel32::guess_api_name(emu, addr);
+            panic!("calling unimplemented ntdll API 0x{:x} {}", addr, apiname);
+        }
     }
 }
 
