@@ -242,6 +242,6 @@ fn RtlAllocateHeap(emu:&mut emu::Emu) {
     alloc.set_base(alloc_addr);
     alloc.set_size(size);
 
-    emu.regs.rax = emu::constants::STATUS_SUCCESS;
+    emu.regs.rax = alloc_addr;
 }
 
