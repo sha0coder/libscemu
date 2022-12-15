@@ -3004,6 +3004,13 @@ impl Emu {
                             }
                             101
                         }
+                        0x10 => {
+                            let stack = self.maps.get_mem("stack");
+                            if self.cfg.verbose >= 1 {
+                                println!("{} Reading StackLimit 0x{:x}", self.pos, &stack.size());
+                            }
+                            stack.size() as u64
+                        }
                         0x14 => {
                             unimplemented!("GS:[14]  get stack canary")
                         }
