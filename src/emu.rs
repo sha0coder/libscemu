@@ -186,6 +186,13 @@ impl Emu {
         self.cfg.verbose = n;
     }
 
+    pub fn enable_banzai(&mut self) {
+        self.cfg.skip_unimplemented = true;
+    }
+
+    pub fn disable_banzai(&mut self) {
+        self.cfg.skip_unimplemented = false;
+    }
 
     pub fn init_stack32(&mut self) {
         let stack = self.maps.get_mem("stack");
@@ -732,8 +739,8 @@ impl Emu {
         self.maps.create_map("lpk_pe").load_at(0x7fefd870000);
         self.maps.create_map("lpk_text").load_at(0x7fefd871000);
         self.maps.create_map("lpk_rdata").load_at(0x7fefd878000);
-        self.maps.create_map("wininet_pe").load_at(0x6fefd880000);
-        self.maps.create_map("wininet_text").load_at(0x6fefd881000);
+        self.maps.create_map("wininet_pe").load_at(0x7fefd880000);
+        self.maps.create_map("wininet_text").load_at(0x7fefd881000);
         self.maps.create_map("gdi32_pe").load_at(0x7fefd9b0000);
         self.maps.create_map("gdi32_text").load_at(0x7fefd9b1000);
         self.maps.create_map("gdi32_rdata").load_at(0x7fefda02000);
