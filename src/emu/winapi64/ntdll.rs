@@ -252,8 +252,8 @@ fn RtlQueueWorkItem(emu:&mut emu::Emu) {
     let ctx = emu.regs.rdx;
     let flags = emu.regs.r8;
 
-    println!("{}** {} ntdll!RtlQueueWorkItem  fptr: 0x{:x} {}",
-             emu.colors.light_red, emu.pos, fptr, emu.colors.nc);
+    println!("{}** {} ntdll!RtlQueueWorkItem  fptr: 0x{:x} ctx: {} flags: {} {}",
+             emu.colors.light_red, emu.pos, fptr, ctx, flags, emu.colors.nc);
 
 
     if fptr > constants::LIBS_BARRIER64 {
