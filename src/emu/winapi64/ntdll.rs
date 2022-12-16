@@ -255,6 +255,12 @@ fn RtlQueueWorkItem(emu:&mut emu::Emu) {
     println!("{}** {} ntdll!RtlQueueWorkItem  fptr: 0x{:x} {}",
              emu.colors.light_red, emu.pos, fptr, emu.colors.nc);
 
+
+    if fptr > constants::LIB_BARRIER64 {
+        let name = kernel32::guess_api_name(emu, fptr);
+        println!("api: {} ", name);
+    }
+
     emu.regs.rax = constants::STATUS_SUCCESS;
 }
 
