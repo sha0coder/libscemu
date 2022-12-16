@@ -255,13 +255,12 @@ fn RtlQueueWorkItem(emu:&mut emu::Emu) {
     println!("{}** {} ntdll!RtlQueueWorkItem  fptr: 0x{:x} ctx: 0x{:x} flags: {} {}",
              emu.colors.light_red, emu.pos, fptr, ctx, flags, emu.colors.nc);
 
-
     if fptr > constants::LIBS_BARRIER64 {
         let name = kernel32::guess_api_name(emu, fptr);
         println!("api: {} ", name);
     }
 
-    emu.regs.rax = constants::STATUS_SUCCESS;
+    emu.regs.rax = 1; //constants::STATUS_SUCCESS;
 }
 
 fn NtWaitForSingleObject(emu:&mut emu::Emu) {
@@ -272,7 +271,7 @@ fn NtWaitForSingleObject(emu:&mut emu::Emu) {
     println!("{}** {} ntdll!NtWaitForSingleObject  hndl: 0x{:x} timeout: {} {}",
              emu.colors.light_red, emu.pos, handle, timeout, emu.colors.nc);
 
-    emu.regs.rax = constants::STATUS_SUCCESS;
+    emu.regs.rax = 1; //constants::STATUS_SUCCESS;
 }
 
 
