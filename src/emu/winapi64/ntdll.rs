@@ -17,6 +17,7 @@ pub fn gateway(addr:u64, emu:&mut emu::Emu) {
         0x7700c5ec => stricmp(emu),
         0x77016930 => RtlExitUserThread(emu),
         0x770233a0 => RtlAllocateHeap(emu),
+        0x76ff1f70 => RtlQueueWorkItem(emu),
         _ => {
             let apiname = kernel32::guess_api_name(emu, addr);
             panic!("calling unimplemented ntdll API 0x{:x} {}", addr, apiname);
@@ -244,4 +245,17 @@ fn RtlAllocateHeap(emu:&mut emu::Emu) {
 
     emu.regs.rax = alloc_addr;
 }
+
+fn RtlQueueWorkItem(emu:&mut emu::Emu) {
+    let fptr = emu.regs.rcx;
+    let ctx = emu.regs.rdx;
+    let flags = emu.regs.r8;
+
+    println!("{}** {} ntdll!RtlQueueWorkItem  fptr: 0x{:x} {}",
+             emu.colors.light_red, emu.pos, fptr, emu.colors.nc);
+
+    emu.regs.rax = constants::STATUS_SUCCESS;
+}
+
+
 
