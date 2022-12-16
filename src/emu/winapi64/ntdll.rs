@@ -252,7 +252,7 @@ fn RtlQueueWorkItem(emu:&mut emu::Emu) {
     let ctx = emu.regs.rdx;
     let flags = emu.regs.r8;
 
-    println!("{}** {} ntdll!RtlQueueWorkItem  fptr: 0x{:x} ctx: {} flags: {} {}",
+    println!("{}** {} ntdll!RtlQueueWorkItem  fptr: 0x{:x} ctx: 0x{:x} flags: {} {}",
              emu.colors.light_red, emu.pos, fptr, ctx, flags, emu.colors.nc);
 
 
