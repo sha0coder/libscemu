@@ -18,6 +18,7 @@ pub fn gateway(addr:u64, emu:&mut emu::Emu) {
         0x77016930 => RtlExitUserThread(emu),
         0x770233a0 => RtlAllocateHeap(emu),
         0x76ff1f70 => RtlQueueWorkItem(emu),
+        0x77021350 => NtWaitForSingleObject(emu),
         _ => {
             let apiname = kernel32::guess_api_name(emu, addr);
             panic!("calling unimplemented ntdll API 0x{:x} {}", addr, apiname);
@@ -253,6 +254,17 @@ fn RtlQueueWorkItem(emu:&mut emu::Emu) {
 
     println!("{}** {} ntdll!RtlQueueWorkItem  fptr: 0x{:x} {}",
              emu.colors.light_red, emu.pos, fptr, emu.colors.nc);
+
+    emu.regs.rax = constants::STATUS_SUCCESS;
+}
+
+fn NtWaitForSingleObject(emu:&mut emu::Emu) {
+    let handle = emu.regs.rcx;
+    let bAlert = emu.regs.rdx;
+    let timeout = emu.regs.r8;
+
+    println!("{}** {} ntdll!NtWaitForSingleObject  hndl: 0x{:x} timeout: {} {}",
+             emu.colors.light_red, emu.pos, handle, timeout, emu.colors.nc);
 
     emu.regs.rax = constants::STATUS_SUCCESS;
 }
