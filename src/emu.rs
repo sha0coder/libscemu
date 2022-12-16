@@ -741,6 +741,7 @@ impl Emu {
         self.maps.create_map("lpk_rdata").load_at(0x7fefd878000);
         self.maps.create_map("wininet_pe").load_at(0x7fefd880000);
         self.maps.create_map("wininet_text").load_at(0x7fefd881000);
+        self.maps.create_map("wininet_rdata").load_at(0x7fefd94000);
         self.maps.create_map("gdi32_pe").load_at(0x7fefd9b0000);
         self.maps.create_map("gdi32_text").load_at(0x7fefd9b1000);
         self.maps.create_map("gdi32_rdata").load_at(0x7fefda02000);
