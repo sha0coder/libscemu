@@ -5589,7 +5589,11 @@ impl Emu {
                     } else {
                         self.show_instruction(&self.colors.light_cyan, &ins);
 
-                        let val = self.maps.read_byte(self.regs.get_esi()).expect("cannot read memory");
+                        let val = match self.maps.read_byte(self.regs.get_esi()){
+                            Some(v) => v,
+                            None => return false,
+                        };
+
                         self.maps.write_byte(self.regs.get_edi(), val);
                         if !self.flags.f_df {
                             self.regs.set_esi(self.regs.get_esi() + 1);
