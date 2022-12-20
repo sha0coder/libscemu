@@ -2100,6 +2100,10 @@ impl Emu {
 
     pub fn spawn_console(&mut self) {
 
+        if !self.cfg.console_enabled {
+            return
+        }
+
         let con = Console::new();
         self.pos -= 1;
         loop {
@@ -2835,7 +2839,9 @@ impl Emu {
 
             if self.seh == 0 {
                 println!("exception without any SEH handler nor vector configured.");
-                self.spawn_console();
+                if self.cfg.console_enabled {
+                    self.spawn_console();
+                }
                 return;
             }
 
