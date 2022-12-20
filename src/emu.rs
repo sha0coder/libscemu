@@ -2099,9 +2099,6 @@ impl Emu {
     }
 
     pub fn spawn_console(&mut self) {
-        if !self.cfg.console_enabled {
-            std::process::exit(1);
-        }
 
         let con = Console::new();
         self.pos -= 1;
@@ -3649,7 +3646,7 @@ impl Emu {
                     //let mut info_factory = InstructionInfoFactory::new();
                     //let info = info_factory.info(&ins);
 
-                    self.emulate_instruction(&ins, sz, false);
+                    let emulation_ok = self.emulate_instruction(&ins, sz, false);
 
                     if self.cfg.inspect {
                         let addr:u64 = self.memory_operand_to_address(self.cfg.inspect_seq.clone().as_str());
@@ -3685,6 +3682,10 @@ impl Emu {
                         break;
                     }
 
+                    if !emulation_ok {
+                        return
+                    }
+
                 } // end decoder loop
             }  // end running loop
 
@@ -3700,7 +3701,7 @@ impl Emu {
 
 
 
-    fn emulate_instruction(&mut self, ins:&Instruction, instruction_sz:usize, rep_step:bool) {
+    fn emulate_instruction(&mut self, ins:&Instruction, instruction_sz:usize, rep_step:bool) -> bool {
         match ins.mnemonic() {
 
             Mnemonic::Jmp => {
@@ -3712,7 +3713,7 @@ impl Emu {
 
                 let addr = match self.get_operand_value(&ins, 0, true) {
                     Some(a) => a,
-                    None => return,
+                    None => return false,
                 };
 
                 if self.cfg.is_64bits {
@@ -3720,7 +3721,7 @@ impl Emu {
                 } else {
                     self.set_eip(addr, false);
                 }
-                return;
+                return true;
             }
 
             Mnemonic::Call => {
@@ -3732,7 +3733,7 @@ impl Emu {
 
                 let addr = match self.get_operand_value(&ins, 0, true) {
                     Some(a) => a,
-                    None => return,
+                    None => return false,
                 };
 
                 if self.cfg.is_64bits {
@@ -3742,14 +3743,14 @@ impl Emu {
                     self.stack_push32(self.regs.get_eip() as u32 + instruction_sz as u32);
                     self.set_eip(addr, false);
                 }
-                return;
+                return true;
             }
 
             Mnemonic::Push => {
 
                 let value = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 self.show_instruction_pushpop(&self.colors.blue, &ins, value);
@@ -3774,7 +3775,7 @@ impl Emu {
                 self.show_instruction_pushpop(&self.colors.blue, &ins, value);
 
                 if !self.set_operand_value(&ins, 0, value) {
-                    return;
+                    return false;
                 }
             }
 
@@ -3845,15 +3846,15 @@ impl Emu {
                 let ret_addr:u64;
 
                 if self.cfg.is_64bits {
-                    ret_addr = self.stack_pop64(false); // return address
+                    ret_addr = self.stack_pop64(false); // return false address
                 } else {
-                    ret_addr = self.stack_pop32(false) as u64; // return address
+                    ret_addr = self.stack_pop32(false) as u64; // return false address
                 }
 
                 self.show_instruction_ret(&self.colors.yellow, &ins, ret_addr);
 
                 if self.run_until_ret {
-                    return; //TODO: fix this
+                    return true; //TODO: fix this
                 }
 
                 if self.break_on_next_return {
@@ -3893,7 +3894,7 @@ impl Emu {
 
                 if self.eh_ctx != 0 {
                     exception::exit(self);
-                    return;
+                    return false;
                 }
 
                 if self.cfg.is_64bits {
@@ -3902,7 +3903,7 @@ impl Emu {
                     self.set_eip(ret_addr, false);
                 }
 
-                return;
+                return true;
             }
 
             Mnemonic::Xchg => {
@@ -3912,19 +3913,19 @@ impl Emu {
 
                 let value0 = match self.get_operand_value(&ins, 0, true) {
                     Some(v)  => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let value1 = match self.get_operand_value(&ins, 1, true) {
                     Some(v)  => v,
-                    None => return,
+                    None => return false,
                 };
 
                 if !self.set_operand_value(&ins, 0, value1) {
-                    return;
+                    return false;
                 }
                 if !self.set_operand_value(&ins, 1, value0) {
-                    return;
+                    return false;
                 }
             }
 
@@ -3935,11 +3936,11 @@ impl Emu {
 
                 let value1 = match self.get_operand_value(&ins, 1, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 if !self.set_operand_value(&ins, 0, value1) {
-                    return;
+                    return false;
                 }
             }
 
@@ -3951,12 +3952,12 @@ impl Emu {
 
                 let value0 = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let value1 = match self.get_operand_value(&ins, 1, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let sz = self.get_operand_sz(&ins, 0);
@@ -3973,7 +3974,7 @@ impl Emu {
                 self.flags.f_cf = false;
 
                 if !self.set_operand_value(&ins, 0, result) {
-                    return;
+                    return false;
                 }
             }
 
@@ -3984,12 +3985,12 @@ impl Emu {
 
                 let value0 = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let value1 = match self.get_operand_value(&ins, 1, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let res:u64 = match self.get_operand_sz(&ins, 1) {
@@ -4001,7 +4002,7 @@ impl Emu {
                 };
 
                 if !self.set_operand_value(&ins, 0, res) {
-                    return;
+                    return false;
                 }
 
             }
@@ -4020,12 +4021,12 @@ impl Emu {
 
                 let value0 = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let value1 = match self.get_operand_value(&ins, 1, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let res:u64;
@@ -4038,7 +4039,7 @@ impl Emu {
                 }
 
                 if !self.set_operand_value(&ins, 0, res) {
-                    return;
+                    return false;
                 }
 
             }
@@ -4057,12 +4058,12 @@ impl Emu {
 
                 let value0 = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let value1 = match self.get_operand_value(&ins, 1, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let res:u64;
@@ -4076,7 +4077,7 @@ impl Emu {
                 }
 
                 if !self.set_operand_value(&ins, 0, res) {
-                    return;
+                    return false;
                 }
 
             }
@@ -4088,12 +4089,12 @@ impl Emu {
 
                 let value0 = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let value1 = match self.get_operand_value(&ins, 1, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let res:u64;
@@ -4106,7 +4107,7 @@ impl Emu {
                 }
 
                 if !self.set_operand_value(&ins, 0, res) {
-                    return;
+                    return false;
                 }
 
             }
@@ -4118,7 +4119,7 @@ impl Emu {
 
                 let value0 = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let res = match self.get_operand_sz(&ins, 0) {
@@ -4130,7 +4131,7 @@ impl Emu {
                 };
 
                 if !self.set_operand_value(&ins, 0, res) {
-                    return;
+                    return false;
                 }
             }
 
@@ -4141,7 +4142,7 @@ impl Emu {
 
                 let value0 = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let res = match self.get_operand_sz(&ins, 0) {
@@ -4153,7 +4154,7 @@ impl Emu {
                 };
 
                 if !self.set_operand_value(&ins, 0, res) {
-                    return;
+                    return false;
                 }
             }
 
@@ -4164,7 +4165,7 @@ impl Emu {
 
                 let value0 = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let sz = self.get_operand_sz(&ins, 0);
@@ -4195,7 +4196,7 @@ impl Emu {
                 }
 
                 if !self.set_operand_value(&ins, 0, res) {
-                    return;
+                    return false;
                 }
 
             }
@@ -4207,7 +4208,7 @@ impl Emu {
 
                 let value0 = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let val:u64;
@@ -4248,7 +4249,7 @@ impl Emu {
                 }
 
                 if !self.set_operand_value(&ins, 0, val) {
-                    return;
+                    return false;
                 }
             }
 
@@ -4259,12 +4260,12 @@ impl Emu {
 
                 let value0 = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let value1 = match self.get_operand_value(&ins, 1, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let sz = self.get_operand_sz(&ins, 0);
@@ -4302,7 +4303,7 @@ impl Emu {
                 self.flags.f_cf = false;
 
                 if !self.set_operand_value(&ins, 0, result2) {
-                    return;
+                    return false;
                 }
             }
 
@@ -4314,12 +4315,12 @@ impl Emu {
 
                 let value0 = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let value1 = match self.get_operand_value(&ins, 1, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let sz = self.get_operand_sz(&ins, 0);
@@ -4357,7 +4358,7 @@ impl Emu {
                 self.flags.f_cf = false;
 
                 if !self.set_operand_value(&ins, 0, result2) {
-                    return;
+                    return false;
                 }
             }
 
@@ -4368,7 +4369,7 @@ impl Emu {
 
                 let value0 = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 if ins.op_count() == 1 { // 1 param
@@ -4389,7 +4390,7 @@ impl Emu {
                     }
 
                     if !self.set_operand_value(&ins, 0, result) {
-                        return;
+                        return false;
                     }
 
 
@@ -4397,7 +4398,7 @@ impl Emu {
 
                     let value1 = match self.get_operand_value(&ins, 1, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     let sz = self.get_operand_sz(&ins, 0);
@@ -4416,7 +4417,7 @@ impl Emu {
                     }
 
                     if !self.set_operand_value(&ins, 0, result) {
-                        return;
+                        return false;
                     }
 
                 }
@@ -4429,7 +4430,7 @@ impl Emu {
 
                 let value0 = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 if ins.op_count() == 1 { // 1 param
@@ -4450,7 +4451,7 @@ impl Emu {
                     }
 
                     if !self.set_operand_value(&ins, 0, result) {
-                        return;
+                        return false;
                     }
 
 
@@ -4458,7 +4459,7 @@ impl Emu {
 
                     let value1 = match self.get_operand_value(&ins, 1, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     let sz = self.get_operand_sz(&ins, 0);
@@ -4477,7 +4478,7 @@ impl Emu {
                     }
 
                     if !self.set_operand_value(&ins, 0, result) {
-                        return;
+                        return false;
                     }
 
                 }
@@ -4490,7 +4491,7 @@ impl Emu {
 
                 let value0 = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 if ins.op_count() == 1 { // 1 param
@@ -4511,7 +4512,7 @@ impl Emu {
                     }
 
                     if !self.set_operand_value(&ins, 0, result) {
-                        return;
+                        return false;
                     }
 
 
@@ -4519,7 +4520,7 @@ impl Emu {
 
                     let value1 = match self.get_operand_value(&ins, 1, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     let sz = self.get_operand_sz(&ins, 0);
@@ -4540,7 +4541,7 @@ impl Emu {
                     //println!("0x{:x}: 0x{:x} SHL 0x{:x} = 0x{:x}", ins.ip32(), value0, value1, result);
 
                     if !self.set_operand_value(&ins, 0, result) {
-                        return;
+                        return false;
                     }
 
                 }
@@ -4553,7 +4554,7 @@ impl Emu {
 
                 let value0 = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 if ins.op_count() == 1 { // 1 param
@@ -4574,14 +4575,14 @@ impl Emu {
                     }
 
                     if !self.set_operand_value(&ins, 0, result) {
-                        return;
+                        return false;
                     }
 
                 } else { // 2 params
 
                     let value1 = match self.get_operand_value(&ins, 1, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     let sz = self.get_operand_sz(&ins, 0);
@@ -4602,7 +4603,7 @@ impl Emu {
                     //println!("0x{:x} SHR 0x{:x} >> 0x{:x} = 0x{:x}", ins.ip32(), value0, value1, result);
 
                     if !self.set_operand_value(&ins, 0, result) {
-                        return;
+                        return false;
                     }
 
                 }
@@ -4620,7 +4621,7 @@ impl Emu {
                 if ins.op_count() == 1 { // 1 param
                     let value0 = match self.get_operand_value(&ins, 0, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     result = self.ror(value0, 1, sz);
@@ -4635,12 +4636,12 @@ impl Emu {
                 } else { // 2 params
                     let value0 = match self.get_operand_value(&ins, 0, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     let value1 = match self.get_operand_value(&ins, 1, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     result = self.ror(value0, value1, sz);
@@ -4678,7 +4679,7 @@ impl Emu {
                 }
 
                 if !self.set_operand_value(&ins, 0, result) {
-                    return;
+                    return false;
                 }
 
             }
@@ -4695,7 +4696,7 @@ impl Emu {
                 if ins.op_count() == 1 { // 1 param
                     let value0 = match self.get_operand_value(&ins, 0, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     result = self.rcr(value0, 1, sz);
@@ -4705,12 +4706,12 @@ impl Emu {
                 } else { // 2 params
                     let value0 = match self.get_operand_value(&ins, 0, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     let value1 = match self.get_operand_value(&ins, 1, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     result = self.rcr(value0, value1, sz);
@@ -4729,7 +4730,7 @@ impl Emu {
                 }
 
                 if !self.set_operand_value(&ins, 0, result) {
-                    return;
+                    return false;
                 }
 
             }
@@ -4746,7 +4747,7 @@ impl Emu {
                 if ins.op_count() == 1 { // 1 param
                     let value0 = match self.get_operand_value(&ins, 0, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     result = self.rol(value0, 1, sz);
@@ -4762,12 +4763,12 @@ impl Emu {
                 } else { // 2 params
                     let value0 = match self.get_operand_value(&ins, 0, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     let value1 = match self.get_operand_value(&ins, 1, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     let pre_cf;
@@ -4816,7 +4817,7 @@ impl Emu {
                 
 
                 if !self.set_operand_value(&ins, 0, result) {
-                    return;
+                    return false;
                 }
             }
 
@@ -4831,7 +4832,7 @@ impl Emu {
                 if ins.op_count() == 1 { // 1 param
                     let value0 = match self.get_operand_value(&ins, 0, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     result = self.rcl(value0, 1, sz);
@@ -4840,12 +4841,12 @@ impl Emu {
                 } else { // 2 params
                     let value0 = match self.get_operand_value(&ins, 0, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     let value1 = match self.get_operand_value(&ins, 1, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     result = self.rcl(value0, value1, sz);
@@ -4863,7 +4864,7 @@ impl Emu {
                 }
 
                 if !self.set_operand_value(&ins, 0, result) {
-                    return;
+                    return false;
                 }
 
             }
@@ -4876,7 +4877,7 @@ impl Emu {
 
                 let value0 = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let pre_rax = self.regs.rax;
@@ -4909,7 +4910,7 @@ impl Emu {
 
                 let value0 = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let pre_rax = self.regs.rax;
@@ -4943,7 +4944,7 @@ impl Emu {
 
                 let value0 = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let pre_rax = self.regs.rax;
@@ -4978,7 +4979,7 @@ impl Emu {
 
                     let value0 = match self.get_operand_value(&ins, 0, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     let pre_rax = self.regs.rax;
@@ -5006,12 +5007,12 @@ impl Emu {
                 } else if ins.op_count() == 2 { // 2 params
                     let value0 = match self.get_operand_value(&ins, 0, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     let value1 = match self.get_operand_value(&ins, 1, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     let sz = self.get_operand_sz(&ins, 0);
@@ -5030,19 +5031,19 @@ impl Emu {
                     }
 
                     if !self.set_operand_value(&ins, 0, result) {
-                        return;
+                        return false;
                     }
 
                 } else { // 3 params
 
                     let value1 = match self.get_operand_value(&ins, 1, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     let value2 = match self.get_operand_value(&ins, 2, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     let sz = self.get_operand_sz(&ins, 0);
@@ -5061,7 +5062,7 @@ impl Emu {
                     }
 
                     if !self.set_operand_value(&ins, 0, result) {
-                        return;
+                        return false;
                     }
 
                 }
@@ -5073,12 +5074,12 @@ impl Emu {
 
                 let mut bit = match self.get_operand_value(&ins, 1, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let value = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let sz = self.get_operand_sz(&ins, 1);
@@ -5097,12 +5098,12 @@ impl Emu {
 
                 let mut bitpos = match self.get_operand_value(&ins, 1, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let value0 = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let sz = self.get_operand_sz(&ins, 0);
@@ -5115,7 +5116,7 @@ impl Emu {
                 set_bit!(result, bitpos, cf ^ 1);
 
                 if !self.set_operand_value(&ins, 0, result) {
-                    return;
+                    return false;
                 }
             }
 
@@ -5125,12 +5126,12 @@ impl Emu {
 
                 let mut bit = match self.get_operand_value(&ins, 1, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let value = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let sz = self.get_operand_sz(&ins, 0);
@@ -5143,7 +5144,7 @@ impl Emu {
                 set_bit!(result, bit, 1);
 
                 if !self.set_operand_value(&ins, 0, result) {
-                    return;
+                    return false;
                 }
             }
 
@@ -5153,12 +5154,12 @@ impl Emu {
 
                 let mut bit = match self.get_operand_value(&ins, 1, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let value = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let sz = self.get_operand_sz(&ins, 0);
@@ -5171,7 +5172,7 @@ impl Emu {
                 set_bit!(result, bit, 0);
 
                 if !self.set_operand_value(&ins, 0, result) {
-                    return;
+                    return false;
                 }
             }
 
@@ -5181,12 +5182,12 @@ impl Emu {
 
                 let value0 = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let value1 = match self.get_operand_value(&ins, 1, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let sz = self.get_operand_sz(&ins, 0); 
@@ -5204,7 +5205,7 @@ impl Emu {
                     self.flags.load(new_flags);
 
                     if !self.set_operand_value(&ins, 0, result) {
-                        return;
+                        return false;
                     }
                 }
 
@@ -5241,7 +5242,7 @@ impl Emu {
                     }
 
                     if !self.set_operand_value(&ins, 0, dest) {
-                        return;
+                        return false;
                     }
                 }*/
             }
@@ -5252,12 +5253,12 @@ impl Emu {
 
                 let value1 = match self.get_operand_value(&ins, 1, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let value0 = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let sz = self.get_operand_sz(&ins, 0); 
@@ -5267,7 +5268,7 @@ impl Emu {
                 self.flags.load(new_flags);
 
                 if !self.set_operand_value(&ins, 0, result) {
-                    return;
+                    return false;
                 }
                 
                 /*
@@ -5291,7 +5292,7 @@ impl Emu {
                     }
 
                     if !self.set_operand_value(&ins, 0, dest) {
-                        return;
+                        return false;
                     }
                 }*/
             }
@@ -5302,7 +5303,7 @@ impl Emu {
 
                 let value0 = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let value1;
@@ -5341,7 +5342,7 @@ impl Emu {
                 }*/
 
                 if !self.set_operand_value(&ins, 0, value1) {
-                    return;
+                    return false;
                 }
 
             }
@@ -5352,16 +5353,16 @@ impl Emu {
 
                 let value1 = match self.get_operand_value(&ins, 1, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let value0 = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 if !self.set_operand_value(&ins, 1, value0) {
-                    return;
+                    return false;
                 }
 
                 let res:u64 = match self.get_operand_sz(&ins, 1) {
@@ -5373,7 +5374,7 @@ impl Emu {
                 };
 
                 if !self.set_operand_value(&ins, 0, res) {
-                    return;
+                    return false;
                 }
             }
 
@@ -5384,14 +5385,14 @@ impl Emu {
 
                 let value1 = match self.get_operand_value(&ins, 1, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let result:u64 = value1 as u32 as i32 as i64 as u64;
 
 
                 if !self.set_operand_value(&ins, 0, result) {
-                    return;
+                    return false;
                 }
             }
 
@@ -5403,7 +5404,7 @@ impl Emu {
 
                 let value1 = match self.get_operand_value(&ins, 1, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let sz0 = self.get_operand_sz(&ins, 0);
@@ -5446,7 +5447,7 @@ impl Emu {
                 }
 
                 if !self.set_operand_value(&ins, 0, result) {
-                    return;
+                    return false;
                 }
 
             }
@@ -5458,7 +5459,7 @@ impl Emu {
 
                 let value1 = match self.get_operand_value(&ins, 1, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let sz0 = self.get_operand_sz(&ins, 0);
@@ -5488,7 +5489,7 @@ impl Emu {
                 }*/
 
                 if !self.set_operand_value(&ins, 0, result) {
-                    return;
+                    return false;
                 }
 
             }
@@ -5519,7 +5520,7 @@ impl Emu {
 
                             self.regs.rcx -= 1;
                             if self.regs.rcx == 0 {
-                                return
+                                return false
                             }
                             first_iteration = false;
                             if rep_step {
@@ -5566,7 +5567,7 @@ impl Emu {
 
                             self.regs.set_ecx(self.regs.get_ecx() - 1);
                             if self.regs.get_ecx() == 0 {
-                                return
+                                return false
                             }
                             first_iteration = false;
                             if rep_step {
@@ -5618,7 +5619,7 @@ impl Emu {
 
                             self.regs.rcx -= 1;
                             if self.regs.rcx == 0 {
-                                return
+                                return false
                             }
                             first_iteration = false;
                             if rep_step {
@@ -5665,7 +5666,7 @@ impl Emu {
 
                             self.regs.set_ecx(self.regs.get_ecx() - 1);
                             if self.regs.get_ecx() == 0 {
-                                return
+                                return false
                             }
                             first_iteration = false;
                             if rep_step {
@@ -5715,7 +5716,7 @@ impl Emu {
 
                             self.regs.rcx -= 1;
                             if self.regs.rcx == 0 {
-                                return
+                                return false
                             }
                             first_iteration = false;
                             if rep_step {
@@ -5761,7 +5762,7 @@ impl Emu {
 
                             self.regs.set_ecx(self.regs.get_ecx() - 1);
                             if self.regs.get_ecx() == 0 {
-                                return
+                                return false
                             }
                             first_iteration = false;
                             if rep_step {
@@ -5791,11 +5792,11 @@ impl Emu {
                 if !self.flags.f_cf && !self.flags.f_zf {
                     let value1 = match self.get_operand_value(&ins, 1, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     if !self.set_operand_value(&ins, 0, value1) {
-                        return;
+                        return false;
                     }
                 }
             }
@@ -5806,11 +5807,11 @@ impl Emu {
                 if !self.flags.f_cf {
                     let value1 = match self.get_operand_value(&ins, 1, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     if !self.set_operand_value(&ins, 0, value1) {
-                        return;
+                        return false;
                     }
                 }
             }
@@ -5821,11 +5822,11 @@ impl Emu {
                 if self.flags.f_cf {
                     let value1 = match self.get_operand_value(&ins, 1, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     if !self.set_operand_value(&ins, 0, value1) {
-                        return;
+                        return false;
                     }
                 }
             }
@@ -5836,11 +5837,11 @@ impl Emu {
                 if self.flags.f_cf || self.flags.f_zf {
                     let value1 = match self.get_operand_value(&ins, 1, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     if !self.set_operand_value(&ins, 0, value1) {
-                        return;
+                        return false;
                     }
                 }
             }
@@ -5851,11 +5852,11 @@ impl Emu {
                 if self.flags.f_zf {
                     let value1 = match self.get_operand_value(&ins, 1, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     if !self.set_operand_value(&ins, 0, value1) {
-                        return;
+                        return false;
                     }
                 }
             }
@@ -5866,11 +5867,11 @@ impl Emu {
                 if !self.flags.f_zf && self.flags.f_sf == self.flags.f_of {
                     let value1 = match self.get_operand_value(&ins, 1, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     if !self.set_operand_value(&ins, 0, value1) {
-                        return;
+                        return false;
                     }
                 }
             }
@@ -5881,11 +5882,11 @@ impl Emu {
                 if self.flags.f_sf == self.flags.f_of {
                     let value1 = match self.get_operand_value(&ins, 1, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     if !self.set_operand_value(&ins, 0, value1) {
-                        return;
+                        return false;
                     }
                 }
             }
@@ -5896,11 +5897,11 @@ impl Emu {
                 if self.flags.f_sf != self.flags.f_of {
                     let value1 = match self.get_operand_value(&ins, 1, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     if !self.set_operand_value(&ins, 0, value1) {
-                        return;
+                        return false;
                     }
                 }
             }
@@ -5911,11 +5912,11 @@ impl Emu {
                 if self.flags.f_zf || self.flags.f_sf != self.flags.f_of {
                     let value1 = match self.get_operand_value(&ins, 1, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     if !self.set_operand_value(&ins, 0, value1) {
-                        return;
+                        return false;
                     }
                 }
             }
@@ -5926,11 +5927,11 @@ impl Emu {
                 if !self.flags.f_of {
                     let value1 = match self.get_operand_value(&ins, 1, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     if !self.set_operand_value(&ins, 0, value1) {
-                        return;
+                        return false;
                     }
                 }
             }
@@ -5941,11 +5942,11 @@ impl Emu {
                 if !self.flags.f_zf {
                     let value1 = match self.get_operand_value(&ins, 1, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     if !self.set_operand_value(&ins, 0, value1) {
-                        return;
+                        return false;
                     }
                 }
             }
@@ -5956,11 +5957,11 @@ impl Emu {
                 if self.flags.f_pf {
                     let value1 = match self.get_operand_value(&ins, 1, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     if !self.set_operand_value(&ins, 0, value1) {
-                        return;
+                        return false;
                     }
                 }
             }
@@ -5973,11 +5974,11 @@ impl Emu {
                 if !self.flags.f_pf {
                     let value1 = match self.get_operand_value(&ins, 1, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     if !self.set_operand_value(&ins, 0, value1) {
-                        return;
+                        return false;
                     }
                 }
             }
@@ -5987,22 +5988,22 @@ impl Emu {
 
                 let value0 = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let value1 = match self.get_operand_value(&ins, 1, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 if self.flags.f_sf {
                     if !self.set_operand_value(&ins, 0, value1) {
-                        return;
+                        return false;
                     }
                 } else {
                     // clear upper bits of register?
                     if !self.set_operand_value(&ins, 0, value0) {
-                        return;
+                        return false;
                     }
                 }
             }
@@ -6013,11 +6014,11 @@ impl Emu {
                 if !self.flags.f_sf {
                     let value1 = match self.get_operand_value(&ins, 1, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     if !self.set_operand_value(&ins, 0, value1) {
-                        return;
+                        return false;
                     }
                 }
             }
@@ -6028,11 +6029,11 @@ impl Emu {
                 if self.flags.f_of {
                     let value1 = match self.get_operand_value(&ins, 1, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     if !self.set_operand_value(&ins, 0, value1) {
-                        return;
+                        return false;
                     }
                 }
             }
@@ -6042,11 +6043,11 @@ impl Emu {
 
                 if !self.flags.f_cf && !self.flags.f_zf {
                     if !self.set_operand_value(&ins, 0, 1) {
-                        return;
+                        return false;
                     }
                 } else  {
                     if !self.set_operand_value(&ins, 0, 0) {
-                        return;
+                        return false;
                     }
                 }
             }
@@ -6056,11 +6057,11 @@ impl Emu {
 
                 if !self.flags.f_cf {
                     if !self.set_operand_value(&ins, 0, 1) {
-                        return;
+                        return false;
                     }
                 } else  {
                     if !self.set_operand_value(&ins, 0, 0) {
-                        return;
+                        return false;
                     }
                 }
             }
@@ -6070,11 +6071,11 @@ impl Emu {
 
                 if self.flags.f_cf {
                     if !self.set_operand_value(&ins, 0, 1) {
-                        return;
+                        return false;
                     }
                 } else  {
                     if !self.set_operand_value(&ins, 0, 0) {
-                        return;
+                        return false;
                     }
                 }
             }
@@ -6084,11 +6085,11 @@ impl Emu {
 
                 if self.flags.f_cf || self.flags.f_zf {
                     if !self.set_operand_value(&ins, 0, 1) {
-                        return;
+                        return false;
                     }
                 } else  {
                     if !self.set_operand_value(&ins, 0, 0) {
-                        return;
+                        return false;
                     }
                 }
             }
@@ -6098,11 +6099,11 @@ impl Emu {
 
                 if self.flags.f_zf {
                     if !self.set_operand_value(&ins, 0, 1) {
-                        return;
+                        return false;
                     }
                 } else  {
                     if !self.set_operand_value(&ins, 0, 0) {
-                        return;
+                        return false;
                     }
                 }
             }
@@ -6112,11 +6113,11 @@ impl Emu {
 
                 if !self.flags.f_zf && self.flags.f_sf == self.flags.f_of {
                     if !self.set_operand_value(&ins, 0, 1) {
-                        return;
+                        return false;
                     }
                 } else  {
                     if !self.set_operand_value(&ins, 0, 0) {
-                        return;
+                        return false;
                     }
                 }
             }
@@ -6126,11 +6127,11 @@ impl Emu {
 
                 if self.flags.f_sf == self.flags.f_of {
                     if !self.set_operand_value(&ins, 0, 1) {
-                        return;
+                        return false;
                     }
                 } else  {
                     if !self.set_operand_value(&ins, 0, 0) {
-                        return;
+                        return false;
                     }
                 }
             }
@@ -6140,11 +6141,11 @@ impl Emu {
 
                 if self.flags.f_sf != self.flags.f_of {
                     if !self.set_operand_value(&ins, 0, 1) {
-                        return;
+                        return false;
                     }
                 } else  {
                     if !self.set_operand_value(&ins, 0, 0) {
-                        return;
+                        return false;
                     }
                 }
             }
@@ -6154,11 +6155,11 @@ impl Emu {
 
                 if self.flags.f_zf ||  self.flags.f_sf != self.flags.f_of {
                     if !self.set_operand_value(&ins, 0, 1) {
-                        return;
+                        return false;
                     }
                 } else  {
                     if !self.set_operand_value(&ins, 0, 0) {
-                        return;
+                        return false;
                     }
                 }
             }
@@ -6168,11 +6169,11 @@ impl Emu {
 
                 if !self.flags.f_zf {
                     if !self.set_operand_value(&ins, 0, 1) {
-                        return;
+                        return false;
                     }
                 } else  {
                     if !self.set_operand_value(&ins, 0, 0) {
-                        return;
+                        return false;
                     }
                 }
             }
@@ -6182,11 +6183,11 @@ impl Emu {
 
                 if !self.flags.f_of {
                     if !self.set_operand_value(&ins, 0, 1) {
-                        return;
+                        return false;
                     }
                 } else  {
                     if !self.set_operand_value(&ins, 0, 0) {
-                        return;
+                        return false;
                     }
                 }
             }
@@ -6196,11 +6197,11 @@ impl Emu {
 
                 if !self.flags.f_pf {
                     if !self.set_operand_value(&ins, 0, 1) {
-                        return;
+                        return false;
                     }
                 } else  {
                     if !self.set_operand_value(&ins, 0, 0) {
-                        return;
+                        return false;
                     }
                 }
             }
@@ -6210,11 +6211,11 @@ impl Emu {
 
                 if !self.flags.f_sf {
                     if !self.set_operand_value(&ins, 0, 1) {
-                        return;
+                        return false;
                     }
                 } else  {
                     if !self.set_operand_value(&ins, 0, 0) {
-                        return;
+                        return false;
                     }
                 }
             }
@@ -6224,11 +6225,11 @@ impl Emu {
 
                 if self.flags.f_of {
                     if !self.set_operand_value(&ins, 0, 1) {
-                        return;
+                        return false;
                     }
                 } else  {
                     if !self.set_operand_value(&ins, 0, 0) {
-                        return;
+                        return false;
                     }
                 }
             }
@@ -6238,11 +6239,11 @@ impl Emu {
 
                 if self.flags.f_pf {
                     if !self.set_operand_value(&ins, 0, 1) {
-                        return;
+                        return false;
                     }
                 } else  {
                     if !self.set_operand_value(&ins, 0, 0) {
-                        return;
+                        return false;
                     }
                 }
             }
@@ -6252,11 +6253,11 @@ impl Emu {
 
                 if self.flags.f_sf {
                     if !self.set_operand_value(&ins, 0, 1) {
-                        return;
+                        return false;
                     }
                 } else  {
                     if !self.set_operand_value(&ins, 0, 0) {
-                        return;
+                        return false;
                     }
                 }
             }
@@ -6275,7 +6276,7 @@ impl Emu {
                         }
 
                         if self.regs.rcx == 0 {
-                            return;
+                            return false;
                         }
 
                         if self.cfg.is_64bits {
@@ -6357,7 +6358,7 @@ impl Emu {
                         }
 
                         if self.regs.rcx == 0 {
-                            return;
+                            return false;
                         }
 
                         if self.cfg.is_64bits {
@@ -6424,7 +6425,7 @@ impl Emu {
 
                 let value0:u64 = match self.maps.read_byte(self.regs.rdi) {
                     Some(value) => value.into(),
-                    None => return,
+                    None => return false,
                 };
 
                 self.flags.sub8(self.regs.get_al(), value0);
@@ -6449,7 +6450,7 @@ impl Emu {
 
                 let value0 = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 self.flags.sub16(self.regs.get_ax(), value0);
@@ -6474,7 +6475,7 @@ impl Emu {
 
                 let value0 = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 self.flags.sub32(self.regs.get_eax(), value0);
@@ -6499,7 +6500,7 @@ impl Emu {
 
                 let value0 = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 self.flags.sub64(self.regs.rax, value0);
@@ -6523,12 +6524,12 @@ impl Emu {
 
                 let value0 = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let value1 = match self.get_operand_value(&ins, 1, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
 
@@ -6543,19 +6544,19 @@ impl Emu {
 
                 let value0 = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let value1 = match self.get_operand_value(&ins, 1, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 if self.cfg.is_64bits {
                     if value0 == self.regs.rax {
                         self.flags.f_zf = true;
                         if !self.set_operand_value(&ins, 0, value1) {
-                            return;
+                            return false;
                         }
                     } else {
                         self.flags.f_zf = false;
@@ -6565,7 +6566,7 @@ impl Emu {
                     if value0 == self.regs.get_eax() {
                         self.flags.f_zf = true;
                         if !self.set_operand_value(&ins, 0, value1) {
-                            return;
+                            return false;
                         }
                     } else {
                         self.flags.f_zf = false;
@@ -6579,18 +6580,18 @@ impl Emu {
 
                 let value0 = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let value1 = match self.get_operand_value(&ins, 1, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 if value0 as u8 == (self.regs.get_al() as u8) {
                     self.flags.f_zf = true;
                     if !self.set_operand_value(&ins, 0, value1) {
-                        return;
+                        return false;
                     }
                 } else {
                     self.flags.f_zf = false;
@@ -6604,18 +6605,18 @@ impl Emu {
 
                 let value0 = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let value1 = match self.get_operand_value(&ins, 1, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 if value0 as u16 == (self.regs.get_ax() as u16) {
                     self.flags.f_zf = true;
                     if !self.set_operand_value(&ins, 0, value1) {
-                        return;
+                        return false;
                     }
                 } else {
                     self.flags.f_zf = false;
@@ -6631,12 +6632,12 @@ impl Emu {
 
                 let value0 = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let value1 = match self.get_operand_value(&ins, 1, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 if !self.step {
@@ -6655,12 +6656,12 @@ impl Emu {
 
                     let value0 = match self.get_operand_value(&ins, 0, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     let value1 = match self.get_operand_value(&ins, 1, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     if !self.step {
@@ -6731,12 +6732,12 @@ impl Emu {
                             if !self.step {
                                 println!("\tcmp: 0x{:x} > 0x{:x}", value0, value1);
                             }
-                            return;
+                            return false;
                         } else if value0 < value1 {
                             if !self.step {
                                 println!("\tcmp: 0x{:x} < 0x{:x}", value0, value1);
                             }
-                            return;
+                            return false;
                         } else {
                             if !self.step {
                                 println!("\tcmp: 0x{:x} == 0x{:x}", value0, value1);
@@ -6746,7 +6747,7 @@ impl Emu {
 
                         self.regs.rcx -= 1;
                         if self.regs.rcx == 0 {
-                            return;
+                            return false;
                         }
 
                         first_iteration = false;
@@ -6846,12 +6847,12 @@ impl Emu {
                             if !self.step {
                                 println!("\tcmp: 0x{:x} > 0x{:x}", value0, value1);
                             }
-                            return;
+                            return false;
                         } else if value0 < value1 {
                             if !self.step {
                                 println!("\tcmp: 0x{:x} < 0x{:x}", value0, value1);
                             }
-                            return;
+                            return false;
                         } else {
                             if !self.step {
                                 println!("\tcmp: 0x{:x} == 0x{:x}", value0, value1);
@@ -6860,7 +6861,7 @@ impl Emu {
 
                         self.regs.rcx -= 1;
                         if self.regs.rcx == 0 {
-                            return;
+                            return false;
                         }
 
                         first_iteration = false;
@@ -6959,12 +6960,12 @@ impl Emu {
                             if !self.step {
                                 println!("\tcmp: 0x{:x} > 0x{:x}", value0, value1);
                             }
-                            return;
+                            return false;
                         } else if value0 < value1 {
                             if !self.step {
                                 println!("\tcmp: 0x{:x} < 0x{:x}", value0, value1);
                             }
-                            return;
+                            return false;
                         } else {
                             if !self.step {
                                 println!("\tcmp: 0x{:x} == 0x{:x}", value0, value1);
@@ -6974,7 +6975,7 @@ impl Emu {
 
                         self.regs.rcx -= 1;
                         if self.regs.rcx == 0 {
-                            return;
+                            return false;
                         }
 
                         first_iteration = false;
@@ -7074,13 +7075,13 @@ impl Emu {
                                 println!("\tcmp: 0x{:x} > 0x{:x}", value0, value1);
                             }
                             assert!(self.flags.f_zf == false);
-                            return;
+                            return false;
                         } else if value0 < value1 {
                             if !self.step {
                                 println!("\tcmp: 0x{:x} < 0x{:x}", value0, value1);
                             }
                             assert!(self.flags.f_zf == false);
-                            return;
+                            return false;
                         } else {
                             if !self.step {
                                 println!("\tcmp: 0x{:x} == 0x{:x}", value0, value1);
@@ -7090,7 +7091,7 @@ impl Emu {
 
                         self.regs.rcx -= 1;
                         if self.regs.rcx == 0 {
-                            return;
+                            return false;
                         }
 
                         first_iteration = false;
@@ -7160,7 +7161,7 @@ impl Emu {
 
                     let addr =  match self.get_operand_value(&ins, 0, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     if self.cfg.is_64bits {
@@ -7168,7 +7169,7 @@ impl Emu {
                     } else {
                         self.set_eip(addr, true);
                     }
-                    return;
+                    return true;
                 } else {
                     self.show_instruction_not_taken(&self.colors.orange, &ins);
                 }
@@ -7183,7 +7184,7 @@ impl Emu {
 
                     let addr =  match self.get_operand_value(&ins, 0, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     if self.cfg.is_64bits {
@@ -7191,7 +7192,8 @@ impl Emu {
                     } else {
                         self.set_eip(addr, true);
                     }
-                    return;
+                    return true;
+
                 } else {
                     self.show_instruction_not_taken(&self.colors.orange, &ins);
                 }
@@ -7205,7 +7207,7 @@ impl Emu {
                     self.show_instruction_taken(&self.colors.orange, &ins);
                     let addr =  match self.get_operand_value(&ins, 0, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     if self.cfg.is_64bits {
@@ -7213,7 +7215,7 @@ impl Emu {
                     } else {
                         self.set_eip(addr, true);
                     }
-                    return;
+                    return true;
                 } else {
                     self.show_instruction_not_taken(&self.colors.orange, &ins);
                 }
@@ -7227,7 +7229,7 @@ impl Emu {
                     self.show_instruction_taken(&self.colors.orange, &ins);
                     let addr =  match self.get_operand_value(&ins, 0, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     if self.cfg.is_64bits {
@@ -7235,7 +7237,7 @@ impl Emu {
                     } else {
                         self.set_eip(addr, true);
                     }
-                    return;
+                    return true;
                 } else {
                     self.show_instruction_not_taken(&self.colors.orange, &ins);
                 }
@@ -7249,7 +7251,7 @@ impl Emu {
                     self.show_instruction_taken(&self.colors.orange, &ins);
                     let addr =  match self.get_operand_value(&ins, 0, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     if self.cfg.is_64bits {
@@ -7257,7 +7259,7 @@ impl Emu {
                     } else {
                         self.set_eip(addr, true);
                     }
-                    return;
+                    return true;
                 } else {
                     self.show_instruction_not_taken(&self.colors.orange, &ins);
                 }
@@ -7271,7 +7273,7 @@ impl Emu {
                     self.show_instruction_taken(&self.colors.orange, &ins);
                     let addr =  match self.get_operand_value(&ins, 0, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     if self.cfg.is_64bits {
@@ -7279,7 +7281,7 @@ impl Emu {
                     } else {
                         self.set_eip(addr, true);
                     }
-                    return;
+                    return true;
                 } else {
                     self.show_instruction_not_taken(&self.colors.orange, &ins);
                 }
@@ -7293,7 +7295,7 @@ impl Emu {
                     self.show_instruction_taken(&self.colors.orange, &ins);
                     let addr =  match self.get_operand_value(&ins, 0, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     if self.cfg.is_64bits {
@@ -7301,7 +7303,7 @@ impl Emu {
                     } else {
                         self.set_eip(addr, true);
                     }
-                    return;
+                    return true;
                 } else {
                     self.show_instruction_not_taken(&self.colors.orange, &ins);
                 }
@@ -7315,7 +7317,7 @@ impl Emu {
                     self.show_instruction_taken(&self.colors.orange, &ins);
                     let addr =  match self.get_operand_value(&ins, 0, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     if self.cfg.is_64bits {
@@ -7323,7 +7325,7 @@ impl Emu {
                     } else {
                         self.set_eip(addr, true);
                     }
-                    return;
+                    return true;
                 } else {
                     self.show_instruction_not_taken(&self.colors.orange, &ins);
                 }
@@ -7337,7 +7339,7 @@ impl Emu {
                     self.show_instruction_taken(&self.colors.orange, &ins);
                     let addr =  match self.get_operand_value(&ins, 0, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     if self.cfg.is_64bits {
@@ -7345,7 +7347,7 @@ impl Emu {
                     } else {
                         self.set_eip(addr, true);
                     }
-                    return;
+                    return true;
                 } else {
                     self.show_instruction_not_taken(&self.colors.orange, &ins);
                 }
@@ -7359,7 +7361,7 @@ impl Emu {
                     self.show_instruction_taken(&self.colors.orange, &ins);
                     let addr =  match self.get_operand_value(&ins, 0, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     if self.cfg.is_64bits {
@@ -7367,7 +7369,7 @@ impl Emu {
                     } else {
                         self.set_eip(addr, true);
                     }
-                    return;
+                    return true;
                 } else {
                     self.show_instruction_not_taken(&self.colors.orange, &ins);
                 }
@@ -7381,7 +7383,7 @@ impl Emu {
                     self.show_instruction_taken(&self.colors.orange, &ins);
                     let addr =  match self.get_operand_value(&ins, 0, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     if self.cfg.is_64bits {
@@ -7389,7 +7391,7 @@ impl Emu {
                     } else {
                         self.set_eip(addr, true);
                     }
-                    return;
+                    return true;
                 } else {
                     self.show_instruction_not_taken(&self.colors.orange, &ins);
                 }
@@ -7403,7 +7405,7 @@ impl Emu {
                     self.show_instruction_taken(&self.colors.orange, &ins);
                     let addr =  match self.get_operand_value(&ins, 0, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     if self.cfg.is_64bits {
@@ -7411,7 +7413,7 @@ impl Emu {
                     } else {
                         self.set_eip(addr, true);
                     }
-                    return;
+                    return true;
                 } else {
                     self.show_instruction_not_taken(&self.colors.orange, &ins);
                 }
@@ -7425,7 +7427,7 @@ impl Emu {
                     self.show_instruction_taken(&self.colors.orange, &ins);
                     let addr =  match self.get_operand_value(&ins, 0, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     if self.cfg.is_64bits {
@@ -7433,7 +7435,7 @@ impl Emu {
                     } else {
                         self.set_eip(addr, true);
                     }
-                    return;
+                    return true;
                 } else {
                     self.show_instruction_not_taken(&self.colors.orange, &ins);
                 }
@@ -7447,7 +7449,7 @@ impl Emu {
                     self.show_instruction_taken(&self.colors.orange, &ins);
                     let addr =  match self.get_operand_value(&ins, 0, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     if self.cfg.is_64bits {
@@ -7455,7 +7457,7 @@ impl Emu {
                     } else {
                         self.set_eip(addr, true);
                     }
-                    return;
+                    return true;
                 } else {
                     self.show_instruction_not_taken(&self.colors.orange, &ins);
                 }
@@ -7469,7 +7471,7 @@ impl Emu {
                     self.show_instruction_taken(&self.colors.orange, &ins);
                     let addr =  match self.get_operand_value(&ins, 0, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     if self.cfg.is_64bits {
@@ -7477,7 +7479,7 @@ impl Emu {
                     } else {
                         self.set_eip(addr, true);
                     }
-                    return;
+                    return true;
                 } else {
                     self.show_instruction_not_taken(&self.colors.orange, &ins);
                 }
@@ -7491,7 +7493,7 @@ impl Emu {
                     self.show_instruction_taken(&self.colors.orange, &ins);
                     let addr =  match self.get_operand_value(&ins, 0, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     if self.cfg.is_64bits {
@@ -7499,7 +7501,7 @@ impl Emu {
                     } else {
                         self.set_eip(addr, true);
                     }
-                    return;
+                    return true;
                 } else {
                     self.show_instruction_not_taken(&self.colors.orange, &ins);
                 }
@@ -7513,7 +7515,7 @@ impl Emu {
                     self.show_instruction_taken(&self.colors.orange, &ins);
                     let addr =  match self.get_operand_value(&ins, 0, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     if self.cfg.is_64bits {
@@ -7521,7 +7523,7 @@ impl Emu {
                     } else {
                         self.set_eip(addr, true);
                     }
-                    return;
+                    return true;
                 } else {
                     self.show_instruction_not_taken(&self.colors.orange, &ins);
                 }
@@ -7535,7 +7537,7 @@ impl Emu {
                     self.show_instruction_taken(&self.colors.orange, &ins);
                     let addr =  match self.get_operand_value(&ins, 0, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     if self.cfg.is_64bits {
@@ -7543,7 +7545,7 @@ impl Emu {
                     } else {
                         self.set_eip(addr, true);
                     }
-                    return;
+                    return true;
                 } else {
                     self.show_instruction_not_taken(&self.colors.orange, &ins);
                 }
@@ -7554,7 +7556,7 @@ impl Emu {
                     self.show_instruction_taken(&self.colors.orange, &ins);
                     let addr =  match self.get_operand_value(&ins, 0, true) {
                         Some(v) => v,
-                        None => return,
+                        None => return false,
                     };
 
                     if self.cfg.is_64bits {
@@ -7562,7 +7564,7 @@ impl Emu {
                     } else {
                         self.set_eip(addr, true);
                     }
-                    return;
+                    return true;
 
                 } else {
                     self.show_instruction_not_taken(&self.colors.orange, &ins);
@@ -7573,7 +7575,7 @@ impl Emu {
                 self.show_instruction(&self.colors.red, &ins);
                 println!("/!\\ int 3 sigtrap!!!!");
                 self.exception();
-                return;
+                return false;
             }
 
             Mnemonic::Nop => {
@@ -7682,7 +7684,7 @@ impl Emu {
 
                 let addr = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 if addr > 0xffffffff {
@@ -7694,7 +7696,7 @@ impl Emu {
 
                     if self.regs.rcx > 0 {
                         self.set_rip(addr, false);
-                        return;
+                        return true;
                     }
 
                 } else if addr > 0xffff {
@@ -7710,7 +7712,7 @@ impl Emu {
                         } else {
                             self.set_eip(addr, false);
                         }
-                        return;
+                        return true;
                     }
 
                 } else {
@@ -7726,7 +7728,7 @@ impl Emu {
                         } else {
                             self.set_eip(addr, false);
                         }
-                        return;
+                        return true;
                     }
                 }
             }
@@ -7738,7 +7740,7 @@ impl Emu {
 
                 let addr = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 if addr > 0xffffffff {
@@ -7750,7 +7752,7 @@ impl Emu {
 
                     if self.regs.rcx > 0 && self.flags.f_zf {
                         self.set_rip(addr, false);
-                        return;
+                        return true;
                     }
                 } else if addr > 0xffff {
                     if self.regs.get_ecx() == 0 {
@@ -7765,7 +7767,7 @@ impl Emu {
                         } else {
                             self.set_eip(addr, false);
                         }
-                        return;
+                        return true;
                     }
                 } else {
                     if self.regs.get_cx() == 0 {
@@ -7780,7 +7782,7 @@ impl Emu {
                         } else {
                             self.set_eip(addr, false);
                         }
-                        return;
+                        return true;
                     }
                 }
             }
@@ -7792,7 +7794,7 @@ impl Emu {
 
                 let addr = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 if addr > 0xffffffff {
@@ -7804,7 +7806,7 @@ impl Emu {
 
                     if self.regs.rcx > 0 && !self.flags.f_zf {
                         self.set_rip(addr, false);
-                        return;
+                        return true;
                     }
 
                 } else if addr > 0xffff {
@@ -7820,7 +7822,7 @@ impl Emu {
                         } else {
                             self.set_eip(addr, false);
                         }
-                        return;
+                        return true;
                     }
 
                 } else {
@@ -7836,7 +7838,7 @@ impl Emu {
                         } else {
                             self.set_eip(addr, false);
                         }
-                        return;
+                        return true;
                     }
                 }
             }
@@ -7848,11 +7850,11 @@ impl Emu {
 
                 let value1 = match self.get_operand_value(&ins, 1, false) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 if !self.set_operand_value(&ins, 0, value1) {
-                    return;
+                    return false;
                 }
             }
 
@@ -7876,7 +7878,7 @@ impl Emu {
 
                 let interrupt = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 match interrupt {
@@ -8089,7 +8091,7 @@ impl Emu {
 
                 let addr = match self.get_operand_value(&ins, 0, false) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 if self.cfg.is_64bits {
@@ -8411,7 +8413,7 @@ impl Emu {
                     None => {
                         eprintln!("popf cannot read the stack");
                         self.exception();
-                        return;
+                        return false;
                     }
                 };
 
@@ -8471,17 +8473,17 @@ impl Emu {
 
                 let value0 = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let value1 = match self.get_operand_value(&ins, 1, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let counter = match self.get_operand_value(&ins, 2, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let sz = self.get_operand_sz(&ins, 0);
@@ -8493,13 +8495,13 @@ impl Emu {
                     let result = 0x9de2;
                     // TODO: flags?
                     if !self.set_operand_value(&ins, 0, result) {
-                        return;
+                        return false;
                     }
                 } else {
                     let (result, new_flags) = inline::shld(value0, value1, counter, sz, self.flags.dump());
                     self.flags.load(new_flags);
                     if !self.set_operand_value(&ins, 0, result) {
-                        return;
+                        return false;
                     }
                 }               
             }
@@ -8509,17 +8511,17 @@ impl Emu {
 
                 let value0 = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let value1 = match self.get_operand_value(&ins, 1, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let counter = match self.get_operand_value(&ins, 2, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let sz = self.get_operand_sz(&ins, 0);
@@ -8535,14 +8537,14 @@ impl Emu {
                 }*/
 
                 if !self.set_operand_value(&ins, 0, result) {
-                    return;
+                    return false;
                 }
             }
 
 
             Mnemonic::Sysenter => {
                 println!("{}{} 0x{:x}: {}{}", self.colors.red, self.pos, ins.ip(), self.out, self.colors.nc);
-                return;
+                return false;
             }
 
             //// SSE XMM ////
@@ -9077,12 +9079,12 @@ impl Emu {
 
                 let value0 = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 let value1 = match self.get_operand_value(&ins, 1, true) {
                     Some(v) => v,
-                    None => return,
+                    None => return false,
                 };
 
                 self.flags.f_zf = value1 < value0;
@@ -9100,7 +9102,7 @@ impl Emu {
                 if !self.maps.write_word(self.regs.rsp, val) {
                     println!("/!\\ exception writing word at rsp 0x{:x}", self.regs.rsp);
                     self.exception();
-                    return;
+                    return false;
                 }
             }
 
@@ -9185,14 +9187,17 @@ impl Emu {
        
                 if !self.cfg.skip_unimplemented {
                     println!("unimplemented or invalid instruction. use --banzai (cfg.skip_unimplemented) mode to skip");
-                    self.spawn_console();
+                    if self.cfg.console_enabled {
+                        self.spawn_console();
+                    }
+                    return false;
                     //unimplemented!("unimplemented instruction");
                 }
             },
 
-
         }
 
+        return true;
     }
 
 }
