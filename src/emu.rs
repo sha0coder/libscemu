@@ -7952,7 +7952,7 @@ impl Emu {
                 if self.cfg.is_64bits {
                     let val = match self.maps.read_dword(self.regs.rsi) {
                         Some(v) => v,
-                        None => panic!("lodsd: memory read error"),
+                        None => return false,
                     };
 
                     self.regs.set_eax(val as u64);
@@ -7966,7 +7966,7 @@ impl Emu {
 
                     let val = match self.maps.read_dword(self.regs.get_esi()) {
                         Some(v) => v,
-                        None => panic!("lodsd: memory read error"),
+                        None => return false,
                     };
 
                     self.regs.set_eax(val as u64);
@@ -7985,7 +7985,7 @@ impl Emu {
                 if self.cfg.is_64bits {
                     let val = match self.maps.read_word(self.regs.rsi) {
                         Some(v) => v,
-                        None => panic!("lodsw: memory read error 0x{:x}", self.regs.rsi),
+                        None => return false,
                     };
 
                     self.regs.set_ax(val as u64);
@@ -7999,7 +7999,7 @@ impl Emu {
 
                     let val = match self.maps.read_word(self.regs.get_esi()) {
                         Some(v) => v,
-                        None => panic!("lodsw: memory read error"),
+                        None => return false,
                     };
 
                     self.regs.set_ax(val as u64);
