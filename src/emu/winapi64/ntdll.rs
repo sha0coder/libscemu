@@ -271,7 +271,7 @@ fn NtWaitForSingleObject(emu:&mut emu::Emu) {
     println!("{}** {} ntdll!NtWaitForSingleObject  hndl: 0x{:x} timeout: {} {}",
              emu.colors.light_red, emu.pos, handle, timeout, emu.colors.nc);
 
-    emu.regs.rax = 102; //constants::STATUS_SUCCESS;
+    emu.regs.rax = 0x102; //constants::STATUS_SUCCESS;
 }
 
 

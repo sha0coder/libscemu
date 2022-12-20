@@ -182,6 +182,14 @@ impl Emu {
         self.enabled_ctrlc = false;
     }
 
+    pub fn disable_console(&mut self) {
+        self.cfg.console_enabled = false;
+    }
+
+    pub fn enable_console(&mut self) {
+        self.cfg.console_enabled = true;
+    }
+
     pub fn set_verbose(&mut self, n:u32) {
         self.cfg.verbose = n;
     }
