@@ -6724,8 +6724,20 @@ impl Emu {
                         }
 
                         if self.cfg.is_64bits {
-                            value0 = self.maps.read_qword(self.regs.rsi).expect("cannot read esi");
-                            value1 = self.maps.read_qword(self.regs.rdi).expect("cannot read edi");
+                            value0 = match self.maps.read_qword(self.regs.rsi) {
+                                Some(v) => v,
+                                None => {
+                                    println!("cannot read rsi");
+                                    return false;
+                                }
+                            };
+                            value1 = match self.maps.read_qword(self.regs.rdi) {
+                                Some(v) => v,
+                                None => {
+                                    println!("cannot read rdi");
+                                    return false;
+                                }
+                            };
 
                             if self.flags.f_df {
                                 self.regs.rsi -= 8;
@@ -6736,8 +6748,20 @@ impl Emu {
                             }
 
                         } else { // 32bits
-                            value0 = self.maps.read_qword(self.regs.get_esi()).expect("cannot read esi");
-                            value1 = self.maps.read_qword(self.regs.get_edi()).expect("cannot read edi");
+                            value0 = match self.maps.read_qword(self.regs.get_esi()) {
+                                Some(v) => v,
+                                None=> {
+                                    println!("cannot read esi");
+                                    return false;
+                                }
+                            };
+                            value1 = match self.maps.read_qword(self.regs.get_edi()) {
+                                Some(v) => v,
+                                None=> {
+                                    println!("cannot read edi");
+                                    return false;
+                                }
+                            };
 
                             if self.flags.f_df {
                                 self.regs.set_esi(self.regs.get_esi() - 8);
@@ -6784,8 +6808,20 @@ impl Emu {
                     self.show_instruction(&self.colors.orange, &ins);
 
                     if self.cfg.is_64bits {
-                        value0 = self.maps.read_qword(self.regs.rsi).expect("cannot read esi");
-                        value1 = self.maps.read_qword(self.regs.rdi).expect("cannot read edi");
+                        value0 = match self.maps.read_qword(self.regs.rsi) {
+                            Some(v) => v,
+                            None => {
+                                println!("cannot read rsi");
+                                return false;
+                            }
+                        };
+                        value1 = match self.maps.read_qword(self.regs.rdi) {
+                            Some(v) => v,
+                            None => {
+                                println!("cannot read rdi");
+                                return false;
+                            }
+                        };
 
                         if self.flags.f_df {
                             self.regs.rsi -= 8;
@@ -6796,8 +6832,20 @@ impl Emu {
                         }
 
                     } else { // 32bits
-                        value0 = self.maps.read_qword(self.regs.get_esi()).expect("cannot read esi");
-                        value1 = self.maps.read_qword(self.regs.get_edi()).expect("cannot read edi");
+                        value0 = match self.maps.read_qword(self.regs.get_esi()) {
+                            Some(v) => v,
+                            None => {
+                                println!("cannot read esi");
+                                return false;
+                            }
+                        };
+                        value1 = match self.maps.read_qword(self.regs.get_edi()) {
+                            Some(v) => v,
+                            None => {
+                                println!("cannot read edi");
+                                return false;
+                            }
+                        };
 
                         if self.flags.f_df {
                             self.regs.set_esi(self.regs.get_esi() - 8);
@@ -6839,8 +6887,20 @@ impl Emu {
                         }
 
                         if self.cfg.is_64bits {
-                            value0 = self.maps.read_dword(self.regs.rsi).expect("cannot read esi");
-                            value1 = self.maps.read_dword(self.regs.rdi).expect("cannot read edi");
+                            value0 = match self.maps.read_dword(self.regs.rsi) {
+                                Some(v) => v,
+                                None => {
+                                    println!("cannot read rsi");
+                                    return false;
+                                }
+                            };
+                            value1 = match self.maps.read_dword(self.regs.rdi) {
+                                Some(v) => v,
+                                None => {
+                                    println!("cannot read rdi");
+                                    return false;
+                                }
+                            };
 
                             if self.flags.f_df {
                                 self.regs.rsi -= 4;
@@ -6851,8 +6911,20 @@ impl Emu {
                             }
 
                         } else { // 32bits
-                            value0 = self.maps.read_dword(self.regs.get_esi()).expect("cannot read esi");
-                            value1 = self.maps.read_dword(self.regs.get_edi()).expect("cannot read edi");
+                            value0 = match self.maps.read_dword(self.regs.get_esi()) {
+                                Some(v) => v,
+                                None => {
+                                    println!("cannot read esi");
+                                    return false;
+                                }
+                            };
+                            value1 = match self.maps.read_dword(self.regs.get_edi()) {
+                                Some(v) => v,
+                                None => {
+                                    println!("cannot read edi");
+                                    return false;
+                                }
+                            };
 
                             if self.flags.f_df {
                                 self.regs.set_esi(self.regs.get_esi() - 4);
@@ -6898,8 +6970,20 @@ impl Emu {
                     self.show_instruction(&self.colors.light_cyan, &ins);
 
                     if self.cfg.is_64bits {
-                        value0 = self.maps.read_dword(self.regs.rsi).expect("cannot read esi");
-                        value1 = self.maps.read_dword(self.regs.rdi).expect("cannot read edi");
+                        value0 = match self.maps.read_dword(self.regs.rsi) {
+                            Some(v) => v,
+                            None => {
+                                println!("cannot read rsi");
+                                return false;
+                            }
+                        };
+                        value1 = match self.maps.read_dword(self.regs.rdi) {
+                            Some(v) => v,
+                            None => {
+                                println!("cannot read rdi");
+                                return false;
+                            }
+                        };
 
                         if self.flags.f_df {
                             self.regs.rsi -= 4;
@@ -6910,8 +6994,20 @@ impl Emu {
                         }
 
                     } else { // 32bits
-                        value0 = self.maps.read_dword(self.regs.get_esi()).expect("cannot read esi");
-                        value1 = self.maps.read_dword(self.regs.get_edi()).expect("cannot read edi");
+                        value0 = match self.maps.read_dword(self.regs.get_esi()) {
+                            Some(v) => v,
+                            None => {
+                                println!("cannot read esi");
+                                return false;
+                            }
+                        };
+                        value1 = match self.maps.read_dword(self.regs.get_edi()) {
+                            Some(v) => v,
+                            None => {
+                                println!("cannot read edi");
+                                return false;
+                            }
+                        };
 
                         if self.flags.f_df {
                             self.regs.set_esi(self.regs.get_esi() - 4);
@@ -6952,8 +7048,20 @@ impl Emu {
                         }
 
                         if self.cfg.is_64bits {
-                            value0 = self.maps.read_word(self.regs.rsi).expect("cannot read esi");
-                            value1 = self.maps.read_word(self.regs.rdi).expect("cannot read edi");
+                            value0 = match self.maps.read_word(self.regs.rsi) {
+                                Some(v) => v,
+                                None => {
+                                    println!("cannot read rsi");
+                                    return false;
+                                }
+                            };
+                            value1 = match self.maps.read_word(self.regs.rdi) {
+                                Some(v) => v,
+                                None => {
+                                    println!("cannot read rdi");
+                                    return false;
+                                }
+                            };
 
                             if self.flags.f_df {
                                 self.regs.rsi -= 1;
@@ -6964,8 +7072,20 @@ impl Emu {
                             }
 
                         } else { // 32bits
-                            value0 = self.maps.read_word(self.regs.get_esi()).expect("cannot read esi");
-                            value1 = self.maps.read_word(self.regs.get_edi()).expect("cannot read edi");
+                            value0 = match self.maps.read_word(self.regs.get_esi()) {
+                                Some(v) => v,
+                                None => {
+                                    println!("cannot read esi");
+                                    return false;
+                                }
+                            };
+                            value1 = match self.maps.read_word(self.regs.get_edi()) {
+                                Some(v) => v,
+                                None => {
+                                    println!("cannot read edi");
+                                    return false;
+                                }
+                            };
 
                             if self.flags.f_df {
                                 self.regs.set_esi(self.regs.get_esi() - 2);
@@ -7013,8 +7133,20 @@ impl Emu {
                     self.show_instruction(&self.colors.light_cyan, &ins);
 
                     if self.cfg.is_64bits {
-                        value0 = self.maps.read_word(self.regs.rsi).expect("cannot read esi");
-                        value1 = self.maps.read_word(self.regs.rdi).expect("cannot read edi");
+                        value0 = match self.maps.read_word(self.regs.rsi) {
+                            Some(v) => v,
+                            None => {
+                                println!("cannot read rsi");
+                                return false;
+                            }
+                        };
+                        value1 = match self.maps.read_word(self.regs.rdi) {
+                            Some(v) => v,
+                            None => {
+                                println!("cannot read rdi");
+                                return false;
+                            }
+                        };
 
                         if self.flags.f_df {
                             self.regs.rsi -= 1;
@@ -7025,8 +7157,20 @@ impl Emu {
                         }
 
                     } else { // 32bits
-                        value0 = self.maps.read_word(self.regs.get_esi()).expect("cannot read esi");
-                        value1 = self.maps.read_word(self.regs.get_edi()).expect("cannot read edi");
+                        value0 = match self.maps.read_word(self.regs.get_esi()) {
+                            Some(v) => v,
+                            None => {
+                                println!("cannot read esi");
+                                return false;
+                            }
+                        };
+                        value1 = match self.maps.read_word(self.regs.get_edi()) {
+                            Some(v) => v,
+                            None => {
+                                println!("cannot read edi");
+                                return false;
+                            }
+                        };
 
                         if self.flags.f_df {
                             self.regs.set_esi(self.regs.get_esi() - 2);
@@ -7066,8 +7210,20 @@ impl Emu {
                         }
 
                         if self.cfg.is_64bits {
-                            value0 = self.maps.read_byte(self.regs.rsi).expect("cannot read esi");
-                            value1 = self.maps.read_byte(self.regs.rdi).expect("cannot read edi");
+                            value0 = match self.maps.read_byte(self.regs.rsi) {
+                                Some(v) => v,
+                                None => {
+                                    println!("cannot read rsi");
+                                    return false;
+                                }
+                            };
+                            value1 = match self.maps.read_byte(self.regs.rdi) {
+                                Some(v) => v,
+                                None => {
+                                    println!("cannot read rdi");
+                                    return false;
+                                }
+                            };
 
                             if self.flags.f_df {
                                 self.regs.rsi -= 1;
@@ -7078,8 +7234,20 @@ impl Emu {
                             }
 
                         } else { // 32bits
-                            value0 = self.maps.read_byte(self.regs.get_esi()).expect("cannot read esi");
-                            value1 = self.maps.read_byte(self.regs.get_edi()).expect("cannot read edi");
+                            value0 = match self.maps.read_byte(self.regs.get_esi()) {
+                                Some(v) => v,
+                                None => {
+                                    println!("cannot read esi");
+                                    return false;
+                                }
+                            };
+                            value1 = match self.maps.read_byte(self.regs.get_edi()) {
+                                Some(v) => v,
+                                None => {
+                                    println!("cannot read edi");
+                                    return false;
+                                }
+                            };
 
                             if self.flags.f_df {
                                 self.regs.set_esi(self.regs.get_esi() - 1);
@@ -7128,8 +7296,20 @@ impl Emu {
                     self.show_instruction(&self.colors.light_cyan, &ins);
 
                     if self.cfg.is_64bits {
-                        value0 = self.maps.read_byte(self.regs.rsi).expect("cannot read esi");
-                        value1 = self.maps.read_byte(self.regs.rdi).expect("cannot read edi");
+                        value0 = match self.maps.read_byte(self.regs.rsi) {
+                            Some(v) => v,
+                            None => {
+                                println!("cannot read rsi");
+                                return false;
+                            }
+                        };
+                        value1 = match self.maps.read_byte(self.regs.rdi) {
+                            Some(v) => v,
+                            None => {
+                                println!("cannot read rdi");
+                                return false;
+                            }
+                        };
 
                         if self.flags.f_df {
                             self.regs.rsi -= 1;
@@ -7140,8 +7320,20 @@ impl Emu {
                         }
 
                     } else { // 32bits
-                        value0 = self.maps.read_byte(self.regs.get_esi()).expect("cannot read esi");
-                        value1 = self.maps.read_byte(self.regs.get_edi()).expect("cannot read edi");
+                        value0 = match self.maps.read_byte(self.regs.get_esi()) {
+                            Some(v) => v,
+                            None => {
+                                println!("cannot read esi");
+                                return false;
+                            }
+                        };
+                        value1 = match self.maps.read_byte(self.regs.get_edi()) {
+                            Some(v) => v,
+                            None => {
+                                println!("cannot read edi");
+                                return false;
+                            }
+                        };
 
                         if self.flags.f_df {
                             self.regs.set_esi(self.regs.get_esi() - 1);
