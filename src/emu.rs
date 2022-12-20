@@ -1124,7 +1124,11 @@ impl Emu {
 
         let mem = match self.maps.get_mem_by_addr(self.regs.get_esp()) {
             Some(m) => m,
-            None => panic!("poping stack outside map  esp: 0x{:x}", self.regs.get_esp() as u32),
+            None => {
+                println!("poping stack outside map  esp: 0x{:x}", self.regs.get_esp() as u32);
+                self.spawn_console();
+                return 0;
+            }
         };
 
         let value = mem.read_dword(self.regs.get_esp());
@@ -1160,7 +1164,11 @@ impl Emu {
 
         let mem = match self.maps.get_mem_by_addr(self.regs.rsp) {
             Some(m) => m,
-            None => panic!("poping stack outside map  esp: 0x{:x}", self.regs.rsp),
+            None => {
+                println!("poping stack outside map  esp: 0x{:x}", self.regs.rsp);
+                self.spawn_console();
+                return 0;
+            }
         };
 
         let value = mem.read_qword(self.regs.rsp);
