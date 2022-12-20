@@ -3683,7 +3683,11 @@ impl Emu {
                     }
 
                     if !emulation_ok {
-                        return
+                        if self.cfg.console_enabled {
+                            self.spawn_console();
+                        } else {
+                            return
+                        }
                     }
 
                 } // end decoder loop
