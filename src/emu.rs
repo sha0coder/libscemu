@@ -6280,7 +6280,7 @@ impl Emu {
                         }
 
                         if self.regs.rcx == 0 {
-                            return false;
+                            return true;
                         }
 
                         if self.cfg.is_64bits {
@@ -6751,7 +6751,7 @@ impl Emu {
 
                         self.regs.rcx -= 1;
                         if self.regs.rcx == 0 {
-                            return false;
+                            return true;
                         }
 
                         first_iteration = false;
@@ -6865,7 +6865,7 @@ impl Emu {
 
                         self.regs.rcx -= 1;
                         if self.regs.rcx == 0 {
-                            return false;
+                            return true;
                         }
 
                         first_iteration = false;
@@ -6979,7 +6979,7 @@ impl Emu {
 
                         self.regs.rcx -= 1;
                         if self.regs.rcx == 0 {
-                            return false;
+                            return true;
                         }
 
                         first_iteration = false;
@@ -7095,7 +7095,7 @@ impl Emu {
 
                         self.regs.rcx -= 1;
                         if self.regs.rcx == 0 {
-                            return false;
+                            return true;
                         }
 
                         first_iteration = false;
