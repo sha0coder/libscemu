@@ -1226,6 +1226,7 @@ impl Regs64 {
             Register::ES => { },
             Register::FS => { },
             Register::GS => { },
+            Register::DS => { },
             _ => unimplemented!("unimplemented register {:?}", reg),
         };
     }
