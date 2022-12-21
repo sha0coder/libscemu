@@ -33,35 +33,36 @@ impl Maps {
 
     pub fn write_qword(&mut self, addr:u64, value:u64) -> bool {
         for (_,mem) in self.maps.iter_mut() {
-            if mem.inside(addr) {
-                mem.write_qword(addr, value);
-                return true;
+            if mem.inside(addr) && mem.inside(addr+1) && mem.inside(addr+2) && mem.inside(addr+3) &&
+                mem.inside(addr+4) && mem.inside(addr+5) && mem.inside(addr+6) && mem.inside(addr+7) {
+                    mem.write_qword(addr, value);
+                    return true;
             }
         }
-        println!("writing on non mapped zone 0x{:x}", addr);
+        println!("writing qword on non mapped zone 0x{:x}", addr);
         false
     }
 
 
     pub fn write_dword(&mut self, addr:u64, value:u32) -> bool {
         for (_,mem) in self.maps.iter_mut() {
-            if mem.inside(addr) {
+            if mem.inside(addr) && mem.inside(addr+1) && mem.inside(addr+2) && mem.inside(addr+3) {
                 mem.write_dword(addr, value);
                 return true;
             }
         }
-        println!("writing on non mapped zone 0x{:x}", addr);
+        println!("writing dword on non mapped zone 0x{:x}", addr);
         false
     }
 
     pub fn write_word(&mut self, addr:u64, value:u16) -> bool {
         for (_,mem) in self.maps.iter_mut() {
-            if mem.inside(addr) {
+            if mem.inside(addr) && mem.inside(addr+1) {
                 mem.write_word(addr, value);
                 return true;
             }
         }
-        println!("writing on non mapped zone 0x{:x}", addr);
+        println!("writing word on non mapped zone 0x{:x}", addr);
         false
     }
 
@@ -72,7 +73,7 @@ impl Maps {
                 return true;
             }
         }
-        println!("writing on non mapped zone 0x{:x}", addr);
+        println!("writing byte on non mapped zone 0x{:x}", addr);
         false
     }
 

@@ -102,7 +102,7 @@ pub struct Emu {
     eh_ctx: u32,
     pub cfg: Config,
     colors: Colors,
-    pos: u64,
+    pub pos: u64,
     force_break: bool,
     force_reload: bool,
     pub tls_callbacks: Vec<u64>,
@@ -1041,7 +1041,7 @@ impl Emu {
         addr
     }
 
-    pub fn stack_push32(&mut self, value:u32) {
+    pub fn stack_push32(&mut self, value:u32) -> bool {
         if self.cfg.stack_trace {
             println!("--- stack push32 ---");
             self.maps.dump_dwords(self.regs.get_esp(), 5);
@@ -1059,21 +1059,29 @@ impl Emu {
         self.regs.set_esp(self.regs.get_esp() - 4);
         let stack = self.maps.get_mem("stack");
         if stack.inside(self.regs.get_esp()) {
-            stack.write_dword(self.regs.get_esp(), value);
+            if !self.maps.write_dword(self.regs.get_esp(), value) {
+            //if !stack.write_dword(self.regs.get_esp(), value) {
+                return false;
+            }
         } else {
             let mem = match self.maps.get_mem_by_addr(self.regs.get_esp()) {
                 Some(m) => m,
                 None =>  {
                     println!("/!\\ pushing stack outside maps esp: 0x{:x}", self.regs.get_esp());
                     self.spawn_console();
-                    return;
+                    return false;
                 }
             };
-            mem.write_dword(self.regs.get_esp(), value);
+            if !self.maps.write_dword(self.regs.get_esp(), value) {
+            //if !mem.write_dword(self.regs.get_esp(), value) {
+                return false;
+            }
         }
+
+        return true;
     }
 
-    pub fn stack_push64(&mut self, value:u64) {
+    pub fn stack_push64(&mut self, value:u64) -> bool {
         if self.cfg.stack_trace {
             println!("--- stack push64  ---");
             self.maps.dump_qwords(self.regs.rsp, 5);
@@ -1098,14 +1106,16 @@ impl Emu {
                 None =>  {
                     println!("pushing stack outside maps rsp: 0x{:x}", self.regs.get_esp());
                     self.spawn_console();
-                    return;
+                    return false;
                 }
             };
             mem.write_qword(self.regs.rsp, value);
         }
+
+        return true;
     }
 
-    pub fn stack_pop32(&mut self, pop_instruction:bool) -> u32 {
+    pub fn stack_pop32(&mut self, pop_instruction:bool) -> Option<u32> {
         if self.cfg.stack_trace {
             println!("--- stack pop32 ---");
             self.maps.dump_dwords(self.regs.get_esp(), 5);
@@ -1119,7 +1129,7 @@ impl Emu {
                 println!("/!\\ poping a code address 0x{:x}", value);
             }
             self.regs.set_esp(self.regs.get_esp() + 4);
-            return value;
+            return Some(value);
         }
 
         let mem = match self.maps.get_mem_by_addr(self.regs.get_esp()) {
@@ -1127,7 +1137,7 @@ impl Emu {
             None => {
                 println!("poping stack outside map  esp: 0x{:x}", self.regs.get_esp() as u32);
                 self.spawn_console();
-                return 0;
+                return None;
             }
         };
 
@@ -1143,10 +1153,10 @@ impl Emu {
 
         self.regs.set_esp(self.regs.get_esp() + 4);
 
-        value
+        Some(value)
     }
 
-    pub fn stack_pop64(&mut self, pop_instruction:bool) -> u64 {
+    pub fn stack_pop64(&mut self, pop_instruction:bool) -> Option<u64> {
         if self.cfg.stack_trace {
             println!("--- stack pop64 ---");
             self.maps.dump_qwords(self.regs.rsp, 5);
@@ -1159,7 +1169,7 @@ impl Emu {
                 println!("/!\\ poping a code address 0x{:x}", value);
             }
             self.regs.rsp += 8;
-            return value;
+            return Some(value);
         }
 
         let mem = match self.maps.get_mem_by_addr(self.regs.rsp) {
@@ -1167,7 +1177,7 @@ impl Emu {
             None => {
                 println!("poping stack outside map  esp: 0x{:x}", self.regs.rsp);
                 self.spawn_console();
-                return 0;
+                return None;
             }
         };
 
@@ -1182,7 +1192,7 @@ impl Emu {
         }
 
         self.regs.rsp += 8;
-        value
+        Some(value)
     }
 
     // this is not used on the emulation
@@ -1500,7 +1510,7 @@ impl Emu {
             }
 
 
-            self.gateway_return = self.stack_pop64(false);
+            self.gateway_return = self.stack_pop64(false).unwrap_or(0);
             self.regs.rip = self.gateway_return;
 
             winapi64::gateway(addr, name, self);
@@ -1540,7 +1550,7 @@ impl Emu {
                 println!("/!\\ changing EIP to {} 0x{:x}", name, addr);
             }
 
-            self.gateway_return = self.stack_pop32(false).into();
+            self.gateway_return = self.stack_pop32(false).unwrap_or(0).into();
             self.regs.set_eip(self.gateway_return);
 
             winapi32::gateway(to32!(addr), name, self);
@@ -2587,10 +2597,10 @@ impl Emu {
                 },
                 "pop" => {
                     if self.cfg.is_64bits {
-                        let value = self.stack_pop64(false);
+                        let value = self.stack_pop64(false).unwrap_or(0);
                         println!("poped value 0x{:x}", value);
                     } else {
-                        let value = self.stack_pop32(false);
+                        let value = self.stack_pop32(false).unwrap_or(0);
                         println!("poped value 0x{:x}", value);
                     }
                 },
@@ -2857,12 +2867,18 @@ impl Emu {
 
             next = match self.maps.read_dword(self.seh) {
                 Some(value) => value.into(),
-                None => panic!("exception wihout correct SEH"),
+                None => {
+                    println!("exception wihout correct SEH");
+                    return;
+                }
             };
 
             addr = match self.maps.read_dword(self.seh + 4) {
                 Some(value) => value.into(),
-                None => panic!("exception without correct SEH."),
+                None => {
+                    println!("exception without correct SEH.");
+                    return;
+                }
             };
 
             let con = Console::new();
@@ -2999,7 +3015,10 @@ impl Emu {
                             }
                             self.seh
                         }
-                        _ => unimplemented!("fs:[{}]", mem_addr),
+                        _ => { 
+                            println!("unimplemented fs:[{}]", mem_addr);
+                            return None;
+                        }
                     };
                     mem_addr = value;
                 }
@@ -3041,7 +3060,10 @@ impl Emu {
                         0x14 => {
                             unimplemented!("GS:[14]  get stack canary")
                         }
-                        _ => unimplemented!("gs:[{}]", mem_addr),
+                        _ => {
+                            println!("unimplemented gs:[{}]", mem_addr);
+                            return None;
+                        }
                     };
                     mem_addr = value;
                 }
@@ -3328,7 +3350,9 @@ impl Emu {
                     MemorySize::Packed128_UInt64 => 64, // 128bits packed in 2 qwords
                     MemorySize::Packed128_UInt32 => 32, // 128bits packed in 4 dwords
                     MemorySize::Packed128_UInt16 => 16, // 128bits packed in 8 words
-                    MemorySize::Bound32_DwordDword => 64,
+                    MemorySize::Bound32_DwordDword => 32,
+                    MemorySize::Bound16_WordWord => 16,
+                    MemorySize::Packed64_Float32 => 32,
                     _  => unimplemented!("memory size {:?}", mem.memory_size()),
                 };
 
@@ -3395,7 +3419,7 @@ impl Emu {
         Flags::diff(self.pre_op_regs.rip, self.pos - 1, self.pre_op_flags, self.post_op_flags);
     }
 
-    pub fn step(&mut self) {
+    pub fn step(&mut self) -> bool {
         self.pos += 1;
         self.step = false;
         // code
@@ -3404,11 +3428,13 @@ impl Emu {
             None => {
                 println!("redirecting code flow to non maped address 0x{:x}", self.regs.rip);
                 self.spawn_console();
-                return;
+                return false;
             }
         };
-        // blockl
+
+        // block
         let block = code.read_from(self.regs.rip).to_vec(); // reduce code block for more speed
+                                                            //
         // decoder
         let mut decoder;
         if self.cfg.is_64bits {
@@ -3416,6 +3442,7 @@ impl Emu {
         } else {
             decoder = Decoder::with_ip(32,  &block, self.regs.get_eip(), DecoderOptions::NONE);
         }
+
         // formatter
         let mut formatter = IntelFormatter::new();
         formatter.options_mut().set_digit_separator("");
@@ -3424,11 +3451,14 @@ impl Emu {
         let ins = decoder.iter().next().unwrap();
         // size
         let sz = ins.len();
+
         // clear
         self.out.clear();
         formatter.format(&ins, &mut self.out);
+
         // emulate
-        self.emulate_instruction(&ins, sz, true);
+        let result_ok = self.emulate_instruction(&ins, sz, true);
+
         // update eip/rip
         if self.force_reload {
             self.force_reload = false;
@@ -3439,6 +3469,8 @@ impl Emu {
                 self.regs.set_eip(self.regs.get_eip() + sz as u64);
             }
         }
+
+        return result_ok;
     }
 
     ///  RUN ENGINE ///
@@ -3457,6 +3489,7 @@ impl Emu {
 
         let mut looped:Vec<u64> = Vec::new();
         let mut prev_addr:u64 = 0;
+        let mut prev_prev_addr:u64 = 0;
         let mut repeat_counter:u32 = 0;
 
         if end_addr == 0 {
@@ -3518,9 +3551,10 @@ impl Emu {
                     }
 
                     // prevent infinite loop
-                    if addr == prev_addr {
+                    if addr == prev_addr || addr == prev_prev_addr {
                         repeat_counter += 1;
                     }
+                    prev_prev_addr = prev_addr;
                     prev_addr = addr;
                     if repeat_counter == 100 {
                         println!("infinite loop!  opcode: {}", ins.op_code().op_code_string());
@@ -3755,10 +3789,12 @@ impl Emu {
                 };
 
                 if self.cfg.is_64bits {
-                    self.stack_push64(self.regs.rip + instruction_sz as u64);
+                    if !self.stack_push64(self.regs.rip + instruction_sz as u64) { return false; }
                     self.set_rip(addr, false);
                 } else {
-                    self.stack_push32(self.regs.get_eip() as u32 + instruction_sz as u32);
+                    if !self.stack_push32(self.regs.get_eip() as u32 + instruction_sz as u32) {
+                        return false;
+                    }
                     self.set_eip(addr, false);
                 }
                 return true;
@@ -3774,9 +3810,11 @@ impl Emu {
                 self.show_instruction_pushpop(&self.colors.blue, &ins, value);
 
                 if self.cfg.is_64bits {
-                    self.stack_push64(value);
+                    if !self.stack_push64(value) { return false; }
                 } else {
-                    self.stack_push32(to32!(value));
+                    if !self.stack_push32(to32!(value)) {
+                        return false;
+                    }
                 }
             }
 
@@ -3785,9 +3823,15 @@ impl Emu {
                 let value:u64;
 
                 if self.cfg.is_64bits {
-                    value = self.stack_pop64(true);
+                    value = match self.stack_pop64(true) {
+                        Some(v) => v as u64,
+                        None => return false,
+                    };
                 } else {
-                    value = self.stack_pop32(true) as u64;
+                    value = match self.stack_pop32(true) {
+                        Some(v) => v as u64,
+                        None => return false,
+                    };
                 }
 
                 self.show_instruction_pushpop(&self.colors.blue, &ins, value);
@@ -3802,14 +3846,14 @@ impl Emu {
 
                 // only 32bits instruction
                 let tmp_esp = self.regs.get_esp() as u32;
-                self.stack_push32(self.regs.get_eax() as u32);
-                self.stack_push32(self.regs.get_ecx() as u32);
-                self.stack_push32(self.regs.get_edx() as u32);
-                self.stack_push32(self.regs.get_ebx() as u32);
-                self.stack_push32(tmp_esp);
-                self.stack_push32(self.regs.get_ebp() as u32);
-                self.stack_push32(self.regs.get_esi() as u32);
-                self.stack_push32(self.regs.get_edi() as u32);
+                if !self.stack_push32(self.regs.get_eax() as u32) { return false; }
+                if !self.stack_push32(self.regs.get_ecx() as u32) { return false; }
+                if !self.stack_push32(self.regs.get_edx() as u32) { return false; }
+                if !self.stack_push32(self.regs.get_ebx() as u32) { return false; }
+                if !self.stack_push32(tmp_esp) { return false; }
+                if !self.stack_push32(self.regs.get_ebp() as u32) { return false; }
+                if !self.stack_push32(self.regs.get_esi() as u32) { return false; }
+                if !self.stack_push32(self.regs.get_edi() as u32) { return false; }
             }
 
             Mnemonic::Popad => {
@@ -3817,22 +3861,22 @@ impl Emu {
                 let mut poped:u64;
 
                 // only 32bits instruction
-                poped = self.stack_pop32(false) as u64;
+                poped = self.stack_pop32(false).unwrap_or(0) as u64;
                 self.regs.set_edi(poped);
-                poped = self.stack_pop32(false) as u64;
+                poped = self.stack_pop32(false).unwrap_or(0) as u64;
                 self.regs.set_esi(poped);
-                poped = self.stack_pop32(false) as u64;
+                poped = self.stack_pop32(false).unwrap_or(0) as u64;
                 self.regs.set_ebp(poped);
 
                 self.regs.set_esp(self.regs.get_esp() + 4); // skip esp
 
-                poped = self.stack_pop32(false) as u64;
+                poped = self.stack_pop32(false).unwrap_or(0) as u64;
                 self.regs.set_ebx(poped);
-                poped = self.stack_pop32(false) as u64;
+                poped = self.stack_pop32(false).unwrap_or(0) as u64;
                 self.regs.set_edx(poped);
-                poped = self.stack_pop32(false) as u64;
+                poped = self.stack_pop32(false).unwrap_or(0) as u64;
                 self.regs.set_ecx(poped);
-                poped = self.stack_pop32(false) as u64;
+                poped = self.stack_pop32(false).unwrap_or(0) as u64;
                 self.regs.set_eax(poped);
             }
 
@@ -3864,9 +3908,15 @@ impl Emu {
                 let ret_addr:u64;
 
                 if self.cfg.is_64bits {
-                    ret_addr = self.stack_pop64(false); // return false address
+                    ret_addr = match self.stack_pop64(false) {
+                        Some(v) => v as u64,
+                        None => return false,
+                    }; // return false address
                 } else {
-                    ret_addr = self.stack_pop32(false) as u64; // return false address
+                    ret_addr = match self.stack_pop32(false) {
+                        Some(v) => v as u64,
+                        None => return false,
+                    }; // return false address
                 }
 
                 self.show_instruction_ret(&self.colors.yellow, &ins, ret_addr);
@@ -3899,7 +3949,8 @@ impl Emu {
                     } else {
 
                         if arg % 4 != 0 {
-                            panic!("weird ret argument!");
+                            println!("weird ret argument!");
+                            return false;
                         }
 
                         arg /= 4;
@@ -5525,8 +5576,17 @@ impl Emu {
                                 self.pos += 1;
                             }
 
-                            let val = self.maps.read_byte(self.regs.rsi).expect("cannot read memory");
-                            self.maps.write_byte(self.regs.rdi, val);
+                            let val = match self.maps.read_byte(self.regs.rsi) {
+                                Some(v) => v,
+                                None => {
+                                    println!("cannot read memory on rsi");
+                                    return false;
+                                }
+                            };
+                            if !self.maps.write_byte(self.regs.rdi, val) {
+                                println!("cannot write memoryh on rdi");
+                                return false;
+                            }
 
                             if !self.flags.f_df {
                                 self.regs.rsi += 1;
@@ -5538,7 +5598,7 @@ impl Emu {
 
                             self.regs.rcx -= 1;
                             if self.regs.rcx == 0 {
-                                return false
+                                return true;
                             }
                             first_iteration = false;
                             if rep_step {
@@ -5572,8 +5632,17 @@ impl Emu {
                                 self.pos += 1;
                             }
 
-                            let val = self.maps.read_byte(self.regs.get_esi()).expect("cannot read memory");
-                            self.maps.write_byte(self.regs.get_edi(), val);
+                            let val = match self.maps.read_byte(self.regs.get_esi()) {
+                                Some(v) => v,
+                                None => {
+                                    println!("cannot read memory on esi");
+                                    return false;
+                                }
+                            };
+                            if !self.maps.write_byte(self.regs.get_edi(), val) {
+                                println!("cannot write memory on edi");
+                                return false;
+                            }
 
                             if !self.flags.f_df {
                                 self.regs.set_esi(self.regs.get_esi() + 1);
@@ -5585,7 +5654,7 @@ impl Emu {
 
                             self.regs.set_ecx(self.regs.get_ecx() - 1);
                             if self.regs.get_ecx() == 0 {
-                                return false
+                                return true;
                             }
                             first_iteration = false;
                             if rep_step {
@@ -5641,7 +5710,7 @@ impl Emu {
 
                             self.regs.rcx -= 1;
                             if self.regs.rcx == 0 {
-                                return false
+                                return true;
                             }
                             first_iteration = false;
                             if rep_step {
@@ -5688,7 +5757,7 @@ impl Emu {
 
                             self.regs.set_ecx(self.regs.get_ecx() - 1);
                             if self.regs.get_ecx() == 0 {
-                                return false
+                                return true;
                             }
                             first_iteration = false;
                             if rep_step {
@@ -5699,7 +5768,13 @@ impl Emu {
 
                     } else {
                         self.show_instruction(&self.colors.light_cyan, &ins);
-                        let val = self.maps.read_word(self.regs.get_esi()).expect("cannot read memory");
+                        let val = match self.maps.read_word(self.regs.get_esi()) {
+                            Some(v) => v,
+                            None => {
+                                println!("cannot read memory on esi");
+                                return false;
+                            }
+                        };
                         self.maps.write_word(self.regs.get_edi(), val);
                         if !self.flags.f_df {
                             self.regs.set_esi(self.regs.get_esi() + 2);
@@ -5738,7 +5813,7 @@ impl Emu {
 
                             self.regs.rcx -= 1;
                             if self.regs.rcx == 0 {
-                                return false
+                                return true;
                             }
                             first_iteration = false;
                             if rep_step {
@@ -5771,7 +5846,13 @@ impl Emu {
                                 self.pos += 1;
                             }
 
-                            let val = self.maps.read_dword(self.regs.get_esi()).expect("cannot read memory");
+                            let val = match self.maps.read_dword(self.regs.get_esi()) {
+                                Some(v) => v,
+                                None => {
+                                    println!("cannot read memory at esi");
+                                    return false;
+                                }
+                            };
                             self.maps.write_dword(self.regs.get_edi(), val);
 
                             if !self.flags.f_df {
@@ -5784,7 +5865,7 @@ impl Emu {
 
                             self.regs.set_ecx(self.regs.get_ecx() - 1);
                             if self.regs.get_ecx() == 0 {
-                                return false
+                                return true;
                             }
                             first_iteration = false;
                             if rep_step {
@@ -5795,7 +5876,13 @@ impl Emu {
 
                     } else {
                         self.show_instruction(&self.colors.light_cyan, &ins);
-                        let val = self.maps.read_dword(self.regs.get_esi()).expect("cannot read memory");
+                        let val = match self.maps.read_dword(self.regs.get_esi()) {
+                            Some(v) => v,
+                            None => {
+                                println!("cannot read memory");
+                                return false;
+                            }
+                        };
                         self.maps.write_dword(self.regs.get_edi(), val);
                         if !self.flags.f_df {
                             self.regs.set_esi(self.regs.get_esi() + 4);
@@ -6302,14 +6389,18 @@ impl Emu {
                         }
 
                         if self.cfg.is_64bits {
-                            self.maps.write_byte(self.regs.rdi, self.regs.get_al() as u8);
+                            if !self.maps.write_byte(self.regs.rdi, self.regs.get_al() as u8) {
+                                return false;
+                            }
                             if self.flags.f_df {
                                 self.regs.rdi -= 1;
                             } else {
                                 self.regs.rdi += 1;
                             }
                         } else { // 32bits
-                            self.maps.write_byte(self.regs.get_edi(), self.regs.get_al() as u8);
+                            if !self.maps.write_byte(self.regs.get_edi(), self.regs.get_al() as u8) {
+                                return false;
+                            }
                             if self.flags.f_df {
                                 self.regs.set_edi(self.regs.get_edi() - 1);
                             } else {
@@ -6380,18 +6471,22 @@ impl Emu {
                         }
 
                         if self.regs.rcx == 0 {
-                            return false;
+                            return true;
                         }
 
                         if self.cfg.is_64bits {
-                            self.maps.write_dword(self.regs.rdi, self.regs.get_eax() as u32);
+                            if !self.maps.write_dword(self.regs.rdi, self.regs.get_eax() as u32) {
+                                return false;
+                            }
                             if self.flags.f_df {
                                 self.regs.rdi -= 4;
                             } else {
                                 self.regs.rdi += 4;
                             }
                         } else { // 32bits
-                            self.maps.write_dword(self.regs.get_edi(), self.regs.get_eax() as u32);
+                            if !self.maps.write_dword(self.regs.get_edi(), self.regs.get_eax() as u32) {
+                                return false;
+                            }
 
                             if self.flags.f_df {
                                 self.regs.set_edi(self.regs.get_edi() - 4);
@@ -7872,7 +7967,10 @@ impl Emu {
                         self.regs.rcx = 0;
                         self.regs.rdx = 0;
                     },
-                    _ => unimplemented!("unimplemented cpuid call 0x{:x}", self.regs.rax),
+                    _ => {
+                        println!("unimplemented cpuid call 0x{:x}", self.regs.rax);
+                        return false;
+                    }
                 }
             }
 
@@ -8077,11 +8175,17 @@ impl Emu {
 
                 if self.cfg.is_64bits {
                     self.regs.rsp = self.regs.rbp;
-                    self.regs.rbp = self.stack_pop64(true);
+                    self.regs.rbp = match self.stack_pop64(true) {
+                        Some(v) => v as u64,
+                        None => return false,
+                    };
                 } else {
                     self.regs.set_esp(self.regs.get_ebp());
-                    let val = self.stack_pop32(true);
-                    self.regs.set_ebp(val as u64);
+                    let val = match self.stack_pop32(true) {
+                        Some(v) => v as u64,
+                        None => return false,
+                    };
+                    self.regs.set_ebp(val);
                 }
             }
 
@@ -8097,7 +8201,10 @@ impl Emu {
 
                 match interrupt {
                     0x80 => syscall32::gateway(self),
-                    _ => unimplemented!("interrupt {}", interrupt),
+                    _ => {
+                        println!("unimplemented interrupt {}", interrupt);
+                        return false;
+                    }
                 }
             }
 
@@ -8560,8 +8667,7 @@ impl Emu {
 
             Mnemonic::Fadd => {
                 self.show_instruction(&self.colors.green, &ins);
-
-                assert!(ins.op_count() == 2);
+                //assert!(ins.op_count() == 2); there are with 1 operand
                
                 if ins.op_register(0) == Register::ST0 {
                     match ins.op_register(1) {
@@ -8573,7 +8679,7 @@ impl Emu {
                         Register::ST5 => self.fpu.add_to_st0(5),
                         Register::ST6 => self.fpu.add_to_st0(6),
                         Register::ST7 => self.fpu.add_to_st0(7),
-                        _  => unimplemented!("impossible case"),
+                        _  => self.fpu.add_to_st0(0),
                     }
                 } else {
                     let i = match ins.op_register(0) {
@@ -8585,7 +8691,7 @@ impl Emu {
                         Register::ST5 => 5,
                         Register::ST6 => 6,
                         Register::ST7 => 7,
-                        _  => unimplemented!("impossible case"),
+                        _  => 0,
                     };
 
                     let j = match ins.op_register(1) {
@@ -8597,7 +8703,7 @@ impl Emu {
                         Register::ST5 => 5,
                         Register::ST6 => 6,
                         Register::ST7 => 7,
-                        _  => unimplemented!("impossible case"),
+                        _  => 0,
                     };
 
                     self.fpu.add(i, j);
@@ -8639,7 +8745,10 @@ impl Emu {
             Mnemonic::Popfd => {
                 self.show_instruction(&self.colors.blue, &ins);
 
-                let flags = self.stack_pop32(true);
+                let flags = match self.stack_pop32(true) {
+                    Some(v) => v,
+                    None => return false,
+                };
                 self.flags.load(flags);
             }
 
@@ -8647,8 +8756,11 @@ impl Emu {
             Mnemonic::Popfq => {
                 self.show_instruction(&self.colors.blue, &ins);
 
-                let eflags = self.stack_pop64(true);
-                self.flags.load(eflags as u32);
+                let eflags = match self.stack_pop64(true) {
+                    Some(v) => v as u32,
+                    None => return false,
+                };
+                self.flags.load(eflags);
             }
 
 
@@ -8774,8 +8886,20 @@ impl Emu {
 
                 assert!(ins.op_count() == 2);
 
-                let value0 = self.get_operand_xmm_value_128(&ins, 0, true).expect("error getting xmm value0");
-                let value1 = self.get_operand_xmm_value_128(&ins, 0, true).expect("error getting xmm value1");
+                let value0 = match self.get_operand_xmm_value_128(&ins, 0, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting xmm value0");
+                        return false;
+                    }
+                };
+                let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting xmm value1");
+                        return false;
+                    }
+                };
 
                 let result:u128 = value0 ^ value1;
                 self.flags.calc_flags(result as u64, 32);
@@ -8786,8 +8910,20 @@ impl Emu {
             Mnemonic::Xorps => {
                 self.show_instruction(&self.colors.green, &ins);
 
-                let value0 = self.get_operand_xmm_value_128(&ins, 0, true).expect("error getting value0");
-                let value1 = self.get_operand_xmm_value_128(&ins, 1, true).expect("error getting velue1");
+                let value0 = match self.get_operand_xmm_value_128(&ins, 0, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting xmm value0");
+                        return false;
+                    }
+                };
+                let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting xmm value1");
+                        return false;
+                    }
+                };
 
                 let a:u128 = (value0 & 0xffffffff) ^ (value1 & 0xffffffff);
                 let b:u128 = (value0 & 0xffffffff_00000000) ^ (value1 & 0xffffffff_00000000);
@@ -8802,8 +8938,20 @@ impl Emu {
             Mnemonic::Xorpd => {
                 self.show_instruction(&self.colors.green, &ins);
 
-                let value0 = self.get_operand_xmm_value_128(&ins, 0, true).expect("error getting value0");
-                let value1 = self.get_operand_xmm_value_128(&ins, 1, true).expect("error getting velue1");
+                let value0 = match self.get_operand_xmm_value_128(&ins, 0, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting xmm value0");
+                        return false;
+                    }
+                };
+                let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting xmm value1");
+                        return false;
+                    }
+                };
 
                 let a:u128 = (value0 & 0xffffffff_ffffffff) ^ (value1 & 0xffffffff_ffffffff);
                 let b:u128 = (value0 & 0xffffffff_ffffffff_00000000_00000000) ^ (value1 & 0xffffffff_ffffffff_00000000_00000000);
@@ -8821,28 +8969,65 @@ impl Emu {
                 let sz1 = self.get_operand_sz(&ins, 1);
 
                 if sz0 == 128 && sz1 == 128 {
-                let value1 = self.get_operand_xmm_value_128(&ins, 1, true).expect("error getting xmm value1");
+                let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting xmm value1");
+                        return false;
+                    }
+                };
                 self.set_operand_xmm_value_128(&ins, 0, value1);
 
                 } else if sz0 == 128 && sz1 == 32 {
-                    let value1 = self.get_operand_value(&ins, 1, true).expect("error getting value1");
+                    let value1 = match self.get_operand_value(&ins, 1, true) {
+                        Some(v) => v,
+                        None => {
+                            println!("error getting xmm value1");
+                            return false;
+                        }
+                    };
                     self.set_operand_xmm_value_128(&ins, 0, value1 as u128);
 
                 } else if sz0 == 32 && sz1 == 128 {
-                    let value1 = self.get_operand_xmm_value_128(&ins, 1, true).expect("error getting xmm value1");
+                    let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                        Some(v) => v,
+                        None => {
+                            println!("error getting xmm value1");
+                            return false;
+                        }
+                    };
                     self.set_operand_value(&ins, 0, value1 as u64);
 
                 } else if sz0 == 128 && sz1 == 64 {
-                    let addr = self.get_operand_value(&ins, 1, false).expect("error getting the address");
-                    let value1 = self.maps.read_qword(addr).expect("error getting qword");
+                    let addr = match self.get_operand_value(&ins, 1, false) {
+                        Some(v) => v,
+                        None => {
+                            println!("error getting xmm address value1");
+                            return false;
+                        }
+                    };
+                    let value1 = match self.maps.read_qword(addr) {
+                        Some(v) => v,
+                        None => {
+                            println!("error getting xmm qword value1");
+                            return false;
+                        }
+                    };
                     self.set_operand_xmm_value_128(&ins, 0, value1 as u128);
 
                 } else if sz0 == 64 && sz1 == 128 {
-                    let value1 = self.get_operand_xmm_value_128(&ins, 1, true).expect("error getting xmm value");
+                    let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                        Some(v) => v,
+                        None => {
+                            println!("error getting xmm value1");
+                            return false;
+                        }
+                    };
                     self.set_operand_value(&ins, 0, value1 as u64);
 
                 } else {
-                    panic!("SSE with other size combinations sz0:{} sz1:{}", sz0, sz1);
+                    println!("SSE with other size combinations sz0:{} sz1:{}", sz0, sz1);
+                    return false;
                 }
             }
 
@@ -8851,7 +9036,13 @@ impl Emu {
 
                 assert!(ins.op_count() == 2);
 
-                let value1 = self.get_operand_xmm_value_128(&ins, 1, true).expect("error getting xmm value");
+                let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting xmm value1");
+                        return false;
+                    }
+                };
                 
                 self.set_operand_xmm_value_128(&ins, 0, value1);
             }
@@ -8865,8 +9056,20 @@ impl Emu {
                 let sz1 = self.get_operand_sz(&ins, 1);
 
                 if sz0 == 32 && sz1 == 128 {
-                    let xmm = self.get_operand_xmm_value_128(&ins, 1, true).expect("error getting xmm value");
-                    let addr = self.get_operand_value(&ins, 0, false).expect("error getting address");
+                    let xmm = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                        Some(v) => v,
+                        None => {
+                            println!("error getting xmm value1");
+                            return false;
+                        }
+                    };
+                    let addr = match self.get_operand_value(&ins, 0, false) {
+                        Some(v) => v,
+                        None => {
+                            println!("error getting address value0");
+                            return false;
+                        }
+                    };
                     //println!("addr: 0x{:x} value: 0x{:x}", addr, xmm);
                     self.maps.write_dword(addr, ((xmm & 0xffffffff_00000000_00000000_00000000) >> (12*8)) as u32 );
                     self.maps.write_dword(addr+4, ((xmm & 0xffffffff_00000000_00000000) >> (8*8)) as u32 );
@@ -8874,22 +9077,40 @@ impl Emu {
                     self.maps.write_dword(addr+12, (xmm & 0xffffffff) as u32 );
 
                 } else if sz0 == 128 && sz1 == 32 {
-                    let addr = self.get_operand_value(&ins, 1, false).expect("error reading address in movdqa");
+                    let addr = match self.get_operand_value(&ins, 1, false) {
+                        Some(v) => v,
+                        None => {
+                            println!("error reading address value1");
+                            return false;
+                        }
+                    };
                     let b1 = match self.maps.read_dword(addr) {
                         Some(v) => v,
-                        None => panic!("error reading b1 in movdqa"),
+                        None => {
+                            println!("error reading b1 in movdqa");
+                            return false;
+                        }
                     };
                     let b2 = match self.maps.read_dword(addr+4) {
                         Some(v) => v,
-                        None => panic!("error reading b2 in movdqa"),
+                        None => {
+                            println!("error reading b2 in movdqa");
+                            return false;
+                        }
                     };
                     let b3 = match self.maps.read_dword(addr+8) {
                         Some(v) => v,
-                        None => panic!("error reading b3 in movdqa"),
+                        None => {
+                            println!("error reading b3 in movdqa");
+                            return false;
+                        }
                     };
                     let b4 = match self.maps.read_dword(addr+12) {
                         Some(v) => v,
-                        None => panic!("error reading b4 in movdqa"),
+                        None => {
+                            println!("error reading b4 in movdqa");
+                            return false;
+                        }
                     };
 
                     let r1 :u128 = b1 as u128;
@@ -8909,8 +9130,20 @@ impl Emu {
             Mnemonic::Andpd => {
                 self.show_instruction(&self.colors.green, &ins);
 
-                let value0 = self.get_operand_xmm_value_128(&ins, 0, true).expect("error getting value0");
-                let value1 = self.get_operand_xmm_value_128(&ins, 1, true).expect("error getting velue1");
+                let value0 = match self.get_operand_xmm_value_128(&ins, 0, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting value0");
+                        return false;
+                    }
+                };
+                let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting value1");
+                        return false;
+                    }
+                };
 
                 let result:u128 = value0 & value1;
 
@@ -8920,8 +9153,20 @@ impl Emu {
             Mnemonic::Orpd => {
                 self.show_instruction(&self.colors.green, &ins);
 
-                let value0 = self.get_operand_xmm_value_128(&ins, 0, true).expect("error getting value0");
-                let value1 = self.get_operand_xmm_value_128(&ins, 1, true).expect("error getting velue1");
+                let value0 = match self.get_operand_xmm_value_128(&ins, 0, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting value0");
+                        return false;
+                    }
+                };
+                let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting value1");
+                        return false;
+                    }
+                };
 
                 let result:u128 = value0 | value1;
 
@@ -8931,8 +9176,20 @@ impl Emu {
             Mnemonic::Addps => {
                 self.show_instruction(&self.colors.green, &ins);
 
-                let value0 = self.get_operand_xmm_value_128(&ins, 0, true).expect("error getting value0");
-                let value1 = self.get_operand_xmm_value_128(&ins, 1, true).expect("error getting velue1");
+                let value0 = match self.get_operand_xmm_value_128(&ins, 0, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting value0");
+                        return false;
+                    }
+                };
+                let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting value1");
+                        return false;
+                    }
+                };
 
                 let a:u128 = (value0 & 0xffffffff) + (value1 & 0xffffffff);
                 let b:u128 = (value0 & 0xffffffff_00000000) + (value1 & 0xffffffff_00000000);
@@ -8947,8 +9204,20 @@ impl Emu {
             Mnemonic::Addpd => {
                 self.show_instruction(&self.colors.green, &ins);
 
-                let value0 = self.get_operand_xmm_value_128(&ins, 0, true).expect("error getting value0");
-                let value1 = self.get_operand_xmm_value_128(&ins, 1, true).expect("error getting velue1");
+                let value0 = match self.get_operand_xmm_value_128(&ins, 0, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting value0");
+                        return false;
+                    }
+                };
+                let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting value1");
+                        return false;
+                    }
+                };
 
                 let a:u128 = (value0 & 0xffffffff_ffffffff) + (value1 & 0xffffffff_ffffffff);
                 let b:u128 = (value0 & 0xffffffff_ffffffff_00000000_00000000) + (value1 & 0xffffffff_ffffffff_00000000_00000000);
@@ -8960,8 +9229,20 @@ impl Emu {
             Mnemonic::Addsd => {
                 self.show_instruction(&self.colors.green, &ins);
 
-                let value0 = self.get_operand_xmm_value_128(&ins, 0, true).expect("error getting value0");
-                let value1 = self.get_operand_xmm_value_128(&ins, 1, true).expect("error getting velue1");
+                let value0 = match self.get_operand_xmm_value_128(&ins, 0, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting value0");
+                        return false;
+                    }
+                };
+                let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting value1");
+                        return false;
+                    }
+                };
 
                 let result:u64 = value0 as u64 + value1 as u64;
                 let r128:u128 = (value0 & 0xffffffffffffffff0000000000000000) + result as u128;
@@ -8971,8 +9252,20 @@ impl Emu {
             Mnemonic::Addss => {
                 self.show_instruction(&self.colors.green, &ins);
 
-                let value0 = self.get_operand_xmm_value_128(&ins, 0, true).expect("error getting value0");
-                let value1 = self.get_operand_xmm_value_128(&ins, 1, true).expect("error getting velue1");
+                let value0 = match self.get_operand_xmm_value_128(&ins, 0, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting value0");
+                        return false;
+                    }
+                };
+                let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting value1");
+                        return false;
+                    }
+                };
 
                 let result:u32 = value0 as u32 + value1 as u32;
                 let r128:u128 = (value0 & 0xffffffffffffffffffffffff00000000) + result as u128;
@@ -8982,8 +9275,20 @@ impl Emu {
             Mnemonic::Subps => {
                 self.show_instruction(&self.colors.green, &ins);
 
-                let value0 = self.get_operand_xmm_value_128(&ins, 0, true).expect("error getting value0");
-                let value1 = self.get_operand_xmm_value_128(&ins, 1, true).expect("error getting velue1");
+                let value0 = match self.get_operand_xmm_value_128(&ins, 0, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting value0");
+                        return false;
+                    }
+                };
+                let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting value1");
+                        return false;
+                    }
+                };
 
                 let a:u128 = (value0 & 0xffffffff) - (value1 & 0xffffffff);
                 let b:u128 = (value0 & 0xffffffff_00000000) - (value1 & 0xffffffff_00000000);
@@ -8998,8 +9303,20 @@ impl Emu {
             Mnemonic::Subpd => {
                 self.show_instruction(&self.colors.green, &ins);
 
-                let value0 = self.get_operand_xmm_value_128(&ins, 0, true).expect("error getting value0");
-                let value1 = self.get_operand_xmm_value_128(&ins, 1, true).expect("error getting velue1");
+                let value0 = match self.get_operand_xmm_value_128(&ins, 0, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting value0");
+                        return false;
+                    }
+                };
+                let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting value1");
+                        return false;
+                    }
+                };
 
                 let a:u128 = (value0 & 0xffffffff_ffffffff) - (value1 & 0xffffffff_ffffffff);
                 let b:u128 = (value0 & 0xffffffff_ffffffff_00000000_00000000) - (value1 & 0xffffffff_ffffffff_00000000_00000000);
@@ -9011,8 +9328,20 @@ impl Emu {
             Mnemonic::Subsd => {
                 self.show_instruction(&self.colors.green, &ins);
 
-                let value0 = self.get_operand_xmm_value_128(&ins, 0, true).expect("error getting value0");
-                let value1 = self.get_operand_xmm_value_128(&ins, 1, true).expect("error getting velue1");
+                let value0 = match self.get_operand_xmm_value_128(&ins, 0, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting value0");
+                        return false;
+                    }
+                };
+                let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting value1");
+                        return false;
+                    }
+                };
 
                 let result:u64 = value0 as u64 - value1 as u64;
                 let r128:u128 = (value0 & 0xffffffffffffffff0000000000000000) + result as u128;
@@ -9022,8 +9351,20 @@ impl Emu {
             Mnemonic::Subss => {
                 self.show_instruction(&self.colors.green, &ins);
 
-                let value0 = self.get_operand_xmm_value_128(&ins, 0, true).expect("error getting value0");
-                let value1 = self.get_operand_xmm_value_128(&ins, 1, true).expect("error getting velue1");
+                let value0 = match self.get_operand_xmm_value_128(&ins, 0, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting value0");
+                        return false;
+                    }
+                };
+                let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting value1");
+                        return false;
+                    }
+                };
 
                 let result:u32 = value0 as u32 - value1 as u32;
                 let r128:u128 = (value0 & 0xffffffffffffffffffffffff00000000) + result as u128;
@@ -9033,8 +9374,20 @@ impl Emu {
             Mnemonic::Mulpd => {
                 self.show_instruction(&self.colors.green, &ins);
 
-                let value0 = self.get_operand_xmm_value_128(&ins, 0, true).expect("error getting value0");
-                let value1 = self.get_operand_xmm_value_128(&ins, 1, true).expect("error getting velue1");
+                let value0 = match self.get_operand_xmm_value_128(&ins, 0, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting value0");
+                        return false;
+                    }
+                };
+                let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting value1");
+                        return false;
+                    }
+                };
 
                 let left:u128 = ((value0 & 0xffffffffffffffff0000000000000000)>>64) * ((value1 & 0xffffffffffffffff0000000000000000)>>64);
                 let right:u128 = (value0 & 0xffffffffffffffff) * (value1 & 0xffffffffffffffff);
@@ -9046,8 +9399,20 @@ impl Emu {
             Mnemonic::Mulps => {
                 self.show_instruction(&self.colors.green, &ins);
 
-                let value0 = self.get_operand_xmm_value_128(&ins, 0, true).expect("error getting value0");
-                let value1 = self.get_operand_xmm_value_128(&ins, 1, true).expect("error getting velue1");
+                let value0 = match self.get_operand_xmm_value_128(&ins, 0, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting value0");
+                        return false;
+                    }
+                };
+                let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting value1");
+                        return false;
+                    }
+                };
 
                 let a:u128 = (value0 & 0xffffffff) * (value1 & 0xffffffff);
                 let b:u128 = (value0 & 0xffffffff00000000) * (value1 & 0xffffffff00000000);
@@ -9062,8 +9427,20 @@ impl Emu {
             Mnemonic::Mulsd => {
                 self.show_instruction(&self.colors.green, &ins);
 
-                let value0 = self.get_operand_xmm_value_128(&ins, 0, true).expect("error getting value0");
-                let value1 = self.get_operand_xmm_value_128(&ins, 1, true).expect("error getting velue1");
+                let value0 = match self.get_operand_xmm_value_128(&ins, 0, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting value0");
+                        return false;
+                    }
+                };
+                let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting value1");
+                        return false;
+                    }
+                };
 
                 let result:u64 = value0 as u64 * value1 as u64;
                 let r128:u128 = (value0 & 0xffffffffffffffff0000000000000000) + result as u128;
@@ -9073,8 +9450,20 @@ impl Emu {
             Mnemonic::Mulss => {
                 self.show_instruction(&self.colors.green, &ins);
 
-                let value0 = self.get_operand_xmm_value_128(&ins, 0, true).expect("error getting value0");
-                let value1 = self.get_operand_xmm_value_128(&ins, 1, true).expect("error getting velue1");
+                let value0 = match self.get_operand_xmm_value_128(&ins, 0, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting value0");
+                        return false;
+                    }
+                };
+                let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting value1");
+                        return false;
+                    }
+                };
 
                 let result:u32 = value0 as u32 * value1 as u32;
                 let r128:u128 = (value0 & 0xffffffffffffffffffffffff00000000) + result as u128;
@@ -9084,8 +9473,20 @@ impl Emu {
             Mnemonic::Packsswb => {
                 self.show_instruction(&self.colors.green, &ins);
                 
-                let value0 = self.get_operand_xmm_value_128(&ins, 0, true).expect("error getting value0");
-                let value1 = self.get_operand_xmm_value_128(&ins, 1, true).expect("error getting velue1");
+                let value0 = match self.get_operand_xmm_value_128(&ins, 0, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting value0");
+                        return false;
+                    }
+                };
+                let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting value1");
+                        return false;
+                    }
+                };
                 let mut result:u128;
 
                 result = (value0 & 0xffff) as u16 as i16 as i8 as u8 as u128;
@@ -9111,8 +9512,20 @@ impl Emu {
             Mnemonic::Packssdw => {
                 self.show_instruction(&self.colors.green, &ins);
                 
-                let value0 = self.get_operand_xmm_value_128(&ins, 0, true).expect("error getting value0");
-                let value1 = self.get_operand_xmm_value_128(&ins, 1, true).expect("error getting velue1");
+                let value0 = match self.get_operand_xmm_value_128(&ins, 0, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting value0");
+                        return false;
+                    }
+                };
+                let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting value1");
+                        return false;
+                    }
+                };
                 let mut result:u128;
 
                 result = (value0 & 0xffffffff) as u32 as i32 as i16 as u16 as u128;
@@ -9130,8 +9543,20 @@ impl Emu {
             Mnemonic::Psllw => {
                 self.show_instruction(&self.colors.green, &ins);
                 
-                let value0 = self.get_operand_xmm_value_128(&ins, 0, true).expect("error getting value0");
-                let value1 = self.get_operand_xmm_value_128(&ins, 1, true).expect("error getting velue1");
+                let value0 = match self.get_operand_xmm_value_128(&ins, 0, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting value0");
+                        return false;
+                    }
+                };
+                let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting value1");
+                        return false;
+                    }
+                };
                 let mut result:u128;
 
                 if value1 > 15 {
@@ -9149,8 +9574,20 @@ impl Emu {
             Mnemonic::Pslld => {
                 self.show_instruction(&self.colors.green, &ins);
                 
-                let value0 = self.get_operand_xmm_value_128(&ins, 0, true).expect("error getting value0");
-                let value1 = self.get_operand_xmm_value_128(&ins, 1, true).expect("error getting velue1");
+                let value0 = match self.get_operand_xmm_value_128(&ins, 0, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting value0");
+                        return false;
+                    }
+                };
+                let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting value1");
+                        return false;
+                    }
+                };
                 let mut result:u128;
 
                 if value1 > 31 {
@@ -9166,8 +9603,20 @@ impl Emu {
             Mnemonic::Paddusb | Mnemonic::Paddb => {
                 self.show_instruction(&self.colors.green, &ins);
                 
-                let value0 = self.get_operand_xmm_value_128(&ins, 0, true).expect("error getting value0");
-                let value1 = self.get_operand_xmm_value_128(&ins, 1, true).expect("error getting velue1");
+                let value0 = match self.get_operand_xmm_value_128(&ins, 0, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting value0");
+                        return false;
+                    }
+                };
+                let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting value1");
+                        return false;
+                    }
+                };
                 let sz = self.get_operand_sz(&ins, 0);
                 let mut result:u128;
     
@@ -9208,8 +9657,20 @@ impl Emu {
             Mnemonic::Paddusw | Mnemonic::Paddw => {
                 self.show_instruction(&self.colors.green, &ins);
                 
-                let value0 = self.get_operand_xmm_value_128(&ins, 0, true).expect("error getting value0");
-                let value1 = self.get_operand_xmm_value_128(&ins, 1, true).expect("error getting velue1");
+                let value0 = match self.get_operand_xmm_value_128(&ins, 0, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting value0");
+                        return false;
+                    }
+                };
+                let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting value1");
+                        return false;
+                    }
+                };
                 let sz = self.get_operand_sz(&ins, 0);
                 let mut result:u128;
     
@@ -9259,7 +9720,13 @@ impl Emu {
             Mnemonic::Movups => {
                 self.show_instruction(&self.colors.green, &ins);
 
-                let source = self.get_operand_xmm_value_128(&ins, 1, true).expect("error getting source");
+                let source = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error reading memory xmm 1 source operand");
+                        return false;
+                    }
+                };
                 
                 self.set_operand_xmm_value_128(&ins, 0, source);
             }
@@ -9267,7 +9734,13 @@ impl Emu {
             Mnemonic::Movdqu => {
                 self.show_instruction(&self.colors.green, &ins);
 
-                let source = self.get_operand_xmm_value_128(&ins, 1, true).expect("error getting source");
+                let source = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error reading memory xmm 1 source operand");
+                        return false;
+                    }
+                };
 
                 self.set_operand_xmm_value_128(&ins, 0, source);
             }
@@ -9323,14 +9796,15 @@ impl Emu {
             Mnemonic::Pushfd => {
                 self.show_instruction(&self.colors.blue, &ins);
 
+                // 32bits only instruction
                 let flags = self.flags.dump();
-                self.stack_push32(flags); // 32bits only instruction
+                if !self.stack_push32(flags) { return false; }
             }
 
             Mnemonic::Pushfq => {
                 self.show_instruction(&self.colors.blue, &ins);
                 self.flags.f_tf = false;
-                self.stack_push64(self.flags.dump() as u64);
+                if !self.stack_push64(self.flags.dump() as u64) { return false; }
             }
 
             Mnemonic::Bound => {
@@ -9352,7 +9826,8 @@ impl Emu {
                 };
 
                 println!("bound idx:{} lower_upper:{}", array_index, lower_upper_bound);
-                unimplemented!("Bound unimplemented");
+                println!("Bound unimplemented");
+                return false;
                 // https://www.felixcloutier.com/x86/bound
             }
 
@@ -9395,7 +9870,10 @@ impl Emu {
                         self.regs.rdx = 0;
                         self.regs.rax = self.cfg.code_base_addr + 0x42;
                     },
-                    _ => unimplemented!("/!\\ unimplemented rdmsr with value {}", self.regs.rcx),
+                    _ => {
+                        println!("/!\\ unimplemented rdmsr with value {}", self.regs.rcx);
+                        return false;
+                    }
                 }
 
             }

@@ -367,11 +367,7 @@ impl Flags {
     }
 
     pub fn add8(&mut self, value1:u64, value2:u64) -> u64 {
-        if value1 > 0xff || value2 > 0xff {
-            panic!("add8 with a bigger precision");
-        }
-
-        let unsigned:u16 = value1 as u16 + value2 as u16;
+        let unsigned:u16 = value1 as u8 as u16 + value2 as u8 as u16;
 
         self.f_sf = (unsigned as i8) < 0;
         self.f_zf = (unsigned & 0xff) == 0;
