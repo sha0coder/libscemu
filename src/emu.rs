@@ -9336,10 +9336,20 @@ impl Emu {
             Mnemonic::Bound => {
                 self.show_instruction(&self.colors.red, &ins);
 
-                let array_index = self.get_operand_value(&ins, 0, true)
-                    .expect("cannot read first opreand of bound");
-                let lower_upper_bound = self.get_operand_value(&ins, 1, true)
-                    .expect("cannot read second opreand of bound");
+                let array_index = match self.get_operand_value(&ins, 0, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("cannot read first opreand of bound");
+                        return false;
+                    }
+                };
+                let lower_upper_bound = match self.get_operand_value(&ins, 1, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("cannot read second opreand of bound");
+                        return false;
+                    }
+                };
 
                 println!("bound idx:{} lower_upper:{}", array_index, lower_upper_bound);
                 unimplemented!("Bound unimplemented");
