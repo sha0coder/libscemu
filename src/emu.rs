@@ -1124,7 +1124,14 @@ impl Emu {
 
         let stack = self.maps.get_mem("stack");
         if stack.inside(self.regs.get_esp()) {
-            let value = stack.read_dword(self.regs.get_esp());
+            //let value = stack.read_dword(self.regs.get_esp());
+            let value = match self.maps.read_dword(self.regs.get_esp()) {
+                Some(v) => v,
+                None => {
+                    println!("esp out of stack");
+                    return None;
+                }
+            };
             if self.cfg.verbose >= 1 && pop_instruction && self.maps.get_mem("code").inside(value.into()) {
                 println!("/!\\ poping a code address 0x{:x}", value);
             }
@@ -1141,7 +1148,14 @@ impl Emu {
             }
         };
 
-        let value = mem.read_dword(self.regs.get_esp());
+        //let value = mem.read_dword(self.regs.get_esp());
+        let value = match self.maps.read_dword(self.regs.get_esp()) {
+            Some(v) => v,
+            None => {
+                println!("esp out of stack");
+                return None;
+            }
+        };
 
         if self.cfg.trace_mem {
             let name = match self.maps.get_addr_name(self.regs.get_esp()) {
@@ -3353,6 +3367,7 @@ impl Emu {
                     MemorySize::Bound32_DwordDword => 32,
                     MemorySize::Bound16_WordWord => 16,
                     MemorySize::Packed64_Float32 => 32,
+                    MemorySize::SegPtr32 => 32,
                     _  => unimplemented!("memory size {:?}", mem.memory_size()),
                 };
 
@@ -3489,7 +3504,7 @@ impl Emu {
 
         let mut looped:Vec<u64> = Vec::new();
         let mut prev_addr:u64 = 0;
-        let mut prev_prev_addr:u64 = 0;
+        //let mut prev_prev_addr:u64 = 0;
         let mut repeat_counter:u32 = 0;
 
         if end_addr == 0 {
@@ -3551,10 +3566,10 @@ impl Emu {
                     }
 
                     // prevent infinite loop
-                    if addr == prev_addr || addr == prev_prev_addr {
+                    if addr == prev_addr { // || addr == prev_prev_addr {
                         repeat_counter += 1;
                     }
-                    prev_prev_addr = prev_addr;
+                    //prev_prev_addr = prev_addr;
                     prev_addr = addr;
                     if repeat_counter == 100 {
                         println!("infinite loop!  opcode: {}", ins.op_code().op_code_string());

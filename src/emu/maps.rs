@@ -79,13 +79,16 @@ impl Maps {
 
     pub fn read_128bits_be(&self, addr:u64) -> Option<u128> {
         for (_,mem) in self.maps.iter() {
-            if mem.inside(addr) {
-                let mut n:u128 = 0;
-                let bytes = mem.read_bytes(addr, 16);
-                for i in 0..16 {
-                   n |= (bytes[i] as u128) << (i*8);
-                }
-                return Some(n);
+            if mem.inside(addr) && mem.inside(addr+1) && mem.inside(addr+2) && mem.inside(addr+3) &&
+               mem.inside(addr+4) && mem.inside(addr+5) && mem.inside(addr+6) && mem.inside(addr+7) && 
+               mem.inside(addr+8) && mem.inside(addr+9) && mem.inside(addr+10) && mem.inside(addr+11) &&
+               mem.inside(addr+12) && mem.inside(addr+13) && mem.inside(addr+14) && mem.inside(addr+15) {
+                    let mut n:u128 = 0;
+                    let bytes = mem.read_bytes(addr, 16);
+                    for i in 0..16 {
+                       n |= (bytes[i] as u128) << (i*8);
+                    }
+                    return Some(n);
             }
         }
         None
@@ -93,13 +96,16 @@ impl Maps {
 
     pub fn read_128bits_le(&self, addr:u64) -> Option<u128> {
         for (_,mem) in self.maps.iter() {
-            if mem.inside(addr) {
-                let mut n:u128 = 0;
-                let bytes = mem.read_bytes(addr, 16);
-                for i in (0..16).rev() {
-                    n |= (bytes[i] as u128) << (i*8);
-                }
-                return Some(n);
+            if mem.inside(addr) && mem.inside(addr+1) && mem.inside(addr+2) && mem.inside(addr+3) &&
+               mem.inside(addr+4) && mem.inside(addr+5) && mem.inside(addr+6) && mem.inside(addr+7) && 
+               mem.inside(addr+8) && mem.inside(addr+9) && mem.inside(addr+10) && mem.inside(addr+11) &&
+               mem.inside(addr+12) && mem.inside(addr+13) && mem.inside(addr+14) && mem.inside(addr+15) {
+                    let mut n:u128 = 0;
+                    let bytes = mem.read_bytes(addr, 16);
+                    for i in (0..16).rev() {
+                        n |= (bytes[i] as u128) << (i*8);
+                    }
+                    return Some(n);
             }
         }
         None
@@ -107,8 +113,9 @@ impl Maps {
 
     pub fn read_qword(&self, addr:u64) -> Option<u64> {
         for (_,mem) in self.maps.iter() {
-            if mem.inside(addr) {
-                return Some(mem.read_qword(addr));
+            if mem.inside(addr) && mem.inside(addr+1) && mem.inside(addr+2) && mem.inside(addr+3) &&
+               mem.inside(addr+4) && mem.inside(addr+5) && mem.inside(addr+6) && mem.inside(addr+7) {
+                    return Some(mem.read_qword(addr));
             }
         }
         None
@@ -116,7 +123,7 @@ impl Maps {
 
     pub fn read_dword(&self, addr:u64) -> Option<u32> {
         for (_,mem) in self.maps.iter() {
-            if mem.inside(addr) {
+            if mem.inside(addr) && mem.inside(addr+1) && mem.inside(addr+2) && mem.inside(addr+3) {
                 return Some(mem.read_dword(addr));
             }
         }
@@ -125,7 +132,7 @@ impl Maps {
 
     pub fn read_word(&self, addr:u64) -> Option<u16> {
         for (_,mem) in self.maps.iter() {
-            if mem.inside(addr) {
+            if mem.inside(addr) && mem.inside(addr+1) {
                 return Some(mem.read_word(addr));
             }
         }

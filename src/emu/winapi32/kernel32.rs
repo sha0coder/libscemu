@@ -111,6 +111,7 @@ pub fn gateway(addr:u32, emu:&mut emu::Emu) -> String {
         0x75e8a611 => lstrlen(emu),
         0x75e9452b => MultiByteToWideChar(emu),
         0x75e93728 => GetSystemInfo(emu),
+        0x75e8bbd0 => HeapFree(emu),
 
         _ => {
             let apiname = guess_api_name(emu, addr);
@@ -1878,6 +1879,24 @@ fn GetSystemInfo(emu:&mut emu::Emu) {
     */
 
     emu.stack_pop32(false);
+}
+
+fn HeapFree(emu:&mut emu::Emu) {
+    let heap = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("kernel32!HeapFree cannot read heap handle");
+    let flags = emu.maps.read_dword(emu.regs.get_esp()+4)
+        .expect("kernel32!HeapFree cannot read heap handle");
+    let mem = emu.maps.read_dword(emu.regs.get_esp()+8)
+        .expect("kernel32!HeapFree cannot read heap handle");
+
+
+    println!("{}** {} kernel32!HeapFree mem: 0x{:x} {}", emu.colors.light_red, emu.pos, mem, emu.colors.nc);
+
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+
+    emu.regs.rax = 1;
 }
 
 
