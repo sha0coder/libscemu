@@ -33,6 +33,7 @@ pub fn gateway(addr:u32, emu:&mut emu::Emu) -> String {
         0x775b7760 => RtlLeaveCriticalSection(emu),
         0x775d65e3 => RtlGetVersion(emu),
         0x775c6db9 => RtlInitializeCriticalSectionEx(emu),
+        0x775a5340 => memset(emu),
         _ => { 
             let apiname = kernel32::guess_api_name(emu, addr);
             println!("calling unimplemented ntdll API 0x{:x} {}", addr, apiname);
@@ -690,18 +691,31 @@ fn RtlInitializeCriticalSectionEx(emu:&mut emu::Emu) {
     let flags = emu.maps.read_dword(emu.regs.get_esp()+8)
         .expect("ntdll!RtlInitializeCriticalSectionEx error reading flags");
 
-
     println!("{}** {} ntdll!RtlInitializeCriticalSectionEx {}",      
              emu.colors.light_red, emu.pos, emu.colors.nc);
 
-    
     emu.stack_pop32(false);
     emu.stack_pop32(false);
     emu.stack_pop32(false);
     emu.regs.rax = 1;
 }
 
+fn memset(emu:&mut emu::Emu) {
+    let ptr = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("ntdll!memset error reading ptr") as u64;
+    let byte = emu.maps.read_dword(emu.regs.get_esp()+4)
+        .expect("ntdll!memset error reading byte");
+    let count = emu.maps.read_dword(emu.regs.get_esp()+8)
+        .expect("ntdll!memset error reading count");
 
+    println!("{}** {} ntdll!memset ptr: 0x{:x} byte: {} count: {} {}",      
+             emu.colors.light_red, emu.pos, ptr, byte, count, emu.colors.nc);
 
+    emu.maps.memset(ptr, byte as u8, count as usize);
 
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+    emu.regs.rax = 1;
+}
 

@@ -25,6 +25,7 @@ pub fn gateway(addr:u32, name:String, emu:&mut emu::Emu) { //name:String, maps:&
         "wininet_text" => wininet::gateway(addr, emu),
         "advapi32_text" => advapi32::gateway(addr, emu),
         "crypt32.text" => crypt32::gateway(addr, emu),
+        "crypt32_text" => crypt32::gateway(addr, emu),
         "dnsapi.text" => dnsapi::gateway(addr, emu),
         "mscoree.text" => mscoree::gateway(addr, emu),
         "msvcrt_text" => msvcrt::gateway(addr, emu),

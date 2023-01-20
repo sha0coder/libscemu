@@ -21,6 +21,8 @@ pub fn gateway(addr:u32, emu:&mut emu::Emu) -> String {
         0x7633ba12 => HttpSendRequestW(emu),
         0x7632b406 => InternetReadFile(emu),
         0x763b3328 => InternetErrorDlg(emu),
+        0x7632a33e => HttpQueryInfoA(emu),
+        0x7632ab49 => InternetCloseHandle(emu),
         _ => {
             let apiname = kernel32::guess_api_name(emu, addr);
             println!("calling unimplemented wininet API 0x{:x} {}", addr, apiname);
@@ -450,8 +452,6 @@ fn InternetReadFile(emu:&mut emu::Emu) {
     let bytes_to_read = emu.maps.read_dword(emu.regs.get_esp()+8).expect("wininet!InternetReadFile cannot read bytes_to_read") as u64;
     let bytes_read_ptr = emu.maps.read_dword(emu.regs.get_esp()+12).expect("wininet!InternetReadFile cannot read bytes_read") as u64;
 
-    
-
     println!("{}** {} wininet!InternetReadFile sz: {} buff: 0x{:x} {}", emu.colors.light_red, emu.pos, bytes_to_read, buff_ptr, emu.colors.nc);
 
     if !helper::handler_exist(file_hndl) {
@@ -481,3 +481,41 @@ fn InternetReadFile(emu:&mut emu::Emu) {
 
     emu.regs.rax = 1; // true
 }
+
+fn HttpQueryInfoA(emu:&mut emu::Emu) {
+    let hrequest = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("wininet!HttpQueryInfoA cannot read hrequest") as u64;
+    let infolvl = emu.maps.read_dword(emu.regs.get_esp()+4)
+        .expect("wininet!HttpQueryInfoA cannot read infolvl") as u64;
+    let buff = emu.maps.read_dword(emu.regs.get_esp()+8)
+        .expect("wininet!HttpQueryInfoA cannot read buffer") as u64;
+    let buff_len = emu.maps.read_dword(emu.regs.get_esp()+12)
+        .expect("wininet!HttpQueryInfoA cannot read buffer len") as u64;
+    let index = emu.maps.read_dword(emu.regs.get_esp()+16)
+        .expect("wininet!HttpQueryInfoA cannot read index") as u64;
+
+    println!("{}** {} wininet!HttpQueryInfoA buff: 0x{:x} sz:{} {}", 
+             emu.colors.light_red, emu.pos, buff, buff_len, emu.colors.nc);
+
+    for _ in 0..5 {
+        emu.stack_pop32(false);
+    }
+
+    emu.regs.rax = 1; // true
+} 
+
+
+fn InternetCloseHandle(emu:&mut emu::Emu) {
+    let handle = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("wininet!InternetCloseHandle cannot read handle") as u64;
+
+
+    println!("{}** {} wininet!InternetCloseHandle handle: {:x} {}", 
+             emu.colors.light_red, emu.pos, handle, emu.colors.nc);
+
+    helper::handler_close(handle);
+    emu.stack_pop32(false);
+    emu.regs.rax = 1; // true
+}
+
+
