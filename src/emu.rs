@@ -13,6 +13,7 @@ pub mod regs64;
 pub mod console;
 pub mod colors;
 pub mod constants;
+pub mod hook;
 mod winapi32;
 mod winapi64;
 pub mod fpu;
@@ -34,6 +35,7 @@ use fpu::FPU;
 use pe32::PE32;
 use pe64::PE64;
 use maps::Maps;
+use hook::Hook;
 use flags::Flags;
 use atty::Stream;
 use colors::Colors;
@@ -94,6 +96,7 @@ pub struct Emu {
     pub eflags: Eflags,
     pub fpu: FPU,
     pub maps: Maps,
+    pub hook: Hook,
     exp: u64,
     break_on_alert: bool,
     pub bp: Breakpoint,
@@ -132,6 +135,7 @@ impl Emu {
             eflags: Eflags::new(),
             fpu: FPU::new(),
             maps: Maps::new(),
+            hook: Hook::new(),
             exp: 0,
             break_on_alert: false,
             bp: Breakpoint::new(),
@@ -277,6 +281,7 @@ impl Emu {
     }
 
     pub fn init(&mut self) {
+        self.pos = 0;
 
         if !atty::is(Stream::Stdout) {
             self.cfg.nocolors = true;
@@ -2861,6 +2866,15 @@ impl Emu {
         let addr:u64;
         let next:u64;
 
+        let handle_exception:bool = match self.hook.hook_on_exception {
+            Some(hook_fn) => hook_fn(self.regs.rip),
+            None => false,
+        };
+
+        if !handle_exception {
+            return;
+        }
+
         if self.veh > 0 {
             addr = self.veh;
 
@@ -3087,6 +3101,11 @@ impl Emu {
 
                     let sz = self.get_operand_sz(ins, noperand);
 
+                    match self.hook.hook_on_memory_read {
+                        Some(hook_fn) => hook_fn(self.regs.rip, mem_addr, sz),
+                        None => (),
+                    }
+
                     value = match sz {
 
                         64 => match self.maps.read_qword(mem_addr) {
@@ -3181,30 +3200,35 @@ impl Emu {
                 if write {
                     let sz = self.get_operand_sz(ins, noperand);
 
+                    let value2 = match self.hook.hook_on_memory_write {
+                        Some(hook_fn) => hook_fn(self.regs.rip, mem_addr, sz, value as u128) as u64,
+                        None => value,
+                    };
+
                     match sz {
                         64 => {
-                            if !self.maps.write_qword(mem_addr, value) {
+                            if !self.maps.write_qword(mem_addr, value2) {
                                 println!("/!\\ exception dereferencing bad address. 0x{:x}", mem_addr);
                                 self.exception();
                                 return false;
                             }
                         }
                         32 => {
-                            if !self.maps.write_dword(mem_addr, to32!(value)) {
+                            if !self.maps.write_dword(mem_addr, to32!(value2)) {
                                 println!("/!\\ exception dereferencing bad address. 0x{:x}", mem_addr);
                                 self.exception();
                                 return false;
                             }
                         }
                         16  => {
-                            if !self.maps.write_word(mem_addr, value as u16) {
+                            if !self.maps.write_word(mem_addr, value2 as u16) {
                                 println!("/!\\ exception dereferencing bad address. 0x{:x}", mem_addr);
                                 self.exception();
                                 return false;
                             }
                         }
                         8  => {
-                            if !self.maps.write_byte(mem_addr, value as u8) {
+                            if !self.maps.write_byte(mem_addr, value2 as u8) {
                                 println!("/!\\ exception dereferencing bad address. 0x{:x}", mem_addr);
                                 self.exception();
                                 return false;
@@ -3218,7 +3242,7 @@ impl Emu {
                             Some(n) => n,
                             None => "not mapped".to_string(),
                         };
-                        println!("\tmem_trace: pos = {} rip = {:x} op = write bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, sz, mem_addr, value, name);
+                        println!("\tmem_trace: pos = {} rip = {:x} op = write bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, sz, mem_addr, value2, name);
                     }
 
                     let name = match self.maps.get_addr_name(mem_addr) {
@@ -3274,6 +3298,12 @@ impl Emu {
                 };
 
                 if do_derref {
+
+                    match self.hook.hook_on_memory_read {
+                        Some(hook_fn) => hook_fn(self.regs.rip, mem_addr, 128),
+                        None => (),
+                    }
+
                     let value:u128 = match self.maps.read_128bits_le(mem_addr) {
                         Some(v) => v,
                         None => {
@@ -3310,7 +3340,12 @@ impl Emu {
                     }
                 };
 
-                for (i,b) in value.to_le_bytes().iter().enumerate() {
+                let value2 = match self.hook.hook_on_memory_write {
+                    Some(hook_fn) => hook_fn(self.regs.rip, mem_addr, 128, value),
+                    None => value,
+                };
+
+                for (i,b) in value2.to_le_bytes().iter().enumerate() {
                     self.maps.write_byte(mem_addr + i as u64, *b);
                 }
 
@@ -3516,7 +3551,7 @@ impl Emu {
         formatter.options_mut().set_digit_separator("");
         formatter.options_mut().set_first_operand_char_index(6);
 
-        self.pos = 0;
+        //self.pos = 0;
 
         loop {
             while self.is_running.load(atomic::Ordering::Relaxed) == 1 {
@@ -3708,8 +3743,19 @@ impl Emu {
 
                     //let mut info_factory = InstructionInfoFactory::new();
                     //let info = info_factory.info(&ins);
+                    
+                    match self.hook.hook_on_pre_instruction {
+                        Some(hook_fn) => hook_fn(self.regs.rip, &ins, sz),
+                        None => (),
+                    }
 
                     let emulation_ok = self.emulate_instruction(&ins, sz, false);
+
+                    match self.hook.hook_on_post_instruction {
+                        Some(hook_fn) => hook_fn(self.regs.rip, &ins, sz, emulation_ok),
+                        None => (),
+                    }
+
 
                     if self.cfg.inspect {
                         let addr:u64 = self.memory_operand_to_address(self.cfg.inspect_seq.clone().as_str());
@@ -8214,11 +8260,18 @@ impl Emu {
                     None => return false,
                 };
 
-                match interrupt {
-                    0x80 => syscall32::gateway(self),
-                    _ => {
-                        println!("unimplemented interrupt {}", interrupt);
-                        return false;
+                let handle_interrupts = match self.hook.hook_on_interrupt {
+                    Some(hook_fn) => hook_fn(self.regs.rip, interrupt),
+                    None => true, 
+                };
+
+                if handle_interrupts {
+                    match interrupt {
+                        0x80 => syscall32::gateway(self),
+                        _ => {
+                            println!("unimplemented interrupt {}", interrupt);
+                            return false;
+                        }
                     }
                 }
             }

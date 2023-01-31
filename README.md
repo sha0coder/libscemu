@@ -61,3 +61,54 @@ Or if you prefer call specific function.
 
 ```
 
+Now it's possible to do hooks.
+
+```rust
+    use libscemu::emu32;
+    use iced_x86::{Instruction};  //need iced_x86 crate only for instruction hooks, to get the
+                                  //instruction object, so add `iced-x86 = "1.17.0"`
+
+
+    fn trace_memory_read(ip_addr:u64, mem_addr:u64, sz:u8) {
+        println!("0x{:x}: reading {} at 0x{:x}", ip_addr, sz, mem_addr);
+    }
+
+    fn trace_memory_write(ip_addr:u64, mem_addr:u64, sz:u8, value:u128) -> u128 {
+        println!("0x{:x}: writing {} '0x{:x}' at 0x{:x}", ip_addr, sz, value, mem_addr);
+        value   // I could change the value to write
+    }
+
+    fn trace_interrupt(ip_addr:u64, interrupt:u64) -> bool {
+        println!("interrupt {} triggered at eip: 0x{:x}", interrupt, ip_addr);
+        true  // do handle interrupts
+    }   
+
+    fn trace_exceptions(ip_addr:u64) -> bool {
+        println!("0x{:x} triggered an exception", ip_addr);
+        true // do handle exceptions
+    }
+
+    fn trace_pre_instruction(ip_addr:u64, ins:&Instruction, sz:usize) {
+        // ...
+    }
+
+    fn trace_post_instruction(ip_addr:u64, ins:&Instruction, sz:usize, emu_ok:bool) {
+        // ...
+    }
+
+    fn main() {
+        let mut emu = emu32();
+        emu.set_maps_folder("../scemu/maps32/"); // download the maps, ideally from scemu git.
+        emu.init();
+
+        emu.load_code("/home/sha0/src/scemu/shellcodes32/mars.exe");
+        emu.hook.on_memory_read(trace_memory_read);
+        emu.hook.on_memory_write(trace_memory_write);
+        emu.hook.on_interrupt(trace_interrupt);
+        emu.hook.on_exception(trace_exceptions);
+        emu.hook.on_pre_instruction(trace_pre_instruction);
+        emu.hook.on_post_instruction(trace_post_instruction);
+        emu.run(0);
+        println!("end!");
+    }
+```
