@@ -2867,7 +2867,7 @@ impl Emu {
         let next:u64;
 
         let handle_exception:bool = match self.hook.hook_on_exception {
-            Some(hook_fn) => hook_fn(self.regs.rip),
+            Some(hook_fn) => hook_fn(self, self.regs.rip),
             None => false,
         };
 
@@ -3102,7 +3102,7 @@ impl Emu {
                     let sz = self.get_operand_sz(ins, noperand);
 
                     match self.hook.hook_on_memory_read {
-                        Some(hook_fn) => hook_fn(self.regs.rip, mem_addr, sz),
+                        Some(hook_fn) => hook_fn(self, self.regs.rip, mem_addr, sz),
                         None => (),
                     }
 
@@ -3201,7 +3201,7 @@ impl Emu {
                     let sz = self.get_operand_sz(ins, noperand);
 
                     let value2 = match self.hook.hook_on_memory_write {
-                        Some(hook_fn) => hook_fn(self.regs.rip, mem_addr, sz, value as u128) as u64,
+                        Some(hook_fn) => hook_fn(self, self.regs.rip, mem_addr, sz, value as u128) as u64,
                         None => value,
                     };
 
@@ -3300,7 +3300,7 @@ impl Emu {
                 if do_derref {
 
                     match self.hook.hook_on_memory_read {
-                        Some(hook_fn) => hook_fn(self.regs.rip, mem_addr, 128),
+                        Some(hook_fn) => hook_fn(self, self.regs.rip, mem_addr, 128),
                         None => (),
                     }
 
@@ -3341,7 +3341,7 @@ impl Emu {
                 };
 
                 let value2 = match self.hook.hook_on_memory_write {
-                    Some(hook_fn) => hook_fn(self.regs.rip, mem_addr, 128, value),
+                    Some(hook_fn) => hook_fn(self, self.regs.rip, mem_addr, 128, value),
                     None => value,
                 };
 
@@ -3745,14 +3745,14 @@ impl Emu {
                     //let info = info_factory.info(&ins);
                     
                     match self.hook.hook_on_pre_instruction {
-                        Some(hook_fn) => hook_fn(self.regs.rip, &ins, sz),
+                        Some(hook_fn) => hook_fn(self, self.regs.rip, &ins, sz),
                         None => (),
                     }
 
                     let emulation_ok = self.emulate_instruction(&ins, sz, false);
 
                     match self.hook.hook_on_post_instruction {
-                        Some(hook_fn) => hook_fn(self.regs.rip, &ins, sz, emulation_ok),
+                        Some(hook_fn) => hook_fn(self, self.regs.rip, &ins, sz, emulation_ok),
                         None => (),
                     }
 
@@ -8261,7 +8261,7 @@ impl Emu {
                 };
 
                 let handle_interrupts = match self.hook.hook_on_interrupt {
-                    Some(hook_fn) => hook_fn(self.regs.rip, interrupt),
+                    Some(hook_fn) => hook_fn(self, self.regs.rip, interrupt),
                     None => true, 
                 };
 

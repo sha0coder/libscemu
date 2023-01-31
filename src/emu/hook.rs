@@ -1,15 +1,16 @@
 use iced_x86::{Instruction};
+use crate::emu;
 
 // return: false will ignore interrupt handling like 0x80 -> linux
-type TypeHookOnInterrupt = fn(ip_addr:u64, interrupt:u64) -> bool; 
+type TypeHookOnInterrupt = fn(emu:&mut emu::Emu, ip_addr:u64, interrupt:u64) -> bool; 
 // return: allow handle exception?
-type TypeHookOnException = fn(ip_addr:u64) -> bool;
+type TypeHookOnException = fn(emu:&mut emu::Emu, ip_addr:u64) -> bool;
 // memory read is pre-read you can modify the value that is going to be read.
-type TypeHookOnMemoryRead = fn(ip_addr:u64, mem_addr:u64, sz:u8);
+type TypeHookOnMemoryRead = fn(emu:&mut emu::Emu, ip_addr:u64, mem_addr:u64, sz:u8);
 // the memory write is pre but you can change the value is going to be written.
-type TypeHookOnMemoryWrite = fn(ip_addr:u64, mem_addr:u64, sz:u8, value:u128) -> u128; 
-type TypeHookOnPreInstruction = fn(ip_addr:u64, ins:&Instruction, sz:usize);   
-type TypeHookOnPostInstruction = fn(ip_addr:u64, ins:&Instruction, sz:usize, emu_ok:bool);
+type TypeHookOnMemoryWrite = fn(emu:&mut emu::Emu, ip_addr:u64, mem_addr:u64, sz:u8, value:u128) -> u128; 
+type TypeHookOnPreInstruction = fn(emu:&mut emu::Emu, ip_addr:u64, ins:&Instruction, sz:usize);   
+type TypeHookOnPostInstruction = fn(emu:&mut emu::Emu, ip_addr:u64, ins:&Instruction, sz:usize, emu_ok:bool);
 
 pub struct Hook {
     pub hook_on_interrupt:Option<TypeHookOnInterrupt>,

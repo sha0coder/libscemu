@@ -68,33 +68,34 @@ Now it's possible to do hooks.
     use iced_x86::{Instruction};  //need iced_x86 crate only for instruction hooks, to get the
                                   //instruction object, so add `iced-x86 = "1.17.0"`
 
-
-    fn trace_memory_read(ip_addr:u64, mem_addr:u64, sz:u8) {
+    fn trace_memory_read(emu:&mut libscemu::emu::Emu, ip_addr:u64, mem_addr:u64, sz:u8) {
         println!("0x{:x}: reading {} at 0x{:x}", ip_addr, sz, mem_addr);
+        if mem_addr == 0x22dff0 {
+            emu.stop();
+        }
     }
 
-    fn trace_memory_write(ip_addr:u64, mem_addr:u64, sz:u8, value:u128) -> u128 {
+    fn trace_memory_write(emu:&mut libscemu::emu::Emu, ip_addr:u64, mem_addr:u64, sz:u8, value:u128) -> u128 {
         println!("0x{:x}: writing {} '0x{:x}' at 0x{:x}", ip_addr, sz, value, mem_addr);
         value   // I could change the value to write
     }
 
-    fn trace_interrupt(ip_addr:u64, interrupt:u64) -> bool {
+    fn trace_interrupt(emu:&mut libscemu::emu::Emu, ip_addr:u64, interrupt:u64) -> bool {
         println!("interrupt {} triggered at eip: 0x{:x}", interrupt, ip_addr);
         true  // do handle interrupts
     }   
 
-    fn trace_exceptions(ip_addr:u64) -> bool {
+    fn trace_exceptions(emu:&mut libscemu::emu::Emu, ip_addr:u64) -> bool {
         println!("0x{:x} triggered an exception", ip_addr);
         true // do handle exceptions
     }
 
-    fn trace_pre_instruction(ip_addr:u64, ins:&Instruction, sz:usize) {
-        // ...
+    fn trace_pre_instruction(emu:&mut libscemu::emu::Emu, ip_addr:u64, ins:&Instruction, sz:usize) {
     }
 
-    fn trace_post_instruction(ip_addr:u64, ins:&Instruction, sz:usize, emu_ok:bool) {
-        // ...
+    fn trace_post_instruction(emu:&mut libscemu::emu::Emu, ip_addr:u64, ins:&Instruction, sz:usize, emu_ok:bool) {
     }
+
 
     fn main() {
         let mut emu = emu32();
