@@ -80,13 +80,15 @@ fn trace_memory_read(emu:&mut libscemu::emu::Emu, ip_addr:u64,
 
 fn trace_memory_write(emu:&mut libscemu::emu::Emu, ip_addr:u64, 
                       mem_addr:u64, sz:u8, value:u128) -> u128 {
-    println!("0x{:x}: writing {} '0x{:x}' at 0x{:x}", ip_addr, sz, value, mem_addr);
+    println!("0x{:x}: writing {} '0x{:x}' at 0x{:x}", ip_addr, sz, 
+             value, mem_addr);
     value   // I could change the value to write
 }
 
 fn trace_interrupt(emu:&mut libscemu::emu::Emu, ip_addr:u64, 
                    interrupt:u64) -> bool {
-    println!("interrupt {} triggered at eip: 0x{:x}", interrupt, ip_addr);
+    println!("interrupt {} triggered at eip: 0x{:x}", interrupt, 
+             ip_addr);
     true  // do handle interrupts
 }   
 
