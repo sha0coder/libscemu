@@ -2868,7 +2868,7 @@ impl Emu {
 
         let handle_exception:bool = match self.hook.hook_on_exception {
             Some(hook_fn) => hook_fn(self, self.regs.rip),
-            None => false,
+            None => true,
         };
 
         if !handle_exception {
