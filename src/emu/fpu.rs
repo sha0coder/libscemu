@@ -8,7 +8,13 @@ pub struct FPU {
     ip:u64,
     err_off:u32,
     err_sel:u32,
-    stack:Vec<f32>
+    stack:Vec<f32>,
+    code_segment:u16,
+    data_segment:u16,
+    operand_ptr:u64,
+    reserved: [u8; 14],
+    reserved2: [u8; 96],
+    xmm: [u64; 16],
 }
 
 impl FPU {
@@ -22,7 +28,31 @@ impl FPU {
             err_off: 0,
             err_sel: 0,
             stack: Vec::new(),
+            code_segment: 0,
+            data_segment: 0,
+            operand_ptr: 0,
+            reserved: [0; 14],
+            reserved2: [0; 96],
+            xmm: [0; 16],
         }
+    }
+
+    pub fn clear(&mut self) {
+        self.st.clear();
+        self.st = vec![0.0;8];
+        self.tag = 0xffff;
+        self.stat = 0;
+        self.ctrl = 0x037f;
+        self.ip = 0;
+        self.err_off = 0;
+        self.err_sel = 0;
+        self.stack.clear();
+        self.code_segment = 0;
+        self.data_segment = 0;
+        self.operand_ptr = 0;
+        self.reserved = [0; 14];
+        self.reserved2 = [0; 96];
+        self.xmm = [0; 16];
     }
 
     pub fn set_ip(&mut self, ip:u64) {

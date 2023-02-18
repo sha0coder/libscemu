@@ -47,8 +47,8 @@ use std::sync::atomic;
 use crate::config::Config;
 use breakpoint::Breakpoint;
 
-use iced_x86::{Decoder, DecoderOptions, Formatter, Instruction, IntelFormatter, Mnemonic, OpKind,
-    InstructionInfoFactory, Register, MemorySize};
+use iced_x86::{Decoder, DecoderOptions, Formatter, Instruction, IntelFormatter, 
+    Mnemonic, OpKind, InstructionInfoFactory, Register, MemorySize};
 
 /*
 macro_rules! rotate_left {
@@ -102,6 +102,7 @@ pub struct Emu {
     pub bp: Breakpoint,
     pub seh: u64,
     pub veh: u64,
+    pub feh: u64,
     eh_ctx: u32,
     pub cfg: Config,
     colors: Colors,
@@ -141,6 +142,7 @@ impl Emu {
             bp: Breakpoint::new(),
             seh: 0,
             veh: 0,
+            feh: 0,
             eh_ctx: 0,
             cfg: Config::new(),
             colors: Colors::new(),
@@ -2740,7 +2742,16 @@ impl Emu {
                 "iat" => {
                     con.print("api keyword");
                     let kw = con.cmd2();
-                    let (addr, lib, name) = winapi32::kernel32::search_api_name(self, &kw);
+                    let addr:u64;
+                    let lib:String;
+                    let name:String;
+
+                    if self.cfg.is_64bits {
+                        (addr, lib, name) = winapi64::kernel32::search_api_name(self, &kw);
+                    } else {
+                        (addr, lib, name) = winapi32::kernel32::search_api_name(self, &kw);
+                    }
+
                     if addr == 0 {
                         println!("api not found");
                     } else {
@@ -3611,6 +3622,7 @@ impl Emu {
                         return;
                     }
 
+                    
 
                     if self.cfg.loops {
                         // loop detector
@@ -8456,6 +8468,14 @@ impl Emu {
 
 
             ///// FPU /////  https://github.com/radare/radare/blob/master/doc/xtra/fpu
+
+            Mnemonic::Fninit => {
+                self.fpu.clear();
+            }
+
+            Mnemonic::Finit => {
+                self.fpu.clear();
+            }
 
             Mnemonic::Ffree => {
                 self.show_instruction(&self.colors.green, &ins);

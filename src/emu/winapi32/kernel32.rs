@@ -545,7 +545,8 @@ fn CreateNamedPipeA(emu:&mut emu::Emu) {
 
     let name = emu.maps.read_string(name_ptr);
 
-    println!("{}** {} kernel32!CreateNamedPipeA  name:{} in: 0x{:x} out: 0x{:x} {}", emu.colors.light_red, emu.pos, name, in_buff_sz, out_buff_sz, emu.colors.nc);
+    println!("{}** {} kernel32!CreateNamedPipeA  name:{} in: 0x{:x} out: 0x{:x} {}", emu.colors.light_red, emu.pos, name, in_buff_sz, 
+        out_buff_sz, emu.colors.nc);
 
     for _ in 0..8 {
         emu.stack_pop32(false);
@@ -597,6 +598,7 @@ fn ReadFile(emu:&mut emu::Emu) {
     if *count < 3 { 
         // keep reading bytes
         emu.maps.write_dword(bytes_read, size);
+        emu.maps.memset(buff, 0x90, size as usize);
         emu.regs.rax = 1;
     } else {
         // try to force finishing reading and continue the malware logic
@@ -653,8 +655,6 @@ fn CloseHandle(emu:&mut emu::Emu) {
     }
     emu.stack_pop32(false);
     emu.regs.rax = 1;
-
-    emu.stack_pop32(false);
 }
 
 fn ExitProcess(emu:&mut emu::Emu) {
@@ -674,6 +674,7 @@ fn TerminateProcess(emu:&mut emu::Emu) {
     
     emu.stack_pop32(false);
     emu.stack_pop32(false);
+    emu.regs.rax = 1;
 }
 
 fn GetThreadContext(emu:&mut emu::Emu) {
@@ -716,13 +717,15 @@ fn SetThreadContext(emu:&mut emu::Emu) {
 fn ReadProcessMemory(emu:&mut emu::Emu) {
     let hndl = emu.maps.read_dword(emu.regs.get_esp()).expect("kernel32!ReadProcessMemory cannot read the handle");
     let addr = emu.maps.read_dword(emu.regs.get_esp()+4).expect("kernel32!ReadProcessMemory cannot read the base address");
-    let buff = emu.maps.read_dword(emu.regs.get_esp()+8).expect("kernel32!ReadProcessMemory cannot read buff");
+    let buff = emu.maps.read_dword(emu.regs.get_esp()+8).expect("kernel32!ReadProcessMemory cannot read buff") as u64;
     let size = emu.maps.read_dword(emu.regs.get_esp()+12).expect("kernel32!ReadProcessMemory cannot read size");
     let bytes = emu.maps.read_dword(emu.regs.get_esp()+16).expect("kernel32!ReadProcessMemory cannot read bytes") as u64;
 
-    println!("{}** {} kernel32!ReadProcessMemory hndl: {} from: 0x{:x} to: 0x{:x} sz: {} {}", emu.colors.light_red, emu.pos, hndl, addr, buff, size, emu.colors.nc);
+    println!("{}** {} kernel32!ReadProcessMemory hndl: {} from: 0x{:x} to: 0x{:x} sz: {} {}", emu.colors.light_red, emu.pos, 
+        hndl, addr, buff, size, emu.colors.nc);
 
     emu.maps.write_dword(bytes, size);
+    emu.maps.memset(buff, 0x90, size as usize);
 
     for _ in 0..5 {
         emu.stack_pop32(false);
@@ -843,6 +846,8 @@ fn SystemTimeToTzSpecificLocalTime(emu:&mut emu::Emu) {
     let tz_ptr = emu.maps.read_dword(emu.regs.get_esp()).expect("kernel32!SystemTimeToTzSpecificLocalTime cannot read tz_ptr");
     let ut_ptr = emu.maps.read_dword(emu.regs.get_esp()+4).expect("kernel32!SystemTimeToTzSpecificLocalTime cannot read ut_ptr");
     let lt_ptr = emu.maps.read_dword(emu.regs.get_esp()+8).expect("kernel32!SystemTimeToTzSpecificLocalTime cannot read lt_ptr");
+
+    println!("{}** {} kernel32!SystemTimeToTzSpecificLocalTime {}", emu.colors.light_red, emu.pos, emu.colors.nc);
 
     emu.stack_pop32(false);
     emu.stack_pop32(false);
@@ -1606,10 +1611,12 @@ fn SetErrorMode(emu:&mut emu::Emu) {
 
 fn GetVersionExW(emu:&mut emu::Emu) {
     let version_info_ptr = emu.maps.read_dword(emu.regs.get_esp())
-        .expect("kernel32!GetVersionExW cannot read version_info_ptr param");
+        .expect("kernel32!GetVersionExW cannot read version_info_ptr param") as u64;
 
     println!("{}** {} kernel32!GetVersionExW 0x{:x} {}", emu.colors.light_red, emu.pos, version_info_ptr, emu.colors.nc);
 
+    let os_version_info = emu::structures::OsVersionInfo::new();
+    os_version_info.save(version_info_ptr, &mut emu.maps);
 
     emu.stack_pop32(false);
 
