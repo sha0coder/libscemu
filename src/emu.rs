@@ -2758,6 +2758,25 @@ impl Emu {
                         println!("found: 0x{:x} {}!{}", addr, lib, name);
                     }
                 }
+                "iatx" => {
+                    con.print("api name");
+                    let api = con.cmd2();
+                    let addr:u64;
+                    let lib:String;
+                    let name:String;
+
+                    if self.cfg.is_64bits {
+                        addr = winapi64::kernel32::resolve_api_name(self, &api);
+                    } else {
+                        addr = winapi32::kernel32::resolve_api_name(self, &api);
+                    }
+
+                    if addr == 0 {
+                        println!("api not found");
+                    } else {
+                        println!("found: 0x{:x} {}", addr, api);
+                    }
+                }
                 "iatd" => {
                     con.print("module");
                     let lib = con.cmd2().to_lowercase();

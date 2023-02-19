@@ -1,6 +1,8 @@
 use crate::emu::maps::Maps;
 use crate::emu::maps::mem64::Mem64;
 
+use chrono::prelude::*;
+
 
 ////// PEB / TEB //////
 
@@ -1060,4 +1062,292 @@ impl OsVersionInfo {
         maps.write_buffer(addr+20, &self.version);
     }
 }
+
+#[derive(Debug)]
+pub struct SystemTime {
+    year: u16,
+    month: u16,
+    day_of_week: u16,
+    day: u16,
+    hour: u16,
+    minute: u16,
+    second: u16,
+    millis: u16,
+}
+
+impl SystemTime {
+    pub fn now() -> SystemTime {
+        let now = Utc::now();
+        let systime = SystemTime{
+            year: now.year() as u16,
+            month: now.month() as u16,
+            day_of_week: now.weekday() as u16,
+            day: now.day() as u16,
+            hour: now.hour() as u16,
+            minute: now.minute() as u16,
+            second: now.second() as u16,
+            millis: now.timestamp_millis() as u16,
+        };
+
+        return systime;
+    }
+
+    pub fn save(&self, addr:u64, maps:&mut Maps) {
+        maps.write_word(addr, self.year);
+        maps.write_word(addr+2, self.month);
+        maps.write_word(addr+4, self.day_of_week);
+        maps.write_word(addr+6, self.day);
+        maps.write_word(addr+8, self.hour);
+        maps.write_word(addr+10, self.minute);
+        maps.write_word(addr+12, self.second);
+        maps.write_word(addr+14, self.millis);
+    }
+}
+
+#[derive(Debug)]
+pub struct StartupInfo32 {
+    cb: u32,
+    reserved: u32,
+    desktop: u32,
+    title: u32,
+    x: u32,
+    y: u32,
+    x_size: u32,
+    y_size: u32,
+    x_count_chars: u32,
+    y_count_chars: u32,
+    fill_attribute: u32,
+    flags: u32,
+    show_window: u16,
+    cb_reserved2: u16,
+    lp_reserved2: u32,
+    std_input: u32,
+    std_output: u32,
+    std_error: u32,
+}
+
+impl StartupInfo32 {
+    pub fn new() -> StartupInfo32 {
+        StartupInfo32 {
+            cb: 68,
+            reserved: 0,
+            desktop: 0,
+            title: 0,
+            x: 10,
+            y: 10,
+            x_size: 300,
+            y_size: 200,
+            x_count_chars: 0,
+            y_count_chars: 0,
+            fill_attribute: 0,
+            flags: 0,
+            show_window: 1,
+            cb_reserved2: 0,
+            lp_reserved2: 0,
+            std_input: 0,
+            std_output: 0,
+            std_error: 0,
+        }
+    }
+
+    pub fn save(&self, addr:u64, maps:&mut Maps) {
+        maps.write_dword(addr, self.cb);
+        maps.write_dword(addr+4, self.reserved);
+        maps.write_dword(addr+8, self.desktop);
+        maps.write_dword(addr+12, self.title);
+        maps.write_dword(addr+16, self.x);
+        maps.write_dword(addr+20, self.y);
+        maps.write_dword(addr+24, self.x_size);
+        maps.write_dword(addr+28, self.y_size);
+        maps.write_dword(addr+32, self.x_count_chars);
+        maps.write_dword(addr+36, self.y_count_chars);
+        maps.write_dword(addr+40, self.fill_attribute);
+        maps.write_dword(addr+44, self.flags);
+        maps.write_word(addr+48, self.show_window);
+        maps.write_word(addr+50, self.cb_reserved2);
+        maps.write_dword(addr+52, self.lp_reserved2);
+        maps.write_dword(addr+56, self.std_input);
+        maps.write_dword(addr+60, self.std_output);
+        maps.write_dword(addr+64, self.std_error);
+    }
+}
+
+
+#[derive(Debug)]
+pub struct StartupInfo64 {
+    cb: u32,
+    reserved: u64,
+    desktop: u64,
+    title: u64,
+    x: u32,
+    y: u32,
+    x_size: u32,
+    y_size: u32,
+    x_count_chars: u32,
+    y_count_chars: u32,
+    fill_attribute: u32,
+    flags: u32,
+    show_window: u16,
+    cb_reserved2: u16,
+    lp_reserved2: u64,
+    std_input: u32,
+    std_output: u32,
+    std_error: u32,
+}
+
+
+impl StartupInfo64 {
+    pub fn new() -> StartupInfo64 {
+        StartupInfo64 {
+            cb: 84,
+            reserved: 0,
+            desktop: 0,
+            title: 0,
+            x: 10,
+            y: 10,
+            x_size: 300,
+            y_size: 200,
+            x_count_chars: 0,
+            y_count_chars: 0,
+            fill_attribute: 0,
+            flags: 0,
+            show_window: 1,
+            cb_reserved2: 0,
+            lp_reserved2: 0,
+            std_input: 0,
+            std_output: 0,
+            std_error: 0,
+        }
+    }
+
+    pub fn save(&self, addr:u64, maps:&mut Maps) {
+        maps.write_dword(addr, self.cb);
+        maps.write_qword(addr+4, self.reserved);
+        maps.write_qword(addr+12, self.desktop);
+        maps.write_qword(addr+20, self.title);
+        maps.write_dword(addr+28, self.x);
+        maps.write_dword(addr+32, self.y);
+        maps.write_dword(addr+36, self.x_size);
+        maps.write_dword(addr+40, self.y_size);
+        maps.write_dword(addr+44, self.x_count_chars);
+        maps.write_dword(addr+48, self.y_count_chars);
+        maps.write_dword(addr+52, self.fill_attribute);
+        maps.write_dword(addr+56, self.flags);
+        maps.write_word(addr+60, self.show_window);
+        maps.write_word(addr+62, self.cb_reserved2);
+        maps.write_qword(addr+64, self.lp_reserved2);
+        maps.write_dword(addr+72, self.std_input);
+        maps.write_dword(addr+76, self.std_output);
+        maps.write_dword(addr+80, self.std_error);
+    }
+}
+
+pub struct SystemInfo32 {
+    oem_id: u32,
+    processor_architecture: u32,
+    reserved: u16,
+    page_size: u32,
+    min_app_addr: u32,
+    max_app_addr: u32,
+    active_processor_mask: u32,
+    number_of_processors: u32,
+    processor_type: u32,
+    alloc_granularity: u32,
+    processor_level: u16,
+    processor_revision: u16,
+}
+
+impl SystemInfo32 {
+    pub fn new() -> SystemInfo32 {
+        SystemInfo32 {
+            oem_id: 0x1337,
+            processor_architecture: 9,
+            reserved: 0,
+            page_size: 4090,
+            min_app_addr: 0,
+            max_app_addr: 0,
+            active_processor_mask: 1,
+            number_of_processors: 4,
+            processor_type: 586,
+            alloc_granularity: 65536,
+            processor_level: 5,
+            processor_revision: 255,
+        }
+    }
+
+    pub fn save(&mut self, addr:u64, maps:&mut Maps) {
+        maps.write_dword(addr, self.oem_id);
+        maps.write_dword(addr+4, self.processor_architecture);
+        maps.write_word(addr+8, self.reserved);
+        maps.write_dword(addr+10, self.page_size);
+        maps.write_dword(addr+14, self.min_app_addr);
+        maps.write_dword(addr+18, self.max_app_addr);
+        maps.write_dword(addr+22, self.active_processor_mask);
+        maps.write_dword(addr+26, self.number_of_processors);
+        maps.write_dword(addr+30, self.processor_type);
+        maps.write_dword(addr+34, self.alloc_granularity);
+        maps.write_word(addr+38, self.processor_level);
+        maps.write_word(addr+40, self.processor_revision);
+    }
+
+    pub fn size(&self) -> usize {
+        return 42;
+    }
+}
+
+
+pub struct SystemInfo64 {
+    oem_id: u32,
+    processor_architecture: u32,
+    reserved: u16,
+    page_size: u32,
+    min_app_addr: u64,
+    max_app_addr: u64,
+    active_processor_mask: u64,
+    number_of_processors: u32,
+    processor_type: u32,
+    alloc_granularity: u32,
+    processor_level: u16,
+    processor_revision: u16,
+}
+
+impl SystemInfo64 {
+    pub fn new() -> SystemInfo64 {
+        SystemInfo64 {
+            oem_id: 0x1337,
+            processor_architecture: 9,
+            reserved: 0,
+            page_size: 4090,
+            min_app_addr: 0,
+            max_app_addr: 0,
+            active_processor_mask: 1,
+            number_of_processors: 4,
+            processor_type: 586,
+            alloc_granularity: 65536,
+            processor_level: 5,
+            processor_revision: 255,
+        }
+    }
+
+    pub fn save(&mut self, addr:u64, maps:&mut Maps) {
+        maps.write_dword(addr, self.oem_id);
+        maps.write_dword(addr+4, self.processor_architecture);
+        maps.write_word(addr+8, self.reserved);
+        maps.write_dword(addr+10, self.page_size);
+        maps.write_qword(addr+14, self.min_app_addr);
+        maps.write_qword(addr+22, self.max_app_addr);
+        maps.write_qword(addr+30, self.active_processor_mask);
+        maps.write_dword(addr+38, self.number_of_processors);
+        maps.write_dword(addr+42, self.processor_type);
+        maps.write_dword(addr+46, self.alloc_granularity);
+        maps.write_word(addr+50, self.processor_level);
+        maps.write_word(addr+52, self.processor_revision);
+    }
+
+    pub fn size(&self) -> usize {
+        return 54;
+    }
+}
+
+
 

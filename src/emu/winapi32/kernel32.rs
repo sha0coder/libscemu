@@ -99,11 +99,13 @@ pub fn gateway(addr:u32, emu:&mut emu::Emu) -> String {
         0x75e8a19f => lstrcat(emu),
         0x75e94a51 => SetErrorMode(emu),
         0x75e83b1a => GetVersionExW(emu),
+        0x75e88fc5 => GetSystemDirectoryA(emu),
         0x75e940fb => GetSystemDirectoryW(emu),
         0x75e41e10 => GetStartupInfoA(emu),
-        0x75e91e16 => FlsGetValue(emu),
         0x75e93891 => GetStartupInfoW(emu),
+        0x75e91e16 => FlsGetValue(emu),
         0x75e976b5 => IsProcessorFeaturePresent(emu),
+        // => InitializeCriticalSection(emu),
         0x75e93879 => InitializeCriticalSectionEx(emu),
         0x75e9418d => FlsAlloc(emu),
         0x75e976e6 => FlsSetValue(emu),
@@ -127,6 +129,7 @@ lazy_static! {
     static ref COUNT_READ:Mutex<u32> = Mutex::new(0);
     static ref COUNT_WRITE:Mutex<u32> = Mutex::new(0);
     pub static ref TICK:Mutex<u32> = Mutex::new(0);
+    static ref LAST_ERROR:Mutex<u32> = Mutex::new(0);
 }
 
 
@@ -174,7 +177,8 @@ pub fn resolve_api_name(emu:&mut emu::Emu, name: &str) -> u64 {
                 }
 
                 let ordinal = flink.get_function_ordinal(emu, i);
-                if ordinal.func_name.contains(name) {
+                if ordinal.func_name == name {
+                //if ordinal.func_name.contains(name) {
                     return ordinal.func_va;
                 }
             }
@@ -1185,14 +1189,14 @@ fn MapViewOfFile(emu:&mut emu::Emu) {
         .expect("kernel32!MapViewOfFile cannot read the handle");
     let access = emu.maps.read_dword(emu.regs.get_esp()+4)
         .expect("kernel32!MapViewOfFile cannot read the acess");
-    let off_hight = emu.maps.read_dword(emu.regs.get_esp()+8)
+    let off_high = emu.maps.read_dword(emu.regs.get_esp()+8)
         .expect("kernel32!MapViewOfFile cannot read the off_hight") as u64;
     let off_low = emu.maps.read_dword(emu.regs.get_esp()+12)
         .expect("kernel32!MapViewOfFile cannot read the off_low") as u64;
     let mut size = emu.maps.read_dword(emu.regs.get_esp()+16)
         .expect("kernel32!MapViewOfFile cannot read the size") as u64;
 
-    let off:u64 = (off_hight << 32) + off_low;
+    let off:u64 = (off_high << 32) + off_low;
 
     if size > 1024*4 {
         size = 1024
@@ -1536,8 +1540,9 @@ fn CreateMutexA(emu:&mut emu::Emu) {
 }
 
 fn GetLastError(emu:&mut emu::Emu) {
-    emu.regs.rax = 0;
-    println!("{}** {} kernel32!GetLastError '{}' {}", emu.colors.light_red, emu.pos, emu.regs.rax, emu.colors.nc);
+    let err = LAST_ERROR.lock().unwrap();
+    emu.regs.rax = *err as u64;
+    println!("{}** {} kernel32!GetLastError ={} {}", emu.colors.light_red, emu.pos, emu.regs.rax, emu.colors.nc);
 }
 
 fn CreateFileMappingW(emu:&mut emu::Emu) {
@@ -1557,7 +1562,7 @@ fn CreateFileMappingW(emu:&mut emu::Emu) {
     let mut name:String = String::new();
 
     if name_ptr > 0 {
-        name = emu.maps.read_string(name_ptr);
+        name = emu.maps.read_wide_string(name_ptr);
     }
 
     emu.regs.rax = helper::handler_create(&name); 
@@ -1571,9 +1576,11 @@ fn CreateFileMappingW(emu:&mut emu::Emu) {
 }
 
 fn GetSystemTime(emu:&mut emu::Emu) {
-    let out_time = emu.maps.read_dword(emu.regs.get_esp()).expect("kernel32!GetSystemTime cannot read out_time param");
+    let out_time = emu.maps.read_dword(emu.regs.get_esp()).expect("kernel32!GetSystemTime cannot read out_time param") as u64;
 
     println!("{}** {} kernel32!GetSystemTime ptr: 0x{:x}' {}", emu.colors.light_red, emu.pos, out_time, emu.colors.nc);
+    let systime = emu::structures::SystemTime::now();
+    systime.save(out_time, &mut emu.maps);
 
     emu.stack_pop32(false);
 }
@@ -1623,6 +1630,22 @@ fn GetVersionExW(emu:&mut emu::Emu) {
     emu.regs.rax = 1;
 }
 
+fn GetSystemDirectoryA(emu:&mut emu::Emu) {
+    let out_buff_ptr = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("kernel32!GetSystemDirectoryA cannot read out_buff_ptr param") as u64;
+    let size = emu.maps.read_dword(emu.regs.get_esp()+4)
+        .expect("kernel32!GetSystemDirectoryA cannot read size param");
+
+    emu.maps.write_string(out_buff_ptr, "C:\\Windows\\");
+
+    println!("{}** {} kernel32!GetSystemDirectoryA  {}", emu.colors.light_red, emu.pos, emu.colors.nc);
+        
+
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+
+    emu.regs.rax = 11;
+}
 
 fn GetSystemDirectoryW(emu:&mut emu::Emu) {
     let out_buff_ptr = emu.maps.read_dword(emu.regs.get_esp())
@@ -1638,7 +1661,7 @@ fn GetSystemDirectoryW(emu:&mut emu::Emu) {
     emu.stack_pop32(false);
     emu.stack_pop32(false);
 
-    emu.regs.rax = 1;
+    emu.regs.rax = 11*2;
 }
 
 fn GetStartupInfoA(emu:&mut emu::Emu) {
@@ -1647,38 +1670,24 @@ fn GetStartupInfoA(emu:&mut emu::Emu) {
 
     println!("{}** {} kernel32!GetStartupInfoA {}", emu.colors.light_red, emu.pos, emu.colors.nc);
     if startup_info_ptr > 0 {
-        emu.maps.write_dword(startup_info_ptr + 12, 100); // dwX
-        emu.maps.write_dword(startup_info_ptr + 16, 100); // dwY
-        emu.maps.write_dword(startup_info_ptr + 20, 0); // dwXSize
-        emu.maps.write_dword(startup_info_ptr + 24, 0); // dwYSize
+        let startupinfo = emu::structures::StartupInfo32::new();
+        startupinfo.save(startup_info_ptr, &mut emu.maps);
     }
 
     emu.stack_pop32(false);
+}
 
-    /*
-     Structure filled by the process that started this process
+fn GetStartupInfoW(emu:&mut emu::Emu) {
+    let startup_info_ptr = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("kernel32!GetStartupInfoW cannot read startup_info_ptr param") as u64;
 
-    typedef struct _STARTUPINFOA {
-      DWORD  cb;
-      LPSTR  lpReserved;
-      LPSTR  lpDesktop;
-      LPSTR  lpTitle;
-      DWORD  dwX;
-      DWORD  dwY;
-      DWORD  dwXSize;
-      DWORD  dwYSize;
-      DWORD  dwXCountChars;
-      DWORD  dwYCountChars;
-      DWORD  dwFillAttribute;
-      DWORD  dwFlags;
-      WORD   wShowWindow;
-      WORD   cbReserved2;
-      LPBYTE lpReserved2;
-      HANDLE hStdInput;
-      HANDLE hStdOutput;
-      HANDLE hStdError;
-    } STARTUPINFOA, *LPSTARTUPINFOA;
-    */
+    println!("{}** {} kernel32!GetStartupInfoW {}", emu.colors.light_red, emu.pos, emu.colors.nc);
+    if startup_info_ptr > 0 {
+        let startupinfo = emu::structures::StartupInfo32::new();
+        startupinfo.save(startup_info_ptr, &mut emu.maps);
+    }
+
+    emu.stack_pop32(false);
 }
 
 fn FlsGetValue(emu:&mut emu::Emu) {
@@ -1695,15 +1704,6 @@ fn FlsGetValue(emu:&mut emu::Emu) {
     println!("{}** {} kernel32!FlsGetValue idx: {} =0x{:x} {}", emu.colors.light_red, emu.pos, idx, emu.regs.get_eax() as u32, emu.colors.nc);
 }
 
-fn GetStartupInfoW(emu:&mut emu::Emu) {
-    let ptr_startupinfo = emu.maps.read_dword(emu.regs.get_esp()).expect("kernel32!GetStartupInfoW cannot read ptr_startupinfo");
-    
-    // https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/ns-processthreadsapi-startupinfoa
-    emu.maps.memset(ptr_startupinfo as u64, 0, 100); //TODO: write something realistic
-    println!("{}** {} kernel32!GetStartupInfoW ptr_startufinfo: 0x{:x} {}", emu.colors.light_red, emu.pos, ptr_startupinfo, emu.colors.nc);
-
-    emu.stack_pop32(false);
-}
 
 fn IsProcessorFeaturePresent(emu:&mut emu::Emu) {
     let feature = emu.maps.read_dword(emu.regs.get_esp()).expect("kernel32!IsProcessorFeaturePresent cannot read feature");
@@ -1748,6 +1748,17 @@ fn IsProcessorFeaturePresent(emu:&mut emu::Emu) {
     };
 
     println!("{}** {} kernel32!IsProcessorFeaturePresent feature: {} {} {}", emu.colors.light_red, emu.pos, feature, msg, emu.colors.nc);
+
+    emu.regs.rax = 1;
+}
+
+fn InitializeCriticalSection(emu:&mut emu::Emu) {
+    let ptr_crit_sect = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("kernel32!InitializeCriticalSection cannot read ptr_crit_sect");
+
+    emu.stack_pop32(false);
+
+    println!("{}** {} kernel32!InitializeCriticalSection ptr: 0x{:x} {}", emu.colors.light_red, emu.pos, ptr_crit_sect, emu.colors.nc);
 
     emu.regs.rax = 1;
 }
@@ -1809,6 +1820,9 @@ fn SetLastError(emu:&mut emu::Emu) {
 
     println!("{}** {} kernel32!SetLastError err: {} {}", emu.colors.light_red, emu.pos, err_code, emu.colors.nc);
 
+    let mut err = LAST_ERROR.lock().unwrap();
+    *err = err_code;
+
     emu.stack_pop32(false);
 }
 
@@ -1862,28 +1876,8 @@ fn GetSystemInfo(emu:&mut emu::Emu) {
 
     println!("{}** {} kernel32!GetSystemInfo sysinfo: 0x{:x} {}", emu.colors.light_red, emu.pos, out_sysinfo, emu.colors.nc);
 
-    /*
-         sizeof(SYSTEM_INFO) = 72
-
-         typedef struct _SYSTEM_INFO {
-          union {
-            DWORD dwOemId;
-            struct {
-              WORD wProcessorArchitecture;
-              WORD wReserved;
-            } DUMMYSTRUCTNAME;
-          } DUMMYUNIONNAME;
-          DWORD     dwPageSize;
-          LPVOID    lpMinimumApplicationAddress;
-          LPVOID    lpMaximumApplicationAddress;
-          DWORD_PTR dwActiveProcessorMask;
-          DWORD     dwNumberOfProcessors;
-          DWORD     dwProcessorType;
-          DWORD     dwAllocationGranularity;
-          WORD      wProcessorLevel;
-          WORD      wProcessorRevision;
-        } SYSTEM_INFO, *LPSYSTEM_INFO;
-    */
+    let mut sysinfo = emu::structures::SystemInfo32::new();
+    sysinfo.save(out_sysinfo, &mut emu.maps);
 
     emu.stack_pop32(false);
 }
