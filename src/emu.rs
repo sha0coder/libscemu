@@ -7443,7 +7443,7 @@ impl Emu {
                                 self.regs.set_esi(self.regs.get_esi() + 1);
                                 self.regs.set_edi(self.regs.get_edi() + 1);
                             }
-                        }
+                        } // end 32bits
 
                         self.flags.sub8(value0 as u64, value1 as u64);
 
@@ -7452,13 +7452,15 @@ impl Emu {
                                 println!("\tcmp: 0x{:x} > 0x{:x}", value0, value1);
                             }
                             assert!(self.flags.f_zf == false);
-                            return false;
+                            break;
+                            //return false;
                         } else if value0 < value1 {
                             if !self.step {
                                 println!("\tcmp: 0x{:x} < 0x{:x}", value0, value1);
                             }
                             assert!(self.flags.f_zf == false);
-                            return false;
+                            break;
+                            //return false;
                         } else {
                             if !self.step {
                                 println!("\tcmp: 0x{:x} == 0x{:x}", value0, value1);
@@ -7476,7 +7478,7 @@ impl Emu {
                             self.force_reload = true;
                             break;
                         }
-                    }
+                    } // end rep loop
 
                 } else { // no rep
 
