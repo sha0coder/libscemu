@@ -294,8 +294,8 @@ fn RtlGetProcessHeaps(emu:&mut emu::Emu) {
     */
     println!("{}** {} ntdll!RtlGetProcessHeaps {}", emu.colors.light_red, emu.pos, emu.colors.nc);
 
-    //emu.stack_pop32(false);
-    //emu.stack_pop32(false);
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
 
     emu.regs.rax = 1; // number of handlers
 }
@@ -592,11 +592,18 @@ fn NtClose(emu:&mut emu::Emu) {
 }
 
 fn RtlInitializeCriticalSectionAndSpinCount(emu:&mut emu::Emu) { 
+    let crit_sect = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("ntdll!RtlInitializeCriticalSectionAndSpinCount error reading crit_sect param");
+    let spin_count = emu.maps.read_dword(emu.regs.get_esp()+4)
+        .expect("ntdll!RtlInitializeCriticalSectionAndSpinCount error reading spin_count param");
 
     println!("{}** {} ntdll!RtlInitializeCriticalSectionAndSpinCount {}",
              emu.colors.light_red, emu.pos, emu.colors.nc);
 
-    unimplemented!("compensate the stack? how many params?");
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+
+    emu.regs.rax = 1;
 }
 
 fn NtProtectVirtualMemory(emu:&mut emu::Emu) {
@@ -668,17 +675,8 @@ fn RtlGetVersion(emu:&mut emu::Emu) {
     println!("{}** {} ntdll!RtlGetVersion {}",      
              emu.colors.light_red, emu.pos, emu.colors.nc);
 
-    /*
-     TODO:
-     typedef struct _OSVERSIONINFOW {
-          ULONG dwOSVersionInfoSize;
-          ULONG dwMajorVersion;
-          ULONG dwMinorVersion;
-          ULONG dwBuildNumber;
-          ULONG dwPlatformId;
-          WCHAR szCSDVersion[128];
-        } OSVERSIONINFOW, *POSVERSIONINFOW, *LPOSVERSIONINFOW, RTL_OSVERSIONINFOW, *PRTL_OSVERSIONINFOW;
-    */
+    let versioninfo = emu::structures::OsVersionInfo::new();
+    versioninfo.save(versioninfo_ptr, &mut emu.maps);
 
     emu.stack_pop32(false);
     emu.regs.rax = 1;
@@ -717,8 +715,11 @@ fn memset(emu:&mut emu::Emu) {
     emu.stack_pop32(false);
     emu.stack_pop32(false);
     emu.stack_pop32(false);
-    emu.regs.rax = 1;
+
+    emu.regs.rax = ptr;
 }
+
+
 
 fn RtlSetUnhandledExceptionFilter(emu: &mut emu::Emu) {
     let filter = emu.maps.read_dword(emu.regs.get_esp())

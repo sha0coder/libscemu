@@ -19,6 +19,25 @@ pub fn gateway(addr:u64, emu:&mut emu::Emu) {
         0x770233a0 => RtlAllocateHeap(emu),
         0x76ff1f70 => RtlQueueWorkItem(emu),
         0x77021350 => NtWaitForSingleObject(emu),
+        0x7705a974 => sscanf(emu),
+        0x770847b0 => NtGetTickCount(emu),
+        0x77021620 => NtQueryPerformanceCounter(emu),
+        0x77094c80 => RtlGetProcessHeaps(emu),
+        0x7701b5c0 => RtlDosPathNameToNtPathName_U(emu),
+        0x77021860 => NtCreateFile(emu),
+        0x77023200 => RtlFreeHeap(emu),
+        0x77021420 => NtQueryInformationFile(emu),
+        0x77021370 => NtReadFile(emu),
+        0x77021400 => NtClose(emu),
+        0x76ff6c20 => RtlInitializeCriticalSectionAndSpinCount(emu),
+        0x77021810 => NtProtectVirtualMemory(emu),
+        0x77022fc0 => RtlEnterCriticalSection(emu),
+        0x76ff9380 => RtlGetVersion(emu),
+        0x7700b3f0 => RtlInitializeCriticalSectionEx(emu),
+        0x77022ed0 => memset(emu),
+        0x77011950 => RtlSetUnhandledExceptionFilter(emu),
+
+
         _ => {
             let apiname = kernel32::guess_api_name(emu, addr);
             panic!("calling unimplemented ntdll API 0x{:x} {}", addr, apiname);
@@ -274,5 +293,296 @@ fn NtWaitForSingleObject(emu:&mut emu::Emu) {
     emu.regs.rax = 0x102; //constants::STATUS_SUCCESS;
 }
 
+fn sscanf(emu:&mut emu::Emu) {
+    let buffer_ptr = emu.regs.rcx;
+    let fmt_ptr = emu.regs.rdx;
+    let list = emu.regs.r8;
+
+    let buffer = emu.maps.read_string(buffer_ptr);
+    let fmt = emu.maps.read_string(fmt_ptr);
+
+    println!("{}** {} ntdll!sscanf out_buff: `{}` fmt: `{}` {}", emu.colors.light_red, emu.pos, buffer, fmt, emu.colors.nc);
+
+    let rust_fmt = fmt.replace("%x","{x}").replace("%d","{}").replace("%s","{}").replace("%hu","{u16}").replace("%i","{}").replace("%o", "{o}").replace("%f","{}");
+    let params = rust_fmt.matches("{").count();
+
+    unimplemented!("sscanf is unimplemented for now.");
+}
+
+fn NtGetTickCount(emu: &mut emu::Emu) {
+    println!("{}** {} ntdll!NtGetTickCount {}", emu.colors.light_red, emu.pos, emu.colors.nc);
+    let tick = kernel32::TICK.lock().unwrap();
+    emu.regs.rax = *tick as u64;
+}
+
+fn NtQueryPerformanceCounter(emu: &mut emu::Emu) {
+    let perf_counter_ptr = emu.regs.rcx;
+    let perf_freq_ptr = emu.regs.rdx;
+
+    println!("{}** {} ntdll!NtQueryPerformanceCounter {}", emu.colors.light_red, emu.pos, emu.colors.nc);
+
+    emu.maps.write_dword(perf_counter_ptr, 0);
+    emu.regs.rax = constants::STATUS_SUCCESS;
+}
+
+fn RtlGetProcessHeaps(emu: &mut emu::Emu) {
+    let num_of_heaps = emu.regs.rcx;
+    let out_process_heaps = emu.regs.rcx;
+
+    println!("{}** {} ntdll!RtlGetProcessHeaps num: {} out: 0x{:x} {}", emu.colors.light_red, emu.pos, num_of_heaps, out_process_heaps, emu.colors.nc);
+
+    emu.regs.rax = 1;
+}
+
+struct CurDir {
+    DosPath: String, // unicode
+    Handle: u64,                                                                                                                                                                                                    
+}
+
+fn RtlDosPathNameToNtPathName_U(emu: &mut emu::Emu) {
+    let dos_path_name_ptr = emu.regs.rcx;
+    let nt_path_name_ptr = emu.regs.rdx;
+    let nt_file_name_part_ptr = emu.regs.r8;
+    let curdir_ptr = emu.regs.r9;
+
+    let dos_path_name = emu.maps.read_wide_string(dos_path_name_ptr);
+
+    //TODO: si la variable destino apunta a pila no hacer memcpy, solo si es un alloc_
+     
+   if curdir_ptr > 0 {
+       let dos_path_unicode_ptr = emu.maps.read_dword(curdir_ptr) 
+           .expect("ntdll!RtlDosPathNameToNtPathName_U error reading dos_path_unicode_ptr") as u64;
+                                                      
+       let dst_map_name = emu.maps.get_addr_name(dos_path_unicode_ptr)
+           .expect("ntdll!RtlDosPathNameToNtPathName_U writting on unmapped address");
+                                                                                                   
+       if dst_map_name.starts_with("alloc_") {                                                               
+           emu.maps.memcpy(dos_path_unicode_ptr, dos_path_name_ptr, emu.maps.sizeof_wide(dos_path_name_ptr)*2);
+       } else {                                                                                            
+           if emu.cfg.verbose >= 1 {                                                          
+               println!("/!\\ ntdll!RtlDosPathNameToNtPathName_U denied dest buffer on {} map", dst_map_name);
+               println!("memcpy1 0x{:x} <- 0x{:x}  sz: {}", 
+                    dos_path_unicode_ptr, dos_path_name_ptr, emu.maps.sizeof_wide(dos_path_name_ptr)*2);
+           }
+       }
+   }
+
+   if nt_path_name_ptr > 0 {
+        // its a stack dword where to write the address of a new buffer
+
+       let dst_map_name = emu.maps.get_addr_name(nt_path_name_ptr)
+           .expect("ntdll!RtlDosPathNameToNtPathName_U writting on unmapped address.");
+
+       if dst_map_name.starts_with("alloc_") {
+            emu.maps.memcpy(nt_path_name_ptr, dos_path_name_ptr, emu.maps.sizeof_wide(dos_path_name_ptr)*2);
+       } else {
+            let addr = match emu.maps.alloc(255) {
+                Some(a) => {
+                    let mem = emu.maps.create_map("nt_alloc");
+                    mem.set_base(a);
+                    mem.set_size(255);
+                    emu.maps.write_dword(nt_path_name_ptr, a as u32);
+                    emu.maps.memcpy(a, dos_path_name_ptr, emu.maps.sizeof_wide(dos_path_name_ptr)*2);
+                },
+                None => {
+                   if emu.cfg.verbose >= 1 {
+                       println!("/!\\ ntdll!RtlDosPathNameToNtPathName_U low memory");
+                   }
+                },
+            };
+       }
+    }
+}
+
+fn NtCreateFile(emu: &mut emu::Emu) {
+    let out_hndl_ptr = emu.regs.rcx;
+    let access_mask = emu.regs.rdx;
+    let oattrib = emu.regs.r8;
+    let iostat = emu.regs.r9;
+    let alloc_sz = emu.maps.read_qword(emu.regs.rsp).expect("ntdll!NtCreateFile error reading alloc_sz param");
+    let fattrib = emu.maps.read_qword(emu.regs.rsp+8).expect("ntdll!NtCreateFile error reading fattrib param");
+    let share_access = emu.maps.read_qword(emu.regs.rsp+16).expect("ntdll!NtCreateFile error reading share_access param");
+    let create_disp = emu.maps.read_qword(emu.regs.rsp+24).expect("ntdll!NtCreateFile error reading create_disp param");
+    let create_opt = emu.maps.read_qword(emu.regs.rsp+32).expect("ntdll!NtCreateFile error reading create_opt param");
+    let ea_buff = emu.maps.read_qword(emu.regs.rsp+40).expect("ntdll!NtCreateFile error reading ea_buff param");
+    let ea_len = emu.maps.read_qword(emu.regs.rsp+48).expect("ntdll!NtCreateFile error reading ea_len param");
+
+    for _ in 0..7 {
+        emu.stack_pop64(false);
+    }
+
+    let obj_name_ptr = emu.maps.read_dword(oattrib + 8)
+        .expect("ntdll!NtCreateFile error reading oattrib +8") as u64;
+    let filename = emu.maps.read_wide_string(obj_name_ptr);
+
+    println!("{}** {} ntdll!NtCreateFile {} {}", emu.colors.light_red, emu.pos, filename, emu.colors.nc);
+
+    if out_hndl_ptr > 0 {
+       emu.maps.write_dword(out_hndl_ptr, helper::handler_create(&filename) as u32);
+    }
+
+    emu.regs.rax = constants::STATUS_SUCCESS;
+}
+
+fn RtlFreeHeap(emu: &mut emu::Emu) {
+    let hndl = emu.regs.rcx;
+    let flags = emu.regs.rdx;
+    let base_addr = emu.regs.r8;
+
+    println!("{}** {} ntdll!RtlFreeHeap 0x{} {}", emu.colors.light_red, emu.pos, base_addr, emu.colors.nc);
+
+    helper::handler_close(hndl);
+    let name = emu.maps.get_addr_name(base_addr).unwrap_or_else(|| String::new());
+    if name == "" {
+        if emu.cfg.verbose >= 1 {
+            println!("map not allocated, so cannot free it.");
+        }
+        emu.regs.rax = 0;
+        return;
+    }
+
+    if name.starts_with("alloc_") {
+        emu.maps.free(&name);
+        emu.regs.rax = 1;
+    } else {
+        emu.regs.rax = 0;
+        if emu.cfg.verbose >= 1 {
+            println!("trying to free a systems map {}", name);
+        }
+    }
+}
+
+fn NtQueryInformationFile(emu: &mut emu::Emu) {
+    let hndl = emu.regs.rcx;
+    let stat = emu.regs.rdx;
+    let fileinfo = emu.regs.r8;
+    let len = emu.regs.r9;
+    let fileinfoctls = emu.maps.read_qword(emu.regs.rsp).expect("ntdll!NtQueryInformationFile cannot read fileinfoctls param");
+
+    println!("{}** {} ntdll!NtQueryInformationFile {}", emu.colors.light_red, emu.pos, emu.colors.nc);
+
+    emu.stack_pop64(false);
+
+    emu.regs.rax = constants::STATUS_SUCCESS;
+}
+
+fn NtReadFile(emu: &mut emu::Emu) {
+    let file_hndl = emu.regs.rcx;
+    let ev_hndl = emu.regs.rdx;
+    let apc_rout = emu.regs.r8;
+    let apc_ctx = emu.regs.r9;
+    let stat = emu.maps.read_qword(emu.regs.rsp).expect("ntdll!NtReadFile error reading stat param");
+    let buff = emu.maps.read_qword(emu.regs.rsp+8).expect("ntdll!NtReadFile error reading buff param");
+    let len = emu.maps.read_qword(emu.regs.rsp+16).expect("ntdll!NtReadFile error reading len param") as usize;
+    let off = emu.maps.read_qword(emu.regs.rsp+24).expect("ntdll!NtReadFile error reading off param");
+    let key = emu.maps.read_qword(emu.regs.rsp+32).expect("ntdll!NtReadFile error reading key param");
+
+    let file = helper::handler_get_uri(file_hndl);
+
+    println!("{}** {} ntdll!NtReadFile {} buff: 0x{:x} sz: {} off_var: 0x{:x} {}", 
+             emu.colors.light_red, emu.pos, file, buff, len, off, emu.colors.nc);
+
+    for _ in 0..5 {
+        emu.stack_pop64(false);
+    }
+
+    emu.maps.memset(buff, 0x90, len);
+    emu.regs.rax = constants::STATUS_SUCCESS;
+}
+
+fn NtClose(emu: &mut emu::Emu) {
+    let hndl = emu.regs.rcx;
+
+    let uri = helper::handler_get_uri(hndl);
+
+    println!("{}** {} ntdll!NtClose hndl: 0x{:x} uri: {} {}", 
+             emu.colors.light_red, emu.pos, hndl, uri, emu.colors.nc);
+
+    if uri == "" {
+        emu.regs.rax = constants::STATUS_INVALID_HANDLE;
+    } else {
+        emu.regs.rax = constants::STATUS_SUCCESS;
+    }
+}
+
+fn RtlInitializeCriticalSectionAndSpinCount(emu: &mut emu::Emu) {
+    let crit_sect = emu.regs.rcx;
+    let spin_count = emu.regs.rdx;
+
+    println!("{}** {} ntdll!RtlInitializeCriticalSectionAndSpinCount {}",
+             emu.colors.light_red, emu.pos, emu.colors.nc);
+
+    emu.regs.rax = 1;
+}
+
+fn NtProtectVirtualMemory(emu: &mut emu::Emu) {
+    let sz = emu.regs.rcx;
+    let status = emu.regs.rdx;
+    let page_number = emu.regs.r8;
+    let page = emu.regs.r9;
+    let prot = emu.maps.read_qword(emu.regs.rsp).expect("ntdll!NtProtectVirtualMemory error reading old prot param");
+    
+    println!("{}** {} ntdll!NtProtectVirtualMemory sz: {} {} {}",
+             emu.colors.light_red, emu.pos, sz, prot, emu.colors.nc);
+
+    emu.stack_pop64(false);
+
+    emu.regs.rax = constants::STATUS_SUCCESS
+}
+
+fn RtlEnterCriticalSection(emu: &mut emu::Emu) {
+    let hndl = emu.regs.rcx;
+
+    println!("{}** {} ntdll!RtlEnterCriticalSection {}",    
+             emu.colors.light_red, emu.pos, emu.colors.nc);
+
+    emu.regs.rax = 1;
+}
+
+fn RtlGetVersion(emu: &mut emu::Emu) {
+    let versioninfo_ptr = emu.regs.rcx;
+
+    println!("{}** {} ntdll!RtlGetVersion {}",      
+             emu.colors.light_red, emu.pos, emu.colors.nc);
+
+    let versioninfo = emu::structures::OsVersionInfo::new();
+    versioninfo.save(versioninfo_ptr, &mut emu.maps);
+
+    emu.regs.rax = 1;
+}
+
+fn RtlInitializeCriticalSectionEx(emu: &mut emu::Emu) {
+    let crit_sect_ptr = emu.regs.rcx;
+    let spin_count = emu.regs.rdx;
+    let flags = emu.regs.r8;
+
+    println!("{}** {} ntdll!RtlInitializeCriticalSectionEx {}",      
+             emu.colors.light_red, emu.pos, emu.colors.nc);
+
+    emu.regs.rax = 1;
+}
+
+fn memset(emu: &mut emu::Emu) {
+    let ptr = emu.regs.rcx;
+    let byte = emu.regs.rdx;
+    let count = emu.regs.r8;
+
+    println!("{}** {} ntdll!memset ptr: 0x{:x} byte: {} count: {} {}",      
+             emu.colors.light_red, emu.pos, ptr, byte, count, emu.colors.nc);
+
+    emu.maps.memset(ptr, byte as u8, count as usize);
+
+    emu.regs.rax = ptr;
+}
+
+fn RtlSetUnhandledExceptionFilter(emu: &mut emu::Emu) {
+    let filter = emu.regs.rcx;
+
+    println!("{}** {} ntdll!RtlSetUnhandledExceptionFilter filter: 0x{:x} {}",
+        emu.colors.light_red, emu.pos, filter, emu.colors.nc);
+
+    emu.feh = filter;
+    emu.regs.rax = 1;
+}
 
 
