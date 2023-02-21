@@ -10,7 +10,7 @@ use std::sync::Mutex;
 
 // a in RCX, b in RDX, c in R8, d in R9, f then e pushed on stack
 
-pub fn gateway(addr:u64, emu:&mut emu::Emu) {
+pub fn gateway(addr:u64, emu:&mut emu::Emu) -> String {
     match addr {
         0x76dc7070 => LoadLibraryA(emu),
         0x76dc6f80 => LoadLibraryW(emu),
@@ -123,9 +123,14 @@ pub fn gateway(addr:u64, emu:&mut emu::Emu) {
         0x76e5a3b2 => EncodePointer(emu),
         0x76e5a2dc => DecodePointer(emu),
 
-
-        _ => panic!("calling unimplemented kernel32 64bits API 0x{:x} {}", addr, guess_api_name(emu, addr)),
+        _ => {
+            let api = guess_api_name(emu, addr);
+            println!("calling unimplemented kernel32 64bits API 0x{:x} {}", addr, api);
+            return api;
+        }
     }
+
+    return String::new();
 }
 
 lazy_static! {                                                            

@@ -24,6 +24,7 @@ pub mod syscall64;
 pub mod breakpoint;
 pub mod endpoint;
 pub mod structures;
+pub mod banzai;
 mod exception;
 mod pe32;
 mod pe64;
@@ -38,6 +39,7 @@ use maps::Maps;
 use hook::Hook;
 use flags::Flags;
 use atty::Stream;
+use banzai::Banzai;
 use colors::Colors;
 use eflags::Eflags;
 use regs64::Regs64;
@@ -122,6 +124,7 @@ pub struct Emu {
     filename: String,
     enabled_ctrlc: bool,
     run_until_ret: bool,
+    banzai: Banzai<'static>,
 }
 
 impl Emu {
@@ -162,6 +165,7 @@ impl Emu {
             filename: String::new(),
             enabled_ctrlc: true,
             run_until_ret: false,
+            banzai: Banzai::new(),
         }
     }
 
@@ -284,6 +288,7 @@ impl Emu {
 
     pub fn init(&mut self) {
         self.pos = 0;
+        self.banzai.init();
 
         if !atty::is(Stream::Stdout) {
             self.cfg.nocolors = true;
@@ -7289,12 +7294,12 @@ impl Emu {
                             if !self.step {
                                 println!("\tcmp: 0x{:x} > 0x{:x}", value0, value1);
                             }
-                            return false;
+                            break;
                         } else if value0 < value1 {
                             if !self.step {
                                 println!("\tcmp: 0x{:x} < 0x{:x}", value0, value1);
                             }
-                            return false;
+                            break;
                         } else {
                             if !self.step {
                                 println!("\tcmp: 0x{:x} == 0x{:x}", value0, value1);
@@ -10008,7 +10013,7 @@ impl Emu {
 
         }
 
-        return true;
+        return true; // result_ok
     }
 
 }

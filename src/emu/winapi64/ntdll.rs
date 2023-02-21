@@ -5,7 +5,7 @@ use crate::emu::structures;
 use crate::emu::constants;
 use crate::emu::winapi64::kernel32;
 
-pub fn gateway(addr:u64, emu:&mut emu::Emu) {
+pub fn gateway(addr:u64, emu:&mut emu::Emu) -> String {
     match addr {
         0x77021760 => ZwQueueApcThread(emu),
         0x77021490 => NtAllocateVirtualMemory(emu),
@@ -37,12 +37,14 @@ pub fn gateway(addr:u64, emu:&mut emu::Emu) {
         0x77022ed0 => memset(emu),
         0x77011950 => RtlSetUnhandledExceptionFilter(emu),
 
-
         _ => {
             let apiname = kernel32::guess_api_name(emu, addr);
-            panic!("calling unimplemented ntdll API 0x{:x} {}", addr, apiname);
+            println!("calling unimplemented ntdll API 0x{:x} {}", addr, apiname);
+            return apiname;
         }
     }
+
+    return String::new();
 }
 
 fn NtAllocateVirtualMemory(emu:&mut emu::Emu) {

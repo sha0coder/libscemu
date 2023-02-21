@@ -6,7 +6,7 @@ use lazy_static::lazy_static;
 use std::sync::Mutex;
 
 
-pub fn gateway(addr:u64, emu:&mut emu::Emu)  {
+pub fn gateway(addr:u64, emu:&mut emu::Emu) -> String {
     match addr {
         0x7fefeeb4980 => WsaStartup(emu),
         0x7fefeeb2010 => WsaSocketA(emu),
@@ -38,8 +38,14 @@ pub fn gateway(addr:u64, emu:&mut emu::Emu)  {
         0x7748cc3f => WsaConnect(emu),
         */
 
-        _ => panic!("calling unimplemented ws2_32 API 0x{:x}", addr)
+        _ => {
+            let apiname = emu::winapi64::kernel32::guess_api_name(emu, addr);
+            println!("calling unimplemented ws2_32 API 0x{:x} {}", addr, apiname);
+            return apiname;
+        }
     }
+
+    return String::new();
 }
 
 lazy_static! {

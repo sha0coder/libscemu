@@ -5,7 +5,7 @@ use crate::emu::constants;
 use lazy_static::lazy_static; 
 use std::sync::Mutex;
 
-pub fn gateway(addr:u64, emu:&mut emu::Emu) {
+pub fn gateway(addr:u64, emu:&mut emu::Emu) -> String {
     match addr {
         0x7fefd899098 => InternetOpenA(emu),
         0x7fefd8b1c80 => InternetOpenW(emu),
@@ -21,8 +21,14 @@ pub fn gateway(addr:u64, emu:&mut emu::Emu) {
         0x7fefd8e1020 => InternetReadFileExA(emu),
         0x7fefd8e2dc0 => InternetReadFileExW(emu),
         0x7fefd92247c => InternetErrorDlg(emu),
-        _ => panic!("calling unimplemented wininet API 0x{:x}", addr)
+        _ => {
+            let apiname = emu::winapi64::kernel32::guess_api_name(emu, addr);
+            println!("calling unimplemented wininet API 0x{:x} {}", addr, apiname);
+            return apiname;
+        }
     }
+
+    return String::new();
 }
 
 
