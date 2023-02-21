@@ -34,7 +34,7 @@ pub fn gateway(addr:u64, name:String, emu:&mut emu::Emu) {
 
             if params > 4 {
                 for _ in 4..params {
-                    emu.stack_pop32(false);
+                    emu.stack_pop64(false);
                 }
             }
             emu.regs.rax = 1;
