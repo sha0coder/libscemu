@@ -105,7 +105,7 @@ pub fn gateway(addr:u32, emu:&mut emu::Emu) -> String {
         0x75e93891 => GetStartupInfoW(emu),
         0x75e91e16 => FlsGetValue(emu),
         0x75e976b5 => IsProcessorFeaturePresent(emu),
-        // => InitializeCriticalSection(emu),
+        0x75eff1e4 => InitializeCriticalSection(emu),
         0x75e93879 => InitializeCriticalSectionEx(emu),
         0x75e9418d => FlsAlloc(emu),
         0x75e976e6 => FlsSetValue(emu),
@@ -114,6 +114,17 @@ pub fn gateway(addr:u32, emu:&mut emu::Emu) -> String {
         0x75e9452b => MultiByteToWideChar(emu),
         0x75e93728 => GetSystemInfo(emu),
         0x75e8bbd0 => HeapFree(emu),
+        0x75ea88e6 => SetThreadLocale(emu),
+        0x75e9679e => GetCommandLineW(emu),
+        0x75e939aa => GetAcp(emu),
+        0x75e93c26 => GetModuleFileNameW(emu),
+        0x75e8c189 => RegOpenKeyExW(emu),
+        0x75e822ef => GetUserDefaultUILanguage(emu),
+        0x75eff05f => EnterCriticalSection(emu),
+        0x75eff346 => LeaveCriticalSection(emu),
+        0x75e83de4 => IsValidLocale(emu),
+        0x75e7ae42 => GetThreadUILanguage(emu),
+        0x75e822d7 => GetThreadPreferredUILanguages(emu),
 
         _ => {
             let apiname = guess_api_name(emu, addr);
@@ -1876,8 +1887,8 @@ fn GetSystemInfo(emu:&mut emu::Emu) {
 
     println!("{}** {} kernel32!GetSystemInfo sysinfo: 0x{:x} {}", emu.colors.light_red, emu.pos, out_sysinfo, emu.colors.nc);
 
-    let mut sysinfo = emu::structures::SystemInfo32::new();
-    sysinfo.save(out_sysinfo, &mut emu.maps);
+    // let mut sysinfo = emu::structures::SystemInfo32::new();
+    // sysinfo.save(out_sysinfo, &mut emu.maps);
 
     emu.stack_pop32(false);
 }
@@ -1899,5 +1910,135 @@ fn HeapFree(emu:&mut emu::Emu) {
 
     emu.regs.rax = 1;
 }
+
+fn SetThreadLocale(emu: &mut emu::Emu) {
+    let locale = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("kernel32!SetThreadLocale cannot read locale param");
+
+    println!("{}** {} kernel32!SetThreadLocale {} {}", emu.colors.light_red, emu.pos, locale, emu.colors.nc);
+
+    emu.stack_pop32(false);
+    emu.regs.rax = 1;
+}
+
+fn GetCommandLineW(emu: &mut emu::Emu) {
+    println!("{}** {} kernel32!GetCommandlineW {}", emu.colors.light_red, emu.pos, emu.colors.nc);
+    emu.regs.rax = 0;
+}
+
+fn GetAcp(emu: &mut emu::Emu) {
+    println!("{}** {} kernel32!GetAcp {}", emu.colors.light_red, emu.pos, emu.colors.nc);
+    emu.regs.rax = 1252;
+}
+
+fn GetModuleFileNameW(emu: &mut emu::Emu) {
+    let hmodule = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("kernel32!GetModuleFileNameW cannot read hmodule");
+    let out_filename_ptr = emu.maps.read_dword(emu.regs.get_esp()+4)
+        .expect("kernel32!GetModuleFileNameW cannot read out_filename_ptr") as u64;
+    let size = emu.maps.read_dword(emu.regs.get_esp()+8)
+        .expect("kernel32!GetModuleFileNameW cannot read out_filename_ptr");
+
+    println!("{}** {} kernel32!GetModuleFileNameW {}", emu.colors.light_red, emu.pos, emu.colors.nc);
+
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+
+    emu.maps.write_wide_string(out_filename_ptr, "jowei3r.exe");
+    emu.regs.rax = 11;
+}
+
+fn RegOpenKeyExW(emu: &mut emu::Emu) {
+    let hkey = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("kernel32!RegOpenKeyExW cannot read hkey");
+    let subkey_ptr = emu.maps.read_dword(emu.regs.get_esp()+4)
+        .expect("kernel32!RegOpenKeyExW cannot read subkey") as u64;
+    let options = emu.maps.read_dword(emu.regs.get_esp()+8)
+        .expect("kernel32!RegOpenKeyExW cannot read options");
+    let sam = emu.maps.read_dword(emu.regs.get_esp()+12)
+        .expect("kernel32!RegOpenKeyExW cannot read sam");
+    let result = emu.maps.read_dword(emu.regs.get_esp()+16)
+        .expect("kernel32!RegOpenKeyExW cannot read result");
+
+
+    let subkey = emu.maps.read_wide_string(subkey_ptr);
+    println!("{}** {} kernel32!RegOpenKeyExW {} {}", emu.colors.light_red, emu.pos, subkey, emu.colors.nc);
+
+
+    for _ in 0..5 {
+        emu.stack_pop32(false);
+    }
+
+    emu.regs.rax = 1;
+}
+
+fn GetUserDefaultUILanguage(emu: &mut emu::Emu) {
+    println!("{}** {} kernel32!GetUserDefaultUILanguage (0x0409 en_US) {}", emu.colors.light_red, emu.pos, 
+        emu.colors.nc);
+    emu.regs.rax = emu::constants::EN_US_LOCALE as u64;
+}
+
+fn EnterCriticalSection(emu: &mut emu::Emu) {
+    let crit_sect = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("kernel32!EnterCriticalSection cannot read crit_sect");
+
+    println!("{}** {} kernel32!EnterCriticalSection {}", emu.colors.light_red, emu.pos, 
+        emu.colors.nc);
+    emu.regs.rax = 1;
+}
+
+fn LeaveCriticalSection(emu: &mut emu::Emu) {
+    let crit_sect = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("kernel32!LeaveCriticalSection cannot read crit_sect");
+
+    println!("{}** {} kernel32!LeaveCriticalSection {}", emu.colors.light_red, emu.pos, 
+        emu.colors.nc);
+    emu.regs.rax = 1;
+}
+
+fn IsValidLocale(emu: &mut emu::Emu) {
+    let locale = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("kernel32!IsValidLocale cannot read locale");
+    let flags = emu.maps.read_dword(emu.regs.get_esp()+4)
+        .expect("kernel32!IsValidLocale cannot read flags");
+
+    println!("{}** {} kernel32!IsValidLocale {}", emu.colors.light_red, emu.pos, emu.colors.nc);
+
+    emu.regs.rax = 1;
+}
+
+fn GetThreadUILanguage(emu: &mut emu::Emu) {
+    println!("{}** {} kernel32!GetThreadUILanguage (0x0409 en_US) {}", emu.colors.light_red, emu.pos, 
+        emu.colors.nc);
+
+    emu.regs.rax = emu::constants::EN_US_LOCALE as u64;
+}
+
+fn GetThreadPreferredUILanguages(emu: &mut emu::Emu) {
+    let flags = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("kernel32!GetThreadPreferredUILanguages cannot read flags");
+    let num_langs_ptr = emu.maps.read_dword(emu.regs.get_esp()+4)
+        .expect("kernel32!GetThreadPreferredUILanguages cannot read num_langs_ptr") as u64;
+    let buff = emu.maps.read_dword(emu.regs.get_esp()+8)
+        .expect("kernel32!GetThreadPreferredUILanguages cannot read buff") as u64;
+    let out_sz = emu.maps.read_dword(emu.regs.get_esp()+12)
+        .expect("kernel32!GetThreadPreferredUILanguages cannot read sz") as u64;
+
+
+    emu.maps.write_dword(num_langs_ptr, 0);
+    println!("{}** {} kernel32!GetThreadPreferredUILanguages {}", emu.colors.light_red, emu.pos, 
+        emu.colors.nc);
+
+    emu.maps.write_dword(out_sz, 0);
+    emu.maps.write_dword(num_langs_ptr, 0);
+
+    for _ in 0..4 {
+        emu.stack_pop32(false);
+    }
+
+    emu.regs.rax = 1;
+}
+
 
 

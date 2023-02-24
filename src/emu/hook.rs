@@ -1,4 +1,4 @@
-use iced_x86::{Instruction};
+use iced_x86::Instruction;
 use crate::emu;
 
 // return: false will ignore interrupt handling like 0x80 -> linux
@@ -11,6 +11,7 @@ type TypeHookOnMemoryRead = fn(emu:&mut emu::Emu, ip_addr:u64, mem_addr:u64, sz:
 type TypeHookOnMemoryWrite = fn(emu:&mut emu::Emu, ip_addr:u64, mem_addr:u64, sz:u8, value:u128) -> u128; 
 type TypeHookOnPreInstruction = fn(emu:&mut emu::Emu, ip_addr:u64, ins:&Instruction, sz:usize);   
 type TypeHookOnPostInstruction = fn(emu:&mut emu::Emu, ip_addr:u64, ins:&Instruction, sz:usize, emu_ok:bool);
+type TypeHookOnWinApiCall = fn(emu:&mut emu::Emu, ip_addr:u64, called_addr:u64) -> bool;
 
 pub struct Hook {
     pub hook_on_interrupt:Option<TypeHookOnInterrupt>,
@@ -19,6 +20,7 @@ pub struct Hook {
     pub hook_on_memory_write:Option<TypeHookOnMemoryWrite>, 
     pub hook_on_pre_instruction:Option<TypeHookOnPreInstruction>,
     pub hook_on_post_instruction:Option<TypeHookOnPostInstruction>,
+    pub hook_on_winapi_call:Option<TypeHookOnWinApiCall>,
 }
 
 impl Hook {
@@ -30,6 +32,7 @@ impl Hook {
             hook_on_memory_write: None, 
             hook_on_pre_instruction: None,
             hook_on_post_instruction: None,
+            hook_on_winapi_call: None,
         }
     }
 
@@ -79,6 +82,14 @@ impl Hook {
 
     pub fn disable_post_instruction(&mut self) {
         self.hook_on_post_instruction = None;
+    }
+
+    pub fn on_winapi_call(&mut self, hook:TypeHookOnWinApiCall) {
+        self.hook_on_winapi_call = Some(hook);
+    }
+
+    pub fn disable_winapi_call(&mut self) {
+        self.hook_on_winapi_call = None;
     }
 
 }

@@ -105,6 +105,10 @@ fn trace_post_instruction(emu:&mut libscemu::emu::Emu, ip_addr:u64,
                           ins:&Instruction, sz:usize, emu_ok:bool) {
 }
 
+fn trace_winapi_call(emu:&mut libscemu::emu::Emu, ip_addr:u64, api_addr:u64) -> bool {
+    return true; // handle api calls
+}
+
 fn main() {
     let mut emu = emu32();
     emu.set_maps_folder("../scemu/maps32/"); // download the maps, ideally from scemu git.
@@ -117,6 +121,7 @@ fn main() {
     emu.hook.on_exception(trace_exceptions);
     emu.hook.on_pre_instruction(trace_pre_instruction);
     emu.hook.on_post_instruction(trace_post_instruction);
+    emu.hook.on_winapi_call(trace_winapi_call);
     emu.run(0);
     println!("end!");
 }

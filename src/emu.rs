@@ -1261,6 +1261,13 @@ impl Emu {
                 return teb.get_base();
             }
 
+            if value == 0x2c {
+                if self.cfg.verbose >= 1 {
+                    println!("ACCESS TO CURRENT LOCALE");
+                }
+                return constants::EN_US_LOCALE as u64;
+            }
+
             panic!("not implemented: {}", operand);
         }
 
@@ -1539,7 +1546,16 @@ impl Emu {
             self.gateway_return = self.stack_pop64(false).unwrap_or(0);
             self.regs.rip = self.gateway_return;
 
-            winapi64::gateway(addr, name, self);
+            
+            let handle_winapi:bool = match self.hook.hook_on_winapi_call {
+                Some(hook_fn) => hook_fn(self, self.regs.rip, addr),
+                None => true,
+            };
+
+            if handle_winapi {
+                winapi64::gateway(addr, name, self);
+            }
+
             self.force_break = true;
         }
     }
@@ -1579,7 +1595,15 @@ impl Emu {
             self.gateway_return = self.stack_pop32(false).unwrap_or(0).into();
             self.regs.set_eip(self.gateway_return);
 
-            winapi32::gateway(to32!(addr), name, self);
+            let handle_winapi:bool = match self.hook.hook_on_winapi_call {
+                Some(hook_fn) => hook_fn(self, self.regs.rip, addr),
+                None => true,
+            };
+
+            if handle_winapi {
+                winapi32::gateway(to32!(addr), name, self);
+            }
+
             self.force_break = true;
         }
     }
@@ -3077,6 +3101,23 @@ impl Emu {
                                 println!("Reading SEH 0x{:x}", self.seh);
                             }
                             self.seh
+                        }
+                        0x2c => {
+                            if self.cfg.verbose >= 1 {
+                                println!("Reading local ");
+                            }
+                            let locale = self.alloc("locale", 100);
+                            self.maps.write_dword(locale, constants::EN_US_LOCALE);
+                            //TODO: return a table of locales
+                            /*
+                            13071 0x41026e: mov   eax,[edx+eax*4]
+                            =>r edx
+                                edx: 0xc8 200 (locale)
+                            =>r eax
+                                eax: 0x409 1033
+                            */
+
+                            locale
                         }
                         _ => { 
                             println!("unimplemented fs:[{}]", mem_addr);
