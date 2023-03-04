@@ -25,6 +25,7 @@ pub mod breakpoint;
 pub mod endpoint;
 pub mod structures;
 pub mod banzai;
+pub mod script;
 mod exception;
 mod pe32;
 mod pe64;
@@ -124,6 +125,7 @@ pub struct Emu {
     filename: String,
     enabled_ctrlc: bool,
     run_until_ret: bool,
+    running_script: bool,
     banzai: Banzai<'static>,
 }
 
@@ -165,6 +167,7 @@ impl Emu {
             filename: String::new(),
             enabled_ctrlc: true,
             run_until_ret: false,
+            running_script: false,
             banzai: Banzai::new(),
         }
     }
@@ -810,10 +813,9 @@ impl Emu {
     }
 
     pub fn filename_to_mapname(&self, filename: &str) -> String {
-        let spl:Vec<&str> = filename.split('.').collect();
-        let spl2:Vec<&str> = spl[0].split('/').collect();
-        let last = spl2.len() -1;
-        spl2[last].to_string()
+        let spl:Vec<&str> = filename.split('/').collect();
+        let spl2:Vec<&str> = spl[spl.len() - 1].split('.').collect();
+        spl2[0].to_string()
     }
 
     pub fn load_pe32(&mut self, filename: &str, set_entry: bool, force_base: u32) -> (u32,u32) {
@@ -1586,6 +1588,7 @@ impl Emu {
                 println!("/!\\ alert, jumping the barrier 0x{:x} name:{} map_name:{} filename:{}", 
                          addr, name, map_name, &self.filename);
             }*/
+            //println!("entra map:`{}` map_name:`{}` filename:`{}` !!!", name, map_name, &self.filename);
             self.regs.set_eip(addr);
         } else {
             if self.cfg.verbose >= 1 {
@@ -2352,7 +2355,7 @@ impl Emu {
                     let num = match con.cmd_num() {
                         Ok(v) => v,
                         Err(_) => {
-                            println!("bad hex value.");
+                            println!("bad instruction number.");
                             continue;
                         }
                     };
@@ -2398,7 +2401,7 @@ impl Emu {
                     self.cfg.trace_reg = true;
                     self.cfg.reg_names.push(reg);
                 }
-                "trd" => {
+                "trc" => {
                     self.cfg.trace_reg = false;
                     self.cfg.reg_names.clear();
                 }
@@ -2607,8 +2610,9 @@ impl Emu {
                             continue;
                         }
                     };
-                    self.force_break = true;
-                    self.regs.set_eip(addr);
+                    //self.force_break = true;
+                    //self.regs.set_eip(addr);
+                    self.set_eip(addr, false);
                 },
                 "rip" => {
                     con.print("=");
@@ -2619,8 +2623,8 @@ impl Emu {
                             continue;
                         }
                     };
-                    self.force_break = true;
-                    self.regs.rip = addr;
+                    //self.force_break = true;
+                    //self.regs.rip = addr;
                 },
                 "push" => {
                     con.print("value");
@@ -2788,6 +2792,7 @@ impl Emu {
                     }
                 }
                 "iatx" => {
+                    //TODO: implement this well
                     con.print("api name");
                     let api = con.cmd2();
                     let addr:u64;
@@ -2809,7 +2814,11 @@ impl Emu {
                 "iatd" => {
                     con.print("module");
                     let lib = con.cmd2().to_lowercase();
-                    winapi32::kernel32::dump_module_iat(self, &lib);
+                    if self.cfg.is_64bits {
+                        winapi64::kernel32::dump_module_iat(self, &lib);
+                    } else {
+                        winapi32::kernel32::dump_module_iat(self, &lib);
+                    }
                 }
                 "dt" => {
                     con.print("structure");
@@ -3233,7 +3242,11 @@ impl Emu {
 
                     if mem_addr == self.bp.get_mem_read() {
                         println!("Memory breakpoint on read 0x{:x}", mem_addr);
-                        self.spawn_console();
+                        if self.running_script {
+                            self.force_break = true;
+                        } else {
+                            self.spawn_console();
+                        }
                     }
 
                 } else {
@@ -3335,7 +3348,11 @@ impl Emu {
 
                     if mem_addr == self.bp.get_mem_write() {
                         println!("Memory breakpoint on write 0x{:x}", mem_addr);
-                        self.spawn_console();
+                        if self.running_script {
+                            self.force_break = true;
+                        } else { 
+                            self.spawn_console();
+                        }
                     }
                 }
             }
@@ -3664,7 +3681,14 @@ impl Emu {
 
                     self.pos += 1;
 
-                    if self.exp == self.pos || self.bp.get_bp() == addr || (self.cfg.console2 && self.cfg.console_addr == addr) {
+                    if self.exp == self.pos || self.pos == self.bp.get_instruction() || 
+                            self.bp.get_bp() == addr || (self.cfg.console2 && self.cfg.console_addr == addr) {
+
+
+                        if self.running_script {
+                            return;
+                        }
+
                         self.cfg.console2 = false;
                         self.step = true;
                         println!("-------");

@@ -128,7 +128,7 @@ impl Console {
         println!("dt ..................... dump structure");
         println!("enter .................. step into");
         println!("tr ..................... trace reg");
-        println!("trd .................... trace regs disable");
+        println!("trc .................... trace regs clear");
         println!("ldr .................... show ldr linked list");
         println!("iat .................... find api name in all iat's ");
         println!("iatx ................... find exact api name in all iat's");

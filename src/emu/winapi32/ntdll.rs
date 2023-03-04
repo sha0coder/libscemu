@@ -35,6 +35,7 @@ pub fn gateway(addr:u32, emu:&mut emu::Emu) -> String {
         0x775c6db9 => RtlInitializeCriticalSectionEx(emu),
         0x775a5340 => memset(emu),
         0x775d7de2 => RtlSetUnhandledExceptionFilter(emu),
+        0x775a55c0 => strlen(emu),
         _ => { 
             let apiname = kernel32::guess_api_name(emu, addr);
             println!("calling unimplemented ntdll API 0x{:x} {}", addr, apiname);
@@ -723,7 +724,7 @@ fn memset(emu:&mut emu::Emu) {
 
 fn RtlSetUnhandledExceptionFilter(emu: &mut emu::Emu) {
     let filter = emu.maps.read_dword(emu.regs.get_esp())
-        .expect("ntdll!RtlSetUnhandledExceptionFilter erro reading filter") as u64;
+        .expect("ntdll!RtlSetUnhandledExceptionFilter error reading filter") as u64;
 
     println!("{}** {} ntdll!RtlSetUnhandledExceptionFilter filter: 0x{:x} {}",
         emu.colors.light_red, emu.pos, filter, emu.colors.nc);
@@ -732,5 +733,20 @@ fn RtlSetUnhandledExceptionFilter(emu: &mut emu::Emu) {
     emu.stack_pop32(false);
     emu.regs.rax = 1;
 }
+
+fn strlen(emu: &mut emu::Emu) {
+    let s_ptr = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("ntdll!strlen error reading string pointer") as u64;
+
+    let s = emu.maps.read_string(s_ptr);
+    let l = s.len();
+    
+    println!("{}** {} ntdll!strlen: `{}` {} {}",
+        emu.colors.light_red, emu.pos, s, l, emu.colors.nc);
+
+    emu.stack_pop32(false);
+    emu.regs.rax = l as u32 as u64;
+}
+
 
 

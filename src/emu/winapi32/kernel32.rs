@@ -1285,13 +1285,21 @@ fn HeapCreate(emu:&mut emu::Emu) {
 }
 
 fn GetModuleHandleA(emu:&mut emu::Emu) {
-    let mod_name_ptr = emu.maps.read_dword(emu.regs.get_esp()).expect("kernel32!GetModuleHandleA cannot read mod_name_ptr") as u64;
-    let mod_name = emu.maps.read_string(mod_name_ptr);
+    let mod_name_ptr = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("kernel32!GetModuleHandleA cannot read mod_name_ptr") as u64;
 
-    println!("{}** {} kernel32!GetModuleHandleA '{}' {}", emu.colors.light_red, emu.pos, mod_name, emu.colors.nc);
+    let mod_name:String;
+
+    if mod_name_ptr == 0 {
+        mod_name = "self".to_string();
+    } else {
+        mod_name = emu.maps.read_string(mod_name_ptr);
+    }
+
+    println!("{}** {} kernel32!GetModuleHandleA '{}' {}", emu.colors.light_red, emu.pos, mod_name, 
+        emu.colors.nc);
 
     emu.stack_pop32(false);
-
     emu.regs.rax = helper::handler_create(&mod_name);
 }
 
