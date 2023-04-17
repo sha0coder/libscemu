@@ -952,6 +952,7 @@ impl Script {
 
                     let addr = self.resolve(args[1], i, emu);
 
+                    // push arguments
                     for j in (2..args.len()).rev() {
                         let v = self.resolve(args[j], i, emu);
                         if emu.cfg.is_64bits {
@@ -960,11 +961,26 @@ impl Script {
                             emu.stack_push32(v as u32);
                         }
                     }
+
+                    // push return address
+                    let retaddr:u64;
+                    if emu.cfg.is_64bits {
+                        retaddr = emu.regs.rip;
+                        emu.stack_push64(emu.regs.rip);
+                    } else {
+                        retaddr = emu.regs.get_eip();
+                        emu.stack_push32(emu.regs.get_eip() as u32);
+                    }
+
                     if emu.cfg.is_64bits {
                         emu.set_rip(addr, false);
                     } else {
                         emu.set_eip(addr, false);
                     }
+
+                    emu.is_running.store(1, std::sync::atomic::Ordering::Relaxed);
+                    emu.run(retaddr);
+
                 },
                 "set" => {
                     //set <hexnum>

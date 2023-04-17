@@ -10038,6 +10038,10 @@ impl Emu {
                 }
             }
 
+            Mnemonic::Pause => {
+                self.show_instruction(&self.colors.red, &ins);
+            }
+
 
             ////   Ring0  ////
 

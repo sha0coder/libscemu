@@ -125,6 +125,7 @@ pub fn gateway(addr:u32, emu:&mut emu::Emu) -> String {
         0x75e83de4 => IsValidLocale(emu),
         0x75e7ae42 => GetThreadUILanguage(emu),
         0x75e822d7 => GetThreadPreferredUILanguages(emu),
+        0x75e78c59 => lstrcmp(emu),
 
         _ => {
             let apiname = guess_api_name(emu, addr);
@@ -2046,6 +2047,34 @@ fn GetThreadPreferredUILanguages(emu: &mut emu::Emu) {
     }
 
     emu.regs.rax = 1;
+}
+
+
+fn lstrcmp(emu: &mut emu::Emu) { 
+    let s1_ptr = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("kernel32!lstrcmp cannot read s1_ptr") as u64;
+    let s2_ptr = emu.maps.read_dword(emu.regs.get_esp()+4)
+        .expect("kernel32!lstrcmp cannot read s2_ptr") as u64;
+
+    let s1 = emu.maps.read_string(s1_ptr);
+    let s2 = emu.maps.read_string(s2_ptr);
+
+
+    println!("{}** {} kernel32!lstrcmp '{}' == '{}' {}", emu.colors.light_red, emu.pos, s1, s2,
+        emu.colors.nc);
+
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+
+    
+    let result = s1.cmp(&s2);
+    if result == std::cmp::Ordering::Less {
+        emu.regs.rax = 0xffffffff;
+    } else if result == std::cmp::Ordering::Greater {
+        emu.regs.rax = 1;
+    } else {
+        emu.regs.rax = 0;
+    }
 }
 
 
