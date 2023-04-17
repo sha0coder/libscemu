@@ -385,7 +385,7 @@ impl Script {
                         println!("error in line {}, mc <mapname> <size>", i);
                         return;
                     }
-                    let sz = match self.to_int(&args[3]) {
+                    let sz = match self.to_int(&args[2]) {
                         Some(v) => v,
                         None => {
                             println!("error in line {}, bad size", i);
@@ -701,6 +701,7 @@ impl Script {
                     let results = emu.maps.search_spaced_bytes_in_all(&bytes);
                     for addr in results.iter() {
                         println!("found at 0x{:x}", addr);
+                        self.result = *addr;
                     }
                 },
                 "ssa" => {
