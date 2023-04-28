@@ -1363,6 +1363,28 @@ impl Regs64 {
         return sz;
     }
 
+    pub fn get_xmm_by_name(&self, reg_name:&str) -> u128 {
+        match reg_name {
+            "xmm0" => return self.xmm0,
+            "xmm1" => return self.xmm1,
+            "xmm2" => return self.xmm2,
+            "xmm3" => return self.xmm3,
+            "xmm4" => return self.xmm4,
+            "xmm5" => return self.xmm5,
+            "xmm6" => return self.xmm6,
+            "xmm7" => return self.xmm7,
+            "xmm8" => return self.xmm8,
+            "xmm9" => return self.xmm9,
+            "xmm10" => return self.xmm10,
+            "xmm11" => return self.xmm11,
+            "xmm12" => return self.xmm12,
+            "xmm13" => return self.xmm13,
+            "xmm14" => return self.xmm14,
+            "xmm15" => return self.xmm15,
+            &_ => unimplemented!("weird register name parsed {}", reg_name),
+        }
+    }
+
     pub fn get_by_name(&self, reg_name:&str) -> u64 {
         match reg_name {
             // 64bits
@@ -1442,6 +1464,29 @@ impl Regs64 {
             &_ => unimplemented!("weird register name parsed {}", reg_name),
         }
     }
+
+    pub fn set_xmm_by_name(&mut self,  reg_name:&str, value:u128) {
+        match reg_name {
+            "xmm0" => self.xmm0 = value,
+            "xmm1" => self.xmm1 = value,
+            "xmm2" => self.xmm2 = value,
+            "xmm3" => self.xmm3 = value,
+            "xmm4" => self.xmm4 = value,
+            "xmm5" => self.xmm5 = value,
+            "xmm6" => self.xmm6 = value,
+            "xmm7" => self.xmm7 = value,
+            "xmm8" => self.xmm8 = value,
+            "xmm9" => self.xmm9 = value,
+            "xmm10" => self.xmm10 = value,
+            "xmm11" => self.xmm11 = value,
+            "xmm12" => self.xmm12 = value,
+            "xmm13" => self.xmm13 = value,
+            "xmm14" => self.xmm14 = value,
+            "xmm15" => self.xmm15 = value,
+            &_ => unimplemented!("weird register name parsed {}", reg_name),
+        }
+    }
+
 
     pub fn set_by_name(&mut self, reg_name:&str, value:u64) {
         match reg_name {
@@ -1798,6 +1843,14 @@ impl Regs64 {
 
     pub fn show_spl(&self, maps:&Maps, pos:u64) {                        
         self.show_reg64(maps, "spl", self.get_spl(), pos);   
+    }
+
+    pub fn is_xmm_by_name(&self, reg:&str) -> bool {
+        match reg {
+            "xmm0"|"xmm1"|"xmm2"|"xmm3"|"xmm4"|"xmm5"|"xmm6"|"xmm7"|
+            "xmm8"|"xmm9"|"xmm10"|"xmm11"|"xmm12"|"xmm13"|"xmm14"|"xmm15" => true,
+                &_ => false,
+        }
     }
 
     pub fn is_reg(&self, reg:&str) -> bool {
