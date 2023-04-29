@@ -30,7 +30,6 @@ impl Maps {
         return self.maps.get_mut(name).expect("incorrect memory map name");
     }
 
-
     pub fn write_qword(&mut self, addr:u64, value:u64) -> bool {
         for (_,mem) in self.maps.iter_mut() {
             if mem.inside(addr) && mem.inside(addr+1) && mem.inside(addr+2) && mem.inside(addr+3) &&
@@ -673,6 +672,7 @@ impl Maps {
         found
     }
 
+    //TODO: return a list with matches.
     pub fn search_string_in_all(&self, kw:String) {
         let mut found = false;
         for (name, mem) in self.maps.iter() {
@@ -801,6 +801,7 @@ impl Maps {
     }
 
     pub fn save(&mut self, addr:u64, size:u64, filename:String) {
+        //TODO: return a boolean or option.
         match self.get_mem_by_addr(addr) {
             Some(m) => {
                 m.save(addr, size as usize, filename);
