@@ -1,4 +1,4 @@
-use std::arch::asm;
+// use std::arch::asm;
 
 // this unsafe blocks are used only on --test mode
 
@@ -1103,7 +1103,7 @@ pub fn bsf(a:u64, b:u64, bits:u8, flags:u32) -> (u64, u32) {
 
 pub fn bsr(a:u64, b:u64, bits:u8, flags:u32) -> (u64, u32) {
     let new_flags:u32 = 0;
-    let mut r:u64 = a;
+    let r:u64 = a;
     /*
     match bits {
         64 => {
