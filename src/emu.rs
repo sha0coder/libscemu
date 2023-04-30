@@ -116,7 +116,7 @@ pub struct Emu {
     pub tls: Vec<u32>,
     pub fls: Vec<u32>,
     step: bool,
-    out: String,
+    pub out: String,
     main_thread_cont: u64,
     gateway_return: u64,
     is_running: Arc<atomic::AtomicU32>,
@@ -127,6 +127,7 @@ pub struct Emu {
     run_until_ret: bool,
     running_script: bool,
     banzai: Banzai<'static>,
+    mnemonic: String,
 }
 
 impl Emu {
@@ -169,6 +170,7 @@ impl Emu {
             run_until_ret: false,
             running_script: false,
             banzai: Banzai::new(),
+            mnemonic: String::new(),
         }
     }
 
@@ -3616,6 +3618,7 @@ impl Emu {
         return result_ok;
     }
 
+
     ///  RUN ENGINE ///
 
     pub fn run(&mut self, end_addr:u64) {
@@ -5726,7 +5729,6 @@ impl Emu {
             }
 
             Mnemonic::Movsb => {
-
                 if self.cfg.is_64bits {
                     if ins.has_rep_prefix() {
                         let mut first_iteration = true;
@@ -5847,7 +5849,6 @@ impl Emu {
 
 
             Mnemonic::Movsw => {
-
                 if self.cfg.is_64bits {
                     if ins.has_rep_prefix() {
                         let mut first_iteration = true;
@@ -5950,7 +5951,6 @@ impl Emu {
             }
 
             Mnemonic::Movsd => {
-
                 if self.cfg.is_64bits {
                     if ins.has_rep_prefix() {
                         let mut first_iteration = true;
