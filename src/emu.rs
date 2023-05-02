@@ -128,6 +128,7 @@ pub struct Emu {
     running_script: bool,
     banzai: Banzai<'static>,
     mnemonic: String,
+    dbg: bool,
 }
 
 impl Emu {
@@ -171,7 +172,16 @@ impl Emu {
             running_script: false,
             banzai: Banzai::new(),
             mnemonic: String::new(),
+            dbg: false,
         }
+    }
+
+    pub fn enable_debug_mode(&mut self) {
+        self.dbg = true;
+    }
+
+    pub fn disable_debug_mode(&mut self) {
+        self.dbg = false;
     }
 
     // select the folder with maps32 or maps64 depending the arch, make sure to do init after this.

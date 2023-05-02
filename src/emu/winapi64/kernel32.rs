@@ -189,6 +189,8 @@ pub fn resolve_api_name(emu:&mut emu::Emu, name: &str) -> u64 {
         }
         flink.next(emu);
 
+        //println!("flink: 0x{:x} first_ptr: 0x{:x}", flink.get_ptr(), first_ptr);
+
         if flink.get_ptr() == first_ptr {  
             break;  
         }

@@ -29,6 +29,10 @@ impl Mem64 {
         }
     }
 
+    pub fn get_name(&self) -> String {
+        return self.mem_name.clone();
+    }
+
     pub fn set_name(&mut self, name:&str) {
         self.mem_name = name.to_string();
     }
