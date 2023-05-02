@@ -176,6 +176,8 @@ impl Emu {
 
     // select the folder with maps32 or maps64 depending the arch, make sure to do init after this.
     pub fn set_maps_folder(&mut self, folder:&str) {
+        let mut f = folder.to_string();
+        f.push_str("/");
         self.cfg.maps_folder = folder.to_string();
     }
 

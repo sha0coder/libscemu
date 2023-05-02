@@ -329,6 +329,7 @@ pub fn load_library(emu:&mut emu::Emu, libname: &str) -> u64 {
 
 
     let mut dll_path = emu.cfg.maps_folder.clone();
+    dll_path.push_str("/");
     dll_path.push_str(&dll);
 
     match peb32::get_module_base(&dll, emu) {
