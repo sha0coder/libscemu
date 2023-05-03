@@ -115,7 +115,6 @@ pub struct Emu {
     pub tls_callbacks: Vec<u64>,
     pub tls: Vec<u32>,
     pub fls: Vec<u32>,
-    step: bool,
     pub out: String,
     main_thread_cont: u64,
     gateway_return: u64,
@@ -159,7 +158,6 @@ impl Emu {
             tls_callbacks: Vec::new(),
             tls: Vec::new(),
             fls: Vec::new(),
-            step: false,
             out: String::new(),
             main_thread_cont: 0,
             gateway_return: 0,
@@ -2759,7 +2757,10 @@ impl Emu {
                 },
                 "n"|"" => {
                     //self.exp = self.pos + 1;
+                    let prev_verbose = self.cfg.verbose;
+                    self.cfg.verbose = 3;
                     self.step();
+                    self.cfg.verbose = prev_verbose;
                     //return;
                 },
                 "m" => self.maps.print_maps(),
@@ -3522,32 +3523,32 @@ impl Emu {
     }
 
     pub fn show_instruction(&self, color:&str, ins:&Instruction) {
-        if !self.step {
+        if self.cfg.verbose >= 2 {
             println!("{}{} 0x{:x}: {}{}", color, self.pos, ins.ip(), self.out, self.colors.nc);
         }
     }
 
     pub fn show_instruction_ret(&self, color:&str, ins:&Instruction, addr: u64) {
-        if !self.step {
+        if self.cfg.verbose >= 2 {
             println!("{}{} 0x{:x}: {} ; ret-addr: 0x{:x} ret-value: 0x{:x} {}", color, self.pos, ins.ip(), self.out, addr, self.regs.rax, self.colors.nc);
         }
     }
 
     pub fn show_instruction_pushpop(&self, color:&str, ins:&Instruction, value:u64) {
-        if !self.step {
+        if self.cfg.verbose >= 2 {
             println!("{}{} 0x{:x}: {} ;0x{:x} {}", color, self.pos, ins.ip(), self.out, value, self.colors.nc);
         }
     }
 
 
     pub fn show_instruction_taken(&self, color:&str, ins:&Instruction) {
-        if !self.step {
+        if self.cfg.verbose >= 2 {
             println!("{}{} 0x{:x}: {} taken {}", color, self.pos, ins.ip(), self.out, self.colors.nc);
         }
     }
 
     pub fn show_instruction_not_taken(&self, color:&str, ins:&Instruction) {
-        if !self.step { // optimization: show always ins.ip()
+        if self.cfg.verbose >= 2 {
             println!("{}{} 0x{:x}: {} not taken {}", color, self.pos, ins.ip(), self.out, self.colors.nc);
         }
     }
@@ -3578,7 +3579,7 @@ impl Emu {
 
     pub fn step(&mut self) -> bool {
         self.pos += 1;
-        self.step = false;
+
         // code
         let code = match self.maps.get_mem_by_addr(self.regs.rip) {
             Some(c) => c,
@@ -3588,6 +3589,7 @@ impl Emu {
                 return false;
             }
         };
+
 
         // block
         let block = code.read_from(self.regs.rip).to_vec(); // reduce code block for more speed
@@ -3690,7 +3692,6 @@ impl Emu {
                         return;
                     }
 
-                    self.step = false;
                     self.out.clear();
                     formatter.format(&ins, &mut self.out);
 
@@ -3705,7 +3706,6 @@ impl Emu {
                         }
 
                         self.cfg.console2 = false;
-                        self.step = true;
                         println!("-------");
                         println!("{} 0x{:x}: {}", self.pos, ins.ip(), self.out);
                         self.spawn_console();
@@ -3838,9 +3838,6 @@ impl Emu {
                         }
                     }
 
-                    if self.cfg.verbose < 2 {
-                        self.step = true;
-                    }
 
                     if self.cfg.trace_string {
                         let s = self.maps.read_string(self.cfg.string_addr);
@@ -6931,7 +6928,7 @@ impl Emu {
                     None => return false,
                 };
 
-                if !self.step {
+                if self.cfg.verbose >= 2 {
                     if value0 > value1 {
                         println!("\tcmp: 0x{:x} > 0x{:x}", value0, value1);
                     } else if value0 < value1 {
@@ -6955,7 +6952,7 @@ impl Emu {
                         None => return false,
                     };
 
-                    if !self.step {
+                    if self.cfg.verbose >= 2 {
                         if value0 > value1 {
                             println!("\tcmp: 0x{:x} > 0x{:x}", value0, value1);
                         } else if value0 < value1 {
@@ -7044,17 +7041,17 @@ impl Emu {
                         self.flags.sub64(value0, value1);
 
                         if value0 > value1 {
-                            if !self.step {
+                            if self.cfg.verbose >= 2 {
                                 println!("\tcmp: 0x{:x} > 0x{:x}", value0, value1);
                             }
                             return false;
                         } else if value0 < value1 {
-                            if !self.step {
+                            if self.cfg.verbose >= 2 {
                                 println!("\tcmp: 0x{:x} < 0x{:x}", value0, value1);
                             }
                             return false;
                         } else {
-                            if !self.step {
+                            if self.cfg.verbose >= 2 {
                                 println!("\tcmp: 0x{:x} == 0x{:x}", value0, value1);
                             }
                         }
@@ -7127,7 +7124,7 @@ impl Emu {
 
                     self.flags.sub64(value0, value1);
 
-                    if !self.step {
+                    if self.cfg.verbose >= 2 {
                         if value0 > value1 {
                             println!("\tcmp: 0x{:x} > 0x{:x}", value0, value1);
                         } else if value0 < value1 {
@@ -7207,17 +7204,17 @@ impl Emu {
                         self.flags.sub32(value0 as u64, value1 as u64);
 
                         if value0 > value1 {
-                            if !self.step {
+                            if self.cfg.verbose >= 2 {
                                 println!("\tcmp: 0x{:x} > 0x{:x}", value0, value1);
                             }
                             return false;
                         } else if value0 < value1 {
-                            if !self.step {
+                            if self.cfg.verbose >= 2 {
                                 println!("\tcmp: 0x{:x} < 0x{:x}", value0, value1);
                             }
                             return false;
                         } else {
-                            if !self.step {
+                            if self.cfg.verbose >= 2 {
                                 println!("\tcmp: 0x{:x} == 0x{:x}", value0, value1);
                             }
                         }
@@ -7289,7 +7286,7 @@ impl Emu {
 
                     self.flags.sub32(value0 as u64, value1 as u64);
 
-                    if !self.step {
+                    if self.cfg.verbose >= 2 {
                         if value0 > value1 {
                             println!("\tcmp: 0x{:x} > 0x{:x}", value0, value1);
                         } else if value0 < value1 {
@@ -7368,17 +7365,17 @@ impl Emu {
                         self.flags.sub16(value0 as u64, value1 as u64);
 
                         if value0 > value1 {
-                            if !self.step {
+                            if self.cfg.verbose >= 2 {
                                 println!("\tcmp: 0x{:x} > 0x{:x}", value0, value1);
                             }
                             break;
                         } else if value0 < value1 {
-                            if !self.step {
+                            if self.cfg.verbose >= 2 {
                                 println!("\tcmp: 0x{:x} < 0x{:x}", value0, value1);
                             }
                             break;
                         } else {
-                            if !self.step {
+                            if self.cfg.verbose >= 2 {
                                 println!("\tcmp: 0x{:x} == 0x{:x}", value0, value1);
                             }
                         }
@@ -7452,7 +7449,7 @@ impl Emu {
 
                     self.flags.sub16(value0 as u64, value1 as u64);
 
-                    if !self.step {
+                    if self.cfg.verbose >= 2 {
                         if value0 > value1 {
                             println!("\tcmp: 0x{:x} > 0x{:x}", value0, value1);
                         } else if value0 < value1 {
@@ -7530,21 +7527,21 @@ impl Emu {
                         self.flags.sub8(value0 as u64, value1 as u64);
 
                         if value0 > value1 {
-                            if !self.step {
+                            if self.cfg.verbose >= 2 {
                                 println!("\tcmp: 0x{:x} > 0x{:x}", value0, value1);
                             }
                             assert!(self.flags.f_zf == false);
                             break;
                             //return false;
                         } else if value0 < value1 {
-                            if !self.step {
+                            if self.cfg.verbose >= 2 {
                                 println!("\tcmp: 0x{:x} < 0x{:x}", value0, value1);
                             }
                             assert!(self.flags.f_zf == false);
                             break;
                             //return false;
                         } else {
-                            if !self.step {
+                            if self.cfg.verbose >= 2 {
                                 println!("\tcmp: 0x{:x} == 0x{:x}", value0, value1);
                             }
                             assert!(self.flags.f_zf == true);
@@ -7617,7 +7614,7 @@ impl Emu {
 
                     self.flags.sub8(value0 as u64, value1 as u64);
 
-                    if !self.step {
+                    if self.cfg.verbose >= 2 {
                         if value0 > value1 {
                             println!("\tcmp: 0x{:x} > 0x{:x}", value0, value1);
                         } else if value0 < value1 {
@@ -8677,6 +8674,35 @@ impl Emu {
 
                 self.fpu.push(std::f32::consts::E.log2());
                 self.fpu.set_ip(self.regs.rip);
+            }
+
+            Mnemonic::Fst => {
+                self.show_instruction(&self.colors.green, &ins);
+
+                let res = self.fpu.get_st(0) as u64;
+
+                if !self.set_operand_value(&ins, 0, res) {
+                    return false;
+                }
+            }
+
+            Mnemonic::Fstp => {
+                self.show_instruction(&self.colors.green, &ins);
+
+                let res = self.fpu.get_st(0) as u64;
+
+                if !self.set_operand_value(&ins, 0, res) {
+                    return false;
+                }
+
+                self.fpu.pop();
+            }
+
+            Mnemonic::Fincstp => {
+                self.show_instruction(&self.colors.green, &ins);
+
+                self.fpu.f_c1 = false;
+                self.fpu.inc_top();
             }
 
             Mnemonic::Fcmove => {

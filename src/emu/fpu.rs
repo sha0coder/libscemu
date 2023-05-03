@@ -15,6 +15,11 @@ pub struct FPU {
     reserved: [u8; 14],
     reserved2: [u8; 96],
     xmm: [u64; 16],
+    top: u8,
+pub    f_c0: bool,
+pub    f_c1: bool,
+pub    f_c2: bool,
+pub    f_c3: bool,
 }
 
 impl FPU {
@@ -34,6 +39,11 @@ impl FPU {
             reserved: [0; 14],
             reserved2: [0; 96],
             xmm: [0; 16],
+            top: 0,
+            f_c0: false,
+            f_c1: false,
+            f_c2: false,
+            f_c3: false,
         }
     }
 
@@ -57,6 +67,10 @@ impl FPU {
 
     pub fn set_ip(&mut self, ip:u64) {
         self.ip = ip;
+    }
+
+    pub fn inc_top(&mut self) {
+        self.top += 1;
     }
 
     pub fn get_env32(&self) -> Vec<u32> {
@@ -100,7 +114,7 @@ impl FPU {
         self.st[i] = value;
     }
 
-    pub fn get_st(self, i:usize) -> f32 {
+    pub fn get_st(&self, i:usize) -> f32 {
         return self.st[i].clone();
     }
 
