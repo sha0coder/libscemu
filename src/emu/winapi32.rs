@@ -9,6 +9,7 @@ mod dnsapi;
 mod mscoree;
 mod msvcrt;
 mod shlwapi;
+mod oleaut32;
 pub mod helper;
 
 use crate::emu;
@@ -29,6 +30,7 @@ pub fn gateway(addr:u32, name:String, emu:&mut emu::Emu) {
         "mscoree.text" => mscoree::gateway(addr, emu),
         "msvcrt_text" => msvcrt::gateway(addr, emu),
         "shlwapi_text" => msvcrt::gateway(addr, emu),
+        "oleaut32_text" => oleaut32::gateway(addr, emu),
         _ => panic!("/!\\ trying to execute on {} at 0x{:x}", name, addr),
     };
 

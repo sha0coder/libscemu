@@ -8595,6 +8595,17 @@ impl Emu {
                 self.fpu.set_ip(self.regs.rip);
             }
 
+            Mnemonic::Fldcw => {
+                self.show_instruction(&self.colors.green, &ins);
+
+                let value = match self.get_operand_value(&ins, 0, false) {
+                    Some(v) => v as u16,
+                    None => return false,
+                };
+
+                self.fpu.set_ctrl(value);
+            }
+
             Mnemonic::Fnstenv => {
                 self.show_instruction(&self.colors.green, &ins);
 
@@ -8704,6 +8715,55 @@ impl Emu {
                 self.fpu.f_c1 = false;
                 self.fpu.inc_top();
             }
+
+            Mnemonic::Fild => {
+                self.show_instruction(&self.colors.green, &ins);
+
+                self.fpu.dec_top();
+
+                //C1	Set to 1 if stack overflow occurred; set to 0 otherwise.
+
+                //println!("operands: {}", ins.op_count());
+                let value1 = match self.get_operand_value(&ins, 0, true) {
+                    Some(v) => v as i32 as f32,
+                    None => return false,
+                };
+
+                self.fpu.set_st(0, value1);
+            }
+
+            Mnemonic::Fist => {
+                self.show_instruction(&self.colors.green, &ins);
+
+                let value = self.fpu.get_st(0) as i64;
+                let value2 = match self.get_operand_sz(&ins, 0) {
+                    16 => value as i64 as i16 as u16 as u64,
+                    32 => value as i64 as i32 as u32 as u64,
+                    64 => value as i64 as u64,
+                    _ => return false,
+                };
+                self.set_operand_value(&ins, 0, value2);
+            }
+
+            Mnemonic::Fistp => {
+                self.show_instruction(&self.colors.green, &ins);
+
+                let value = self.fpu.get_st(0) as i64;
+                let value2 = match self.get_operand_sz(&ins, 0) {
+                    16 => value as i64 as i16 as u16 as u64,
+                    32 => value as i64 as i32 as u32 as u64,
+                    64 => value as i64 as u64,
+                    _ => return false,
+                };
+                if !self.set_operand_value(&ins, 0, value2) {
+                    return false;
+                }
+
+                self.fpu.pop();
+                self.fpu.set_st(0, 0.0);
+                self.fpu.inc_top();
+            }
+
 
             Mnemonic::Fcmove => {
                 self.show_instruction(&self.colors.green, &ins);
@@ -10077,6 +10137,14 @@ impl Emu {
             }
 
             Mnemonic::Pause => {
+                self.show_instruction(&self.colors.red, &ins);
+            }
+
+            Mnemonic::Wait => {
+                self.show_instruction(&self.colors.red, &ins);
+            }
+
+            Mnemonic::Mwait => {
                 self.show_instruction(&self.colors.red, &ins);
             }
 

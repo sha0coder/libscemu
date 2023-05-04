@@ -126,6 +126,11 @@ pub fn gateway(addr:u32, emu:&mut emu::Emu) -> String {
         0x75e7ae42 => GetThreadUILanguage(emu),
         0x75e822d7 => GetThreadPreferredUILanguages(emu),
         0x75e78c59 => lstrcmp(emu),
+        0x75e7be77 => GetNativeSystemInfo(emu),
+        0x75e78b33 => GetTempPathW(emu),
+        0x75e92004 => FileTimeToLocalFileTime(emu),
+        0x75e82ce1 => FileTimeToDosDateTime(emu),
+        0x75e82aee => CreateMutexW(emu),
 
         _ => {
             let apiname = guess_api_name(emu, addr);
@@ -1562,6 +1567,25 @@ fn CreateMutexA(emu:&mut emu::Emu) {
     emu.regs.rax = helper::handler_create(&uri);
 }
 
+fn CreateMutexW(emu:&mut emu::Emu) {
+    let attr = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("kernel32!CreateMutexW cannot read attr param");
+    let owner = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("kernel32!CreateMutexW cannot read owner param");
+    let name_ptr = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("kernel32!CreateMutexW cannot read name param") as u64;
+    let name = emu.maps.read_wide_string(name_ptr);
+
+    println!("{}** {} kernel32!CreateMutexW '{}' {}", emu.colors.light_red, emu.pos, name, emu.colors.nc);
+
+    for _ in 0..3 {
+        emu.stack_pop32(false);
+    }
+   
+    let uri = format!("mutex://{}", name);
+    emu.regs.rax = helper::handler_create(&uri);
+}
+
 fn GetLastError(emu:&mut emu::Emu) {
     let err = LAST_ERROR.lock().unwrap();
     emu.regs.rax = *err as u64;
@@ -2081,4 +2105,106 @@ fn lstrcmp(emu: &mut emu::Emu) {
 }
 
 
+fn GetNativeSystemInfo(emu: &mut emu::Emu) {    
+    let sysinfo_ptr = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("kernel32!GetNativeSystemInfo cannot read sysinfo_ptr") as u64;
+
+    let mut sysinfo = emu::structures::SystemInfo32::new(); 
+    sysinfo.save(sysinfo_ptr, &mut emu.maps);
+
+    println!("{}** {} kernel32!GetNativeSystemInfo {}", emu.colors.light_red, emu.pos, 
+        emu.colors.nc);
+
+    emu.stack_pop32(false);
+}
+
+fn GetTempPathW(emu: &mut emu::Emu) {
+    let bufflen = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("kernel32!GetTempPathW cannot read bufflen");
+    let buff_ptr = emu.maps.read_dword(emu.regs.get_esp()+4)
+        .expect("kernel32!GetTempPathW cannot read buff_ptr") as u64;
+
+    if bufflen >= 14 {
+        emu.maps.write_wide_string(buff_ptr, "c:\\tmp\\");
+        emu.regs.rax = 14;
+    } else {
+        emu.regs.rax = 0;
+    }
+
+    println!("{}** {} kernel32!GetTempPathW {}", emu.colors.light_red, emu.pos, 
+        emu.colors.nc);
+
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+}
+
+fn FileTimeToLocalFileTime(emu: &mut emu::Emu) {
+    let lpFileTime = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("kernel32!FileTimeToLocalFileTime cannot read lpFileTime") as u64;
+    let out_lpLocalFileTime = emu.maps.read_dword(emu.regs.get_esp()+4)
+        .expect("kernel32!FileTimeToLocalFileTime cannot read out_lpLocalFileTime") as u64;
+
+
+    let dwLowDateTime = emu.maps.read_dword(lpFileTime)
+        .expect("kernel32!FileTimeToLocalFileTime cannot read dwLowDateTime");
+    let dwHighDateTime = emu.maps.read_dword(lpFileTime+4)
+        .expect("kernel32!FileTimeToLocalFileTime cannot read dwHighDateTime");
+
+    emu.maps.write_dword(out_lpLocalFileTime, dwLowDateTime);
+    emu.maps.write_dword(out_lpLocalFileTime+4, dwHighDateTime);
+
+     println!("{}** {} kernel32!FileTimeToLocalFileTime {} {} {}", emu.colors.light_red, emu.pos,
+         dwLowDateTime, dwHighDateTime, emu.colors.nc);
+
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+    emu.regs.rax = 1;
+}
+
+fn FileTimeToDosDateTime(emu: &mut emu::Emu) {
+    let lpFileTime = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("kernel32!FileTimeToDosDateTime cannot read lpFileTime") as u64;
+    let out_lpFatDate = emu.maps.read_dword(emu.regs.get_esp()+4)
+        .expect("kernel32!FileTimeToDosDateTime cannot read out_lpFatDate") as u64;
+    let out_lpFatTime = emu.maps.read_dword(emu.regs.get_esp()+8)
+        .expect("kernel32!FileTimeToDosDateTime cannot read out_lpFatTime") as u64;
+
+
+    let dwLowDateTime = emu.maps.read_dword(lpFileTime)
+        .expect("kernel32!FileTimeToLocalFileTime cannot read dwLowDateTime");
+    let dwHighDateTime = emu.maps.read_dword(lpFileTime+4)
+        .expect("kernel32!FileTimeToLocalFileTime cannot read dwHighDateTime");
+
+
+    /*
+    let ftSeconds = (dwLowDateTime as u64) | ((dwHighDateTime as u64) << 32);
+    let posix_seconds = (ftSeconds / 10_000_000) - 11_644_473_600;
+    let utc_dt = std::time::UNIX_EPOCH + std::time::Duration::from_secs(posix_seconds);
+    let local_dt = DateTime::<chrono::Local>::from(utc_dt).with_timezone(&chrono::Local);
+    let year = (local_dt.year() - 1980) as u16;
+    let month = local_dt.month() as u16;
+    let day = local_dt.day() as u16;
+    let date = ((year << 9) | (month << 5) | day) as u16;
+    let hour = local_dt.hour() as u16;
+    let min = local_dt.minute() as u16;
+    let sec = (local_dt.second() / 2) as u16;
+    let time = ((hour << 11) | (min << 5) | sec) as u16;
+
+    emu.maps.write_dword(out_lpFatDate, date as u32);
+    emu.maps.write_dword(out_lpFatTime, time as u32);
+    */
+
+    emu.maps.write_dword(out_lpFatDate, 0);
+    emu.maps.write_dword(out_lpFatTime, 0);
+
+
+    println!("{}** {} kernel32!FileTimeToDosDateTime {} {} {}", emu.colors.light_red, emu.pos,
+         dwLowDateTime, dwHighDateTime, emu.colors.nc);
+    
+
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+    emu.regs.rax = 1;
+}
 

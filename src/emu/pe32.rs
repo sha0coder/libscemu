@@ -27,7 +27,7 @@ macro_rules! read_u32_le {
 
 macro_rules! write_u32_le {
     ($raw:expr, $off:expr, $val:expr) => {
-      $raw[$off+0]  = ($val & 0x000000ff) as u8;
+      $raw[$off+0] = ($val & 0x000000ff) as u8;
       $raw[$off+1] = (($val & 0x0000ff00) >> 8) as u8;
       $raw[$off+2] = (($val & 0x00ff0000) >> 16) as u8;
       $raw[$off+3] = (($val & 0xff000000) >> 24) as u8;
@@ -832,7 +832,7 @@ impl PE32 {
         let off = self.sect_hdr[id].pointer_to_raw_data as usize;
         let mut sz = self.sect_hdr[id].size_of_raw_data as usize; //TODO: coger sz en disk no en va
         if off+sz >= self.raw.len() {
-            println!("/!\\ warning: raw sz:{} off:{} sz:{}  off+sz:{}", self.raw.len(), off, sz, off+sz);
+            //println!("/!\\ warning: raw sz:{} off:{} sz:{}  off+sz:{}", self.raw.len(), off, sz, off+sz);
             sz = self.raw.len() - off - 1;
         }
         let section_ptr = &self.raw[off..off+sz];

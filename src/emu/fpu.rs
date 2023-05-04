@@ -15,7 +15,7 @@ pub struct FPU {
     reserved: [u8; 14],
     reserved2: [u8; 96],
     xmm: [u64; 16],
-    top: u8,
+    top: i8,
 pub    f_c0: bool,
 pub    f_c1: bool,
 pub    f_c2: bool,
@@ -65,12 +65,30 @@ impl FPU {
         self.xmm = [0; 16];
     }
 
+    pub fn set_ctrl(&mut self, ctrl:u16) {
+        self.ctrl = ctrl;
+    }
+
+    pub fn get_ctrl(&self) -> u16 {
+        return self.ctrl;
+    }
+
     pub fn set_ip(&mut self, ip:u64) {
         self.ip = ip;
     }
 
     pub fn inc_top(&mut self) {
         self.top += 1;
+        if self.top > 7 {
+            self.top = 0;
+        }
+    }
+
+    pub fn dec_top(&mut self) {
+        self.top -= 1;
+        if self.top < 0 {
+            self.top = 7;
+        }
     }
 
     pub fn get_env32(&self) -> Vec<u32> {
