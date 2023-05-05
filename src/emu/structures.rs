@@ -927,6 +927,36 @@ pub struct MemoryBasicInformation {
 
 impl MemoryBasicInformation {
 
+    pub fn guess(addr:u64, maps:&mut Maps) -> MemoryBasicInformation {
+        match maps.get_mem_by_addr(addr) {
+            Some(mem) => {
+                MemoryBasicInformation {
+                    base_address: mem.get_base() as u32,
+                    allocation_base: mem.get_base() as u32,
+                    allocation_protect: 0xff,
+                    partition_id: 0,
+                    region_size: mem.size() as u32,
+                    state: 0,
+                    protect: 0xff,
+                    typ: 0,
+                }
+            }
+            None => {
+                MemoryBasicInformation {
+                    base_address: 0,
+                    allocation_base: 0,
+                    allocation_protect: 0xff,
+                    partition_id: 0,
+                    region_size: 0,
+                    state: 0,
+                    protect: 0xff,
+                    typ: 0,
+                }
+            }
+        }
+
+    }
+
     pub fn load(addr:u64, maps:&Maps) -> MemoryBasicInformation {
         MemoryBasicInformation {
             base_address: maps.read_dword(addr).unwrap(),

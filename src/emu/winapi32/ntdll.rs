@@ -36,6 +36,8 @@ pub fn gateway(addr:u32, emu:&mut emu::Emu) -> String {
         0x775a5340 => memset(emu),
         0x775d7de2 => RtlSetUnhandledExceptionFilter(emu),
         0x775a55c0 => strlen(emu),
+        0x77593030 => VerSetConditionMask(emu),
+
         _ => { 
             let apiname = kernel32::guess_api_name(emu, addr);
             println!("calling unimplemented ntdll API 0x{:x} {}", addr, apiname);
@@ -748,5 +750,14 @@ fn strlen(emu: &mut emu::Emu) {
     emu.regs.rax = l as u32 as u64;
 }
 
+fn VerSetConditionMask(emu: &mut emu::Emu) {
+    println!("{}** {} ntdll!strlen: {}",
+        emu.colors.light_red, emu.pos, emu.colors.nc);
+
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+    emu.regs.rax = 0xffff;
+}
 
 

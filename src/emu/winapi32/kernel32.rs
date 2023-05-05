@@ -4,6 +4,7 @@ use crate::emu::context32;
 use crate::emu::constants;
 use crate::emu::console;
 use crate::emu::peb32;
+use crate::emu::structures;
 
 use lazy_static::lazy_static; 
 use std::sync::Mutex;
@@ -131,6 +132,12 @@ pub fn gateway(addr:u32, emu:&mut emu::Emu) -> String {
         0x75e92004 => FileTimeToLocalFileTime(emu),
         0x75e82ce1 => FileTimeToDosDateTime(emu),
         0x75e82aee => CreateMutexW(emu),
+        0x75e976d6 => VirtualQuery(emu),
+        0x75e91da4 => VirtualFree(emu),
+        0x75e7eb60 => RaiseException(emu),
+        0x75e80e91 => VerifyVersionInfoW(emu),
+        0x75e78a3b => GetTimeZoneInformation(emu),
+        0x75e74e42 => VirtualQueryEx(emu),
 
         _ => {
             let apiname = guess_api_name(emu, addr);
@@ -2207,4 +2214,135 @@ fn FileTimeToDosDateTime(emu: &mut emu::Emu) {
     emu.stack_pop32(false);
     emu.regs.rax = 1;
 }
+
+fn VirtualQuery(emu: &mut emu::Emu) {
+    let addr = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("kernel32!VirtualQuery cannot read addr") as u64;
+    let out_buff = emu.maps.read_dword(emu.regs.get_esp()+4)
+        .expect("kernel32!VirtualQuery cannot read out_buff") as u64;
+    let size = emu.maps.read_dword(emu.regs.get_esp()+8)
+        .expect("kernel32!VirtualQuery cannot read size");
+
+
+    println!("{}** {} kernel32!VirtualQuery 0x{:x} 0x{:x} {} {}", emu.colors.light_red, emu.pos,
+         addr, out_buff, size, emu.colors.nc);
+
+    if size < 30 {
+        println!("buffer to short: {}", size);
+        emu.regs.rax = 0;
+    } else {
+        let mbi = structures::MemoryBasicInformation::guess(addr, &mut emu.maps);
+        mbi.save(out_buff, &mut emu.maps);
+        emu.regs.rax = 1;
+    }
+
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+}
+
+fn VirtualFree(emu: &mut emu::Emu) {
+    let addr = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("kernel32!VirtualFree cannot read addr") as u64;
+    let size = emu.maps.read_dword(emu.regs.get_esp()+4)
+        .expect("kernel32!VirtualFree cannot read out_buff");
+    let freeType = emu.maps.read_dword(emu.regs.get_esp()+8)
+        .expect("kernel32!VirtualFree cannot read size") as u64;
+            
+    println!("{}** {} kernel32!VirtualFree 0x{:x} {} {}", emu.colors.light_red, emu.pos,
+         addr, size, emu.colors.nc);
+
+
+    match emu.maps.get_mem_by_addr(addr) {
+        Some(mem) => {
+            emu.regs.rax = 1;
+            let name = mem.get_name();
+            emu.maps.free(&name);
+        },
+        None => {
+            emu.regs.rax = 0;
+        }
+    }
+    
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+}
+
+fn RaiseException(emu: &mut emu::Emu) { 
+    let code = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("kernel32!RaiseException cannot read code");
+    let flags = emu.maps.read_dword(emu.regs.get_esp()+4)  
+        .expect("kernel32!RaiseException cannot read flags");
+    let num_args = emu.maps.read_dword(emu.regs.get_esp()+8)  
+        .expect("kernel32!RaiseException cannot read num_args");
+    let args = emu.maps.read_dword(emu.regs.get_esp()+12)  
+        .expect("kernel32!RaiseException cannot read args");
+
+    println!("{}** {} kernel32!RaiseException {} {} {}", emu.colors.light_red, emu.pos,
+         code, flags, emu.colors.nc);
+
+    for _ in 0..4 {
+        emu.stack_pop32(false);
+    }
+
+    emu.regs.rax = 0;
+    //std::process::exit(1);
+}
+
+fn VerifyVersionInfoW(emu: &mut emu::Emu) {
+
+    println!("{}** {} kernel32!VerifyVersionInfoW {}", emu.colors.light_red, emu.pos,
+         emu.colors.nc);
+
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+    emu.regs.rax = 0xffff;
+}
+
+fn GetTimeZoneInformation(emu: &mut emu::Emu) {
+    let out_timeZoneInfo = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("kernel32!GetTimeZoneInformation cannot read out_timeZoneInfo");
+
+
+    //TODO: new structure https://learn.microsoft.com/en-us/windows/win32/api/timezoneapi/ns-timezoneapi-time_zone_information
+
+    println!("{}** {} kernel32!GetTimeZoneInformation {}", emu.colors.light_red, emu.pos,
+         emu.colors.nc);
+
+    emu.stack_pop32(false);
+    emu.regs.rax = 1; // TIME_ZONE_ID_STANDARD 
+}
+
+
+fn VirtualQueryEx(emu: &mut emu::Emu) {
+    let hndl = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("kernel32!VirtualQueryEx cannot read proc hndl") as u64;
+    let addr = emu.maps.read_dword(emu.regs.get_esp()+4)
+        .expect("kernel32!VirtualQueryEx cannot read addr") as u64;
+    let out_buff = emu.maps.read_dword(emu.regs.get_esp()+8)
+        .expect("kernel32!VirtualQueryEx cannot read out_buff") as u64;
+    let size = emu.maps.read_dword(emu.regs.get_esp()+12)
+        .expect("kernel32!VirtualQueryEx cannot read size");
+
+
+    println!("{}** {} kernel32!VirtualQueryEx 0x{:x} 0x{:x} {} {}", emu.colors.light_red, emu.pos,
+         addr, out_buff, size, emu.colors.nc);
+
+    if size < 30 {
+        println!("buffer to short: {}", size);
+        emu.regs.rax = 0;
+    } else {
+        let mbi = structures::MemoryBasicInformation::guess(addr, &mut emu.maps);
+        mbi.save(out_buff, &mut emu.maps);
+        emu.regs.rax = 1;
+    }
+
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+}
+
 
