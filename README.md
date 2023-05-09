@@ -28,7 +28,7 @@ Zero parameter means emulate for-ever.
 ```rust
 emu.load_code("shellcodes32/shikata.bin");
 emu.set_verbose(2);
-emu.run(0); 
+emu.run(None); 
 ```
 
 Or if you prefer call specific function.
@@ -51,7 +51,7 @@ emu.regs.set_eip(crypto_key_gen);
 emu.stack_push32(param2_out_buff);
 emu.stack_push32(param1);
 emu.stack_push32(ret_addr);
-emu.run(ret_addr);   // emulate until arrive to ret_addr
+emu.run(Some(ret_addr));   // emulate until arrive to ret_addr
 
 emu.step();
 
@@ -122,7 +122,7 @@ fn main() {
     emu.hook.on_pre_instruction(trace_pre_instruction);
     emu.hook.on_post_instruction(trace_post_instruction);
     emu.hook.on_winapi_call(trace_winapi_call);
-    emu.run(0);
+    emu.run(None);
     println!("end!");
 }
 ```

@@ -375,13 +375,13 @@ impl Script {
                 "c" => {
                     emu.is_running
                         .store(1, std::sync::atomic::Ordering::Relaxed);
-                    emu.run(0);
+                    emu.run(None);
                 }
                 "cr" => {
                     emu.break_on_next_return = true;
                     emu.is_running
                         .store(1, std::sync::atomic::Ordering::Relaxed);
-                    emu.run(0);
+                    emu.run(None);
                 }
                 "f" => emu.flags.print(),
                 "fc" => emu.flags.clear(),
@@ -1007,7 +1007,7 @@ impl Script {
 
                     emu.is_running
                         .store(1, std::sync::atomic::Ordering::Relaxed);
-                    emu.run(retaddr);
+                    emu.run(Some(retaddr));
                 }
                 "set" => {
                     //set <hexnum>

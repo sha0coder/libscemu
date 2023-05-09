@@ -1050,7 +1050,7 @@ impl Emu {
                 self.regs.rip = self.tls_callbacks[i];
                 println!("ret address: 0x{:x}", base);
                 self.stack_push64(base);
-                self.run(base);
+                self.run(Some(base));
             }
 
             self.regs.rip = ep;
@@ -3668,7 +3668,7 @@ impl Emu {
 
     pub fn run_until_ret(&mut self) {
         self.run_until_ret = true;
-        self.run(0);
+        self.run(None);
     }
 
     pub fn capture_pre_op(&mut self) {
@@ -3755,7 +3755,8 @@ impl Emu {
 
     ///  RUN ENGINE ///
 
-    pub fn run(&mut self, end_addr: u64) {
+    pub fn run(&mut self, end_addr: Option<u64>) {
+
         self.is_running.store(1, atomic::Ordering::Relaxed);
         let is_running2 = Arc::clone(&self.is_running);
 
@@ -3772,7 +3773,7 @@ impl Emu {
         //let mut prev_prev_addr:u64 = 0;
         let mut repeat_counter: u32 = 0;
 
-        if end_addr == 0 {
+        if end_addr.is_none() {
             println!(" ----- emulation -----");
         }
 
@@ -3811,7 +3812,7 @@ impl Emu {
                     let sz = ins.len();
                     let addr = ins.ip();
 
-                    if end_addr > 0 && addr == end_addr {
+                    if !end_addr.is_none() && Some(addr) == end_addr {
                         return;
                     }
 
