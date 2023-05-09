@@ -1,4 +1,5 @@
 use crate::emu;
+use crate::emu::constants::*;
 use crate::emu::winapi32::helper;
 use crate::emu::winapi32::kernel32;
 
@@ -82,9 +83,29 @@ fn CryptAcquireContextA(emu: &mut emu::Emu) {
     let hndl = helper::handler_create(&uri) as u32;
     emu.maps.write_dword(out_handle, hndl);
 
+    let mut sflags = String::new();
+    if flags & CRYPT_VERIFYCONTEXT == CRYPT_VERIFYCONTEXT {
+        sflags.push_str("CRYPT_VERIFYCONTEXT ");
+    }
+    if flags & CRYPT_NEWKEYSET == CRYPT_NEWKEYSET {
+        sflags.push_str("CRYPT_NEWKEYSET ");
+    }
+    if flags & CRYPT_DELETEKEYSET == CRYPT_DELETEKEYSET {
+        sflags.push_str("CRYPT_DELETEKEYSET ");
+    }
+    if flags & CRYPT_MACHINE_KEYSET == CRYPT_MACHINE_KEYSET {
+        sflags.push_str("CRYPT_MACHINE_KEYSET ");
+    }
+    if flags & CRYPT_SILENT == CRYPT_SILENT {
+        sflags.push_str("CRYPT_SILENT ");
+    }
+    if flags & CRYPT_DEFAULT_CONTAINER_OPTIONAL == CRYPT_DEFAULT_CONTAINER_OPTIONAL {
+        sflags.push_str("CRYPT_DEFAULT_CONTAINER_OPTIONAL ");
+    }
+
     println!(
-        "{}** {} advapi321!CryptAcquireContextA =0x{:x} type: {} flags: {} {}",
-        emu.colors.light_red, emu.pos, hndl, prov_type, flags, emu.colors.nc
+        "{}** {} advapi321!CryptAcquireContextA =0x{:x} type: {} flags: `{}` {}",
+        emu.colors.light_red, emu.pos, hndl, prov_type, &sflags, emu.colors.nc
     );
 
     for _ in 0..5 {

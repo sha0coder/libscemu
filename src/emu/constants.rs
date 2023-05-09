@@ -68,6 +68,15 @@ pub const MEM_IMAGE: u32 = 0x1000000;
 pub const MEM_MAPPED: u32 = 0x40000;
 pub const MEM_PRIVATE: u32 = 0x20000;
 
+// CryptAquireContext Flags
+pub const CRYPT_VERIFYCONTEXT: u32 = 0xF0000000;
+pub const CRYPT_NEWKEYSET: u32 = 0x00000008;
+pub const CRYPT_DELETEKEYSET: u32 = 0x00000010;
+pub const CRYPT_MACHINE_KEYSET: u32 = 0x00000020;
+pub const CRYPT_SILENT: u32 = 0x00000040;
+pub const CRYPT_DEFAULT_CONTAINER_OPTIONAL: u32 = 0x00000080;
+
+
 // TLS Callback Reason:
 pub const DLL_PROCESS_ATTACH: u32 = 1;
 pub const DLL_PROCESS_DETACH: u32 = 0;
