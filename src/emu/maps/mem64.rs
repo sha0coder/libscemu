@@ -2,21 +2,20 @@
     Little endian 64 bits and inferior bits memory.
 */
 
-
 use md5;
 use std::fs::File;
-use std::io::Read;
-use std::io::Write;
-use std::io::SeekFrom;  
-use std::io::BufReader;
 use std::io::prelude::*;
+use std::io::BufReader;
+use std::io::Read;
+use std::io::SeekFrom;
+use std::io::Write;
 
 #[derive(Clone)]
 pub struct Mem64 {
     mem_name: String,
     base_addr: u64,
     bottom_addr: u64,
-    pub mem: Vec<u8>, 
+    pub mem: Vec<u8>,
 }
 
 impl Mem64 {
@@ -33,15 +32,15 @@ impl Mem64 {
         return self.mem_name.clone();
     }
 
-    pub fn set_name(&mut self, name:&str) {
+    pub fn set_name(&mut self, name: &str) {
         self.mem_name = name.to_string();
     }
 
-    pub fn alloc(&mut self, amount:usize) {
+    pub fn alloc(&mut self, amount: usize) {
         self.mem = vec![0; amount];
     }
 
-    pub fn extend(&mut self, amount:usize) {
+    pub fn extend(&mut self, amount: usize) {
         for i in 0..amount {
             self.mem.push(0);
         }
@@ -60,44 +59,44 @@ impl Mem64 {
         self.bottom_addr
     }
 
-    pub fn memcpy(&mut self, ptr:&[u8], sz:usize) {
+    pub fn memcpy(&mut self, ptr: &[u8], sz: usize) {
         for i in 0..sz {
             self.mem[i] = ptr[i];
         }
     }
 
-    pub fn inside(&self, addr:u64) -> bool {
+    pub fn inside(&self, addr: u64) -> bool {
         if addr >= self.base_addr && addr < self.bottom_addr {
             return true;
         }
         false
     }
 
-    pub fn set_base(&mut self, base_addr:u64) {
+    pub fn set_base(&mut self, base_addr: u64) {
         self.base_addr = base_addr;
         self.bottom_addr = base_addr;
     }
 
-    pub fn update_base(&mut self, base_addr:u64) {
+    pub fn update_base(&mut self, base_addr: u64) {
         self.base_addr = base_addr;
     }
 
-    pub fn set_bottom(&mut self, bottom_addr:u64) {
+    pub fn set_bottom(&mut self, bottom_addr: u64) {
         self.bottom_addr = bottom_addr;
         let size = self.bottom_addr - self.base_addr;
         self.alloc(size as usize);
     }
 
-    pub fn update_bottom(&mut self, bottom_addr:u64) {
+    pub fn update_bottom(&mut self, bottom_addr: u64) {
         self.bottom_addr = bottom_addr;
     }
 
-    pub fn set_size(&mut self, size:u64) {
+    pub fn set_size(&mut self, size: u64) {
         self.bottom_addr = self.base_addr + size;
         self.alloc(size as usize);
     }
 
-    pub fn read_from(&self, addr:u64) -> &[u8] {
+    pub fn read_from(&self, addr: u64) -> &[u8] {
         let idx = (addr - self.base_addr) as usize;
         let max_sz = (self.bottom_addr - self.base_addr) as usize;
         /*
@@ -108,17 +107,16 @@ impl Mem64 {
         return self.mem.get(idx..max_sz).unwrap();
     }
 
-    pub fn read_bytes(&self, addr:u64, sz:usize) -> &[u8] {
+    pub fn read_bytes(&self, addr: u64, sz: usize) -> &[u8] {
         let idx = (addr - self.base_addr) as usize;
         let sz2 = idx as usize + sz;
         if sz2 > self.mem.len() {
-            return &[0;0];
+            return &[0; 0];
         }
         return self.mem.get(idx..sz2).unwrap();
     }
 
-    pub fn read_byte(&self, addr:u64) -> u8 {
-
+    pub fn read_byte(&self, addr: u64) -> u8 {
         assert!(self.inside(addr));
 
         let idx = (addr - self.base_addr) as usize;
@@ -129,75 +127,72 @@ impl Mem64 {
         }
     }
 
-    pub fn read_word(&self, addr:u64) -> u16 {
+    pub fn read_word(&self, addr: u64) -> u16 {
         let idx = (addr - self.base_addr) as usize;
-        (self.mem[idx] as u16)   + 
-        ((self.mem[idx+1] as u16) << 8)
+        (self.mem[idx] as u16) + ((self.mem[idx + 1] as u16) << 8)
     }
 
-    pub fn read_dword(&self, addr:u64) -> u32 {
+    pub fn read_dword(&self, addr: u64) -> u32 {
         let idx = (addr - self.base_addr) as usize;
-        (self.mem[idx] as u32)   +
-        ((self.mem[idx+1] as u32) <<  8) +
-        ((self.mem[idx+2] as u32) << 16) +
-        ((self.mem[idx+3] as u32) << 24)
+        (self.mem[idx] as u32)
+            + ((self.mem[idx + 1] as u32) << 8)
+            + ((self.mem[idx + 2] as u32) << 16)
+            + ((self.mem[idx + 3] as u32) << 24)
     }
 
-
-    pub fn read_qword(&self, addr:u64) -> u64 {
+    pub fn read_qword(&self, addr: u64) -> u64 {
         let idx = (addr - self.base_addr) as usize;
-        let mut r:u64 = 0;
+        let mut r: u64 = 0;
 
         for i in 0..8 {
-            r += (self.mem[idx+i] as u64) << (8*i);
+            r += (self.mem[idx + i] as u64) << (8 * i);
         }
 
         r
     }
 
-
-    pub fn write_byte(&mut self, addr:u64, value:u8) {
+    pub fn write_byte(&mut self, addr: u64, value: u8) {
         let idx = (addr - self.base_addr) as usize;
         self.mem[idx] = value;
     }
 
-    pub fn write_bytes(&mut self, addr:u64, bs:Vec<u8>) {
+    pub fn write_bytes(&mut self, addr: u64, bs: Vec<u8>) {
         let idx = (addr - self.base_addr) as usize;
         for i in 0..bs.len() {
-            self.mem[idx+i] = bs[i];
+            self.mem[idx + i] = bs[i];
         }
     }
 
-    pub fn write_word(&mut self, addr:u64, value:u16) {
+    pub fn write_word(&mut self, addr: u64, value: u16) {
         let idx = (addr - self.base_addr) as usize;
-        self.mem[idx]   = (value & 0x00ff) as u8;
-        self.mem[idx+1] = ((value & 0xff00) >> 8) as u8;
+        self.mem[idx] = (value & 0x00ff) as u8;
+        self.mem[idx + 1] = ((value & 0xff00) >> 8) as u8;
     }
 
-    pub fn write_dword(&mut self, addr:u64, value:u32) {
+    pub fn write_dword(&mut self, addr: u64, value: u32) {
         let idx = (addr - self.base_addr) as usize;
         assert!(idx < self.mem.len());
-        self.mem[idx]   = (value & 0x000000ff) as u8;
-        self.mem[idx+1] = ((value & 0x0000ff00) >> 8) as u8;
-        self.mem[idx+2] = ((value & 0x00ff0000) >> 16) as u8;
-        self.mem[idx+3] = ((value & 0xff000000) >> 24) as u8;
+        self.mem[idx] = (value & 0x000000ff) as u8;
+        self.mem[idx + 1] = ((value & 0x0000ff00) >> 8) as u8;
+        self.mem[idx + 2] = ((value & 0x00ff0000) >> 16) as u8;
+        self.mem[idx + 3] = ((value & 0xff000000) >> 24) as u8;
     }
 
-    pub fn write_qword(&mut self, addr:u64, value:u64) {
+    pub fn write_qword(&mut self, addr: u64, value: u64) {
         let idx = (addr - self.base_addr) as usize;
         for i in 0..8 {
-            self.mem[idx+i] = ((value & (0xff<<(i*8))) >>(i*8)) as u8;
+            self.mem[idx + i] = ((value & (0xff << (i * 8))) >> (i * 8)) as u8;
         }
     }
 
-    pub fn write_string(&mut self, addr:u64, s:&str) {
+    pub fn write_string(&mut self, addr: u64, s: &str) {
         let mut v = s.as_bytes().to_vec();
         v.push(0);
         self.write_bytes(addr, v);
     }
 
-    pub fn write_wide_string(&mut self, addr:u64, s:&str) {
-        let mut wv:Vec<u8> = Vec::new();
+    pub fn write_wide_string(&mut self, addr: u64, s: &str) {
+        let mut wv: Vec<u8> = Vec::new();
         let v = s.as_bytes().to_vec();
         for b in v {
             wv.push(b);
@@ -207,7 +202,6 @@ impl Mem64 {
         wv.push(0);
         self.write_bytes(addr, wv);
     }
-
 
     pub fn print_bytes(&self) {
         println!("---mem---");
@@ -221,7 +215,7 @@ impl Mem64 {
         self.print_dwords_from_to(self.get_base(), self.get_bottom());
     }
 
-    pub fn print_dwords_from_to(&self, from:u64, to:u64) {
+    pub fn print_dwords_from_to(&self, from: u64, to: u64) {
         println!("---mem---");
         for addr in (from..to).step_by(4) {
             println!("0x{:x}", self.read_dword(addr))
@@ -234,9 +228,9 @@ impl Mem64 {
         md5::compute(&self.mem)
     }
 
-    pub fn load_at(&mut self, base_addr:u64) {
+    pub fn load_at(&mut self, base_addr: u64) {
         self.set_base(base_addr);
-        let mut name:String = String::from(&self.mem_name);
+        let mut name: String = String::from(&self.mem_name);
         name.push_str(".bin");
         self.load(name.as_str());
     }
@@ -244,7 +238,9 @@ impl Mem64 {
     pub fn load_chunk(&mut self, filename: &str, off: u64, sz: usize) -> bool {
         let mut f = match File::open(&filename) {
             Ok(f) => f,
-            Err(_) => {  return false; }
+            Err(_) => {
+                return false;
+            }
         };
         f.seek(SeekFrom::Start(off));
         let mut reader = BufReader::new(&f);
@@ -252,25 +248,31 @@ impl Mem64 {
         for i in 0..sz {
             self.mem.push(0);
         }
-        reader.read_exact(&mut self.mem).expect("cannot load chunk of file");
+        reader
+            .read_exact(&mut self.mem)
+            .expect("cannot load chunk of file");
         f.sync_all(); // thanks Alberto Segura
-        true 
+        true
     }
 
     pub fn load(&mut self, filename: &str) -> bool {
         let f = match File::open(&filename) {
             Ok(f) => f,
-            Err(_) => {  return false; }
+            Err(_) => {
+                return false;
+            }
         };
         let len = f.metadata().unwrap().len();
         self.bottom_addr = self.base_addr + len;
         let mut reader = BufReader::new(&f);
-        reader.read_to_end(&mut self.mem).expect("cannot load map file");
+        reader
+            .read_to_end(&mut self.mem)
+            .expect("cannot load map file");
         f.sync_all(); // thanks Alberto Segura
         true
     }
 
-    pub fn save(&self, addr:u64, size:usize, filename:String) {
+    pub fn save(&self, addr: u64, size: usize, filename: String) {
         let idx = (addr - self.base_addr) as usize;
         let sz2 = idx as usize + size;
         if sz2 > self.mem.len() {
@@ -295,7 +297,4 @@ impl Mem64 {
 
         f.sync_all().unwrap();
     }
-
-
 }
-

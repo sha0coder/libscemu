@@ -1,31 +1,30 @@
-
 #[derive(Clone)]
 pub struct FPU {
-    st:Vec<f32>,
-    tag:u16,
-    stat:u16,
-    ctrl:u16,
-    ip:u64,
-    err_off:u32,
-    err_sel:u32,
-    stack:Vec<f32>,
-    code_segment:u16,
-    data_segment:u16,
-    operand_ptr:u64,
+    st: Vec<f32>,
+    tag: u16,
+    stat: u16,
+    ctrl: u16,
+    ip: u64,
+    err_off: u32,
+    err_sel: u32,
+    stack: Vec<f32>,
+    code_segment: u16,
+    data_segment: u16,
+    operand_ptr: u64,
     reserved: [u8; 14],
     reserved2: [u8; 96],
     xmm: [u64; 16],
     top: i8,
-pub    f_c0: bool,
-pub    f_c1: bool,
-pub    f_c2: bool,
-pub    f_c3: bool,
+    pub f_c0: bool,
+    pub f_c1: bool,
+    pub f_c2: bool,
+    pub f_c3: bool,
 }
 
 impl FPU {
     pub fn new() -> FPU {
         FPU {
-            st: vec![0.0;8],
+            st: vec![0.0; 8],
             tag: 0xffff,
             stat: 0,
             ctrl: 0x027f,
@@ -49,7 +48,7 @@ impl FPU {
 
     pub fn clear(&mut self) {
         self.st.clear();
-        self.st = vec![0.0;8];
+        self.st = vec![0.0; 8];
         self.tag = 0xffff;
         self.stat = 0;
         self.ctrl = 0x037f;
@@ -65,7 +64,7 @@ impl FPU {
         self.xmm = [0; 16];
     }
 
-    pub fn set_ctrl(&mut self, ctrl:u16) {
+    pub fn set_ctrl(&mut self, ctrl: u16) {
         self.ctrl = ctrl;
     }
 
@@ -73,7 +72,7 @@ impl FPU {
         return self.ctrl;
     }
 
-    pub fn set_ip(&mut self, ip:u64) {
+    pub fn set_ip(&mut self, ip: u64) {
         self.ip = ip;
     }
 
@@ -92,8 +91,8 @@ impl FPU {
     }
 
     pub fn get_env32(&self) -> Vec<u32> {
-        let mut r:Vec<u32> = Vec::new();
-        let mut r1:u32 = self.tag as u32;
+        let mut r: Vec<u32> = Vec::new();
+        let mut r1: u32 = self.tag as u32;
         r1 <<= 16;
         r1 += self.ctrl as u32;
         r.push(r1);
@@ -104,8 +103,8 @@ impl FPU {
     }
 
     pub fn get_env64(&self) -> Vec<u64> {
-        let mut r:Vec<u64> = Vec::new();
-        let mut r1:u64 = self.tag as u64;
+        let mut r: Vec<u64> = Vec::new();
+        let mut r1: u64 = self.tag as u64;
         r1 <<= 16;
         r1 += self.ctrl as u64;
         r.push(r1);
@@ -128,40 +127,40 @@ impl FPU {
         println!("--------");
     }
 
-    pub fn set_st(&mut self, i:usize, value:f32) {
+    pub fn set_st(&mut self, i: usize, value: f32) {
         self.st[i] = value;
     }
 
-    pub fn get_st(&self, i:usize) -> f32 {
+    pub fn get_st(&self, i: usize) -> f32 {
         return self.st[i].clone();
     }
 
-    pub fn xchg_st(&mut self, i:usize) {
+    pub fn xchg_st(&mut self, i: usize) {
         let tmp = self.st[0];
         self.st[0] = self.st[i];
         self.st[i] = tmp;
     }
 
-    pub fn clear_st(&mut self, i:usize) {
+    pub fn clear_st(&mut self, i: usize) {
         self.st[i] = 0.0;
     }
 
-    pub fn move_to_st0(&mut self, i:usize) {
+    pub fn move_to_st0(&mut self, i: usize) {
         self.st[0] = self.st[i];
     }
 
-    pub fn add_to_st0(&mut self, i:usize) {
+    pub fn add_to_st0(&mut self, i: usize) {
         self.st[0] = self.st[0] + self.st[i];
     }
 
-    pub fn add(&mut self, i:usize, j:usize) {
+    pub fn add(&mut self, i: usize, j: usize) {
         self.st[i] = self.st[i] + self.st[j];
     }
 
-    pub fn push(&mut self, value:f32) {
+    pub fn push(&mut self, value: f32) {
         self.stack.push(value);
     }
-    
+
     pub fn pop(&mut self) -> f32 {
         return self.stack.pop().unwrap_or(0.0);
     }
@@ -176,9 +175,5 @@ impl FPU {
         self.pop();
     }
 
-    pub fn check_pending_exceptions(self) {
-    }
-
+    pub fn check_pending_exceptions(self) {}
 }
-
-

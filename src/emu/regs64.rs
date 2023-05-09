@@ -3,61 +3,60 @@ use iced_x86::Register;
 use rand;
 
 macro_rules! set_reg32 {
-    ($reg:expr, $val:expr) => (
+    ($reg:expr, $val:expr) => {
         $reg = ($val & 0x00000000ffffffff);
-    )
+    };
 }
 
 macro_rules! set_reg16 {
-    ($reg:expr, $val:expr) => (
+    ($reg:expr, $val:expr) => {
         $reg &= 0xffffffffffff0000;
         $reg += ($val & 0x000000000000ffff);
-    )
+    };
 }
 
 macro_rules! set_reg8l {
-    ($reg:expr, $val:expr) => (
+    ($reg:expr, $val:expr) => {
         $reg &= 0xffffffffffffff00;
         $reg += ($val & 0x00000000000000ff);
-    )
+    };
 }
 
 macro_rules! set_reg8h {
-    ($reg:expr, $val:expr) => (
+    ($reg:expr, $val:expr) => {
         $reg &= 0xffffffffffff00ff;
         $reg = $reg + (($val & 0x00000000000000ff) << 8);
-    )
+    };
 }
 
 macro_rules! get_reg32l {
-    ($reg:expr) => (
+    ($reg:expr) => {
         return $reg & 0x00000000ffffffff;
-
-    )
+    };
 }
 
 macro_rules! get_reg32h {
-    ($reg:expr) => (
+    ($reg:expr) => {
         return $reg >> 32;
-    )
+    };
 }
 
 macro_rules! get_reg16 {
-    ($reg:expr) => (
+    ($reg:expr) => {
         return $reg & 0x000000000000ffff;
-    )
+    };
 }
 
 macro_rules! get_reg8l {
-    ($reg:expr) => (
+    ($reg:expr) => {
         return $reg & 0x00000000000000ff;
-    )
+    };
 }
 
 macro_rules! get_reg8h {
-    ($reg:expr) => (
+    ($reg:expr) => {
         return ($reg & 0x000000000000ff00) >> 8;
-    )
+    };
 }
 
 //  https://wiki.osdev.org/CPU_Registers_x86-64
@@ -99,7 +98,7 @@ pub struct Regs64 {
     pub cr6: u64, // reserved
     pub cr7: u64, // reserved
     pub cr8: u64,
-    pub cr9: u64, // reserved
+    pub cr9: u64,  // reserved
     pub cr10: u64, // reserved
     pub cr11: u64, // reserved
     pub cr12: u64, // reserved
@@ -122,15 +121,15 @@ pub struct Regs64 {
     pub xmm4: u128,
     pub xmm5: u128,
     pub xmm6: u128,
-    pub xmm7: u128, 
-    pub xmm8: u128, 
-    pub xmm9: u128, 
-    pub xmm10: u128, 
-    pub xmm11: u128, 
-    pub xmm12: u128, 
-    pub xmm13: u128, 
-    pub xmm14: u128, 
-    pub xmm15: u128, 
+    pub xmm7: u128,
+    pub xmm8: u128,
+    pub xmm9: u128,
+    pub xmm10: u128,
+    pub xmm11: u128,
+    pub xmm12: u128,
+    pub xmm13: u128,
+    pub xmm14: u128,
+    pub xmm15: u128,
 
     pub mm0: u128,
     pub mm1: u128,
@@ -144,7 +143,7 @@ pub struct Regs64 {
 
 impl Regs64 {
     pub fn new() -> Regs64 {
-        Regs64{
+        Regs64 {
             dr0: 0,
             dr1: 0,
             dr2: 0,
@@ -226,79 +225,215 @@ impl Regs64 {
 
     pub fn diff(rip: u64, pos: u64, a: Regs64, b: Regs64) {
         let mut output = format!("\tdiff_reg: pos = {} rip = {:x} ", pos, rip);
-        if a.dr0 != b.dr0 { output = format!("{}{} {:x} -> {:x}; ", output, "dr0", a.dr0, b.dr0); }
-        if a.dr1 != b.dr1 { output = format!("{}{} {:x} -> {:x}; ", output, "dr1", a.dr1, b.dr1); }
-        if a.dr2 != b.dr2 { output = format!("{}{} {:x} -> {:x}; ", output, "dr2", a.dr2, b.dr2); }
-        if a.dr3 != b.dr3 { output = format!("{}{} {:x} -> {:x}; ", output, "dr3", a.dr3, b.dr3); }
-        if a.dr6 != b.dr6 { output = format!("{}{} {:x} -> {:x}; ", output, "dr6", a.dr6, b.dr6); }
-        if a.dr7 != b.dr7 { output = format!("{}{} {:x} -> {:x}; ", output, "dr7", a.dr7, b.dr7); }
-        if a.rax != b.rax { output = format!("{}{} {:x} -> {:x}; ", output, "rax", a.rax, b.rax); }
-        if a.rbx != b.rbx { output = format!("{}{} {:x} -> {:x}; ", output, "rbx", a.rbx, b.rbx); }
-        if a.rcx != b.rcx { output = format!("{}{} {:x} -> {:x}; ", output, "rcx", a.rcx, b.rcx); }
-        if a.rdx != b.rdx { output = format!("{}{} {:x} -> {:x}; ", output, "rdx", a.rdx, b.rdx); }
-        if a.rsi != b.rsi { output = format!("{}{} {:x} -> {:x}; ", output, "rsi", a.rsi, b.rsi); }
-        if a.rdi != b.rdi { output = format!("{}{} {:x} -> {:x}; ", output, "rdi", a.rdi, b.rdi); }
-        if a.rbp != b.rbp { output = format!("{}{} {:x} -> {:x}; ", output, "rbp", a.rbp, b.rbp); }
-        if a.rsp != b.rsp { output = format!("{}{} {:x} -> {:x}; ", output, "rsp", a.rsp, b.rsp); }
+        if a.dr0 != b.dr0 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "dr0", a.dr0, b.dr0);
+        }
+        if a.dr1 != b.dr1 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "dr1", a.dr1, b.dr1);
+        }
+        if a.dr2 != b.dr2 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "dr2", a.dr2, b.dr2);
+        }
+        if a.dr3 != b.dr3 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "dr3", a.dr3, b.dr3);
+        }
+        if a.dr6 != b.dr6 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "dr6", a.dr6, b.dr6);
+        }
+        if a.dr7 != b.dr7 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "dr7", a.dr7, b.dr7);
+        }
+        if a.rax != b.rax {
+            output = format!("{}{} {:x} -> {:x}; ", output, "rax", a.rax, b.rax);
+        }
+        if a.rbx != b.rbx {
+            output = format!("{}{} {:x} -> {:x}; ", output, "rbx", a.rbx, b.rbx);
+        }
+        if a.rcx != b.rcx {
+            output = format!("{}{} {:x} -> {:x}; ", output, "rcx", a.rcx, b.rcx);
+        }
+        if a.rdx != b.rdx {
+            output = format!("{}{} {:x} -> {:x}; ", output, "rdx", a.rdx, b.rdx);
+        }
+        if a.rsi != b.rsi {
+            output = format!("{}{} {:x} -> {:x}; ", output, "rsi", a.rsi, b.rsi);
+        }
+        if a.rdi != b.rdi {
+            output = format!("{}{} {:x} -> {:x}; ", output, "rdi", a.rdi, b.rdi);
+        }
+        if a.rbp != b.rbp {
+            output = format!("{}{} {:x} -> {:x}; ", output, "rbp", a.rbp, b.rbp);
+        }
+        if a.rsp != b.rsp {
+            output = format!("{}{} {:x} -> {:x}; ", output, "rsp", a.rsp, b.rsp);
+        }
         //if a.rip != b.rip { output = format!("{}{} {:x} -> {:x}; ", output, "rip", a.rip, b.rip); }
-        if a.r8 != b.r8 { output = format!("{}{} {:x} -> {:x}; ", output, "r8", a.r8, b.r8); }
-        if a.r9 != b.r9 { output = format!("{}{} {:x} -> {:x}; ", output, "r9", a.r9, b.r9); }
-        if a.r10 != b.r10 { output = format!("{}{} {:x} -> {:x}; ", output, "r10", a.r10, b.r10); }
-        if a.r11 != b.r11 { output = format!("{}{} {:x} -> {:x}; ", output, "r11", a.r11, b.r11); }
-        if a.r12 != b.r12 { output = format!("{}{} {:x} -> {:x}; ", output, "r12", a.r12, b.r12); }
-        if a.r13 != b.r13 { output = format!("{}{} {:x} -> {:x}; ", output, "r13", a.r13, b.r13); }
-        if a.r14 != b.r14 { output = format!("{}{} {:x} -> {:x}; ", output, "r14", a.r14, b.r14); }
-        if a.r15 != b.r15 { output = format!("{}{} {:x} -> {:x}; ", output, "r15", a.r15, b.r15); }
-        if a.cr0 != b.cr0 { output = format!("{}{} {:x} -> {:x}; ", output, "cr0", a.cr0, b.cr0); }
-        if a.cr1 != b.cr1 { output = format!("{}{} {:x} -> {:x}; ", output, "cr1", a.cr1, b.cr1); }
-        if a.cr2 != b.cr2 { output = format!("{}{} {:x} -> {:x}; ", output, "cr2", a.cr2, b.cr2); }
-        if a.cr3 != b.cr3 { output = format!("{}{} {:x} -> {:x}; ", output, "cr3", a.cr3, b.cr3); }
-        if a.cr4 != b.cr4 { output = format!("{}{} {:x} -> {:x}; ", output, "cr4", a.cr4, b.cr4); }
-        if a.cr5 != b.cr5 { output = format!("{}{} {:x} -> {:x}; ", output, "cr5", a.cr5, b.cr5); }
-        if a.cr6 != b.cr6 { output = format!("{}{} {:x} -> {:x}; ", output, "cr6", a.cr6, b.cr6); }
-        if a.cr7 != b.cr7 { output = format!("{}{} {:x} -> {:x}; ", output, "cr7", a.cr7, b.cr7); }
-        if a.cr8 != b.cr8 { output = format!("{}{} {:x} -> {:x}; ", output, "cr8", a.cr8, b.cr8); }
-        if a.cr9 != b.cr9 { output = format!("{}{} {:x} -> {:x}; ", output, "cr9", a.cr9, b.cr9); }
-        if a.cr10 != b.cr10 { output = format!("{}{} {:x} -> {:x}; ", output, "cr10", a.cr10, b.cr10); }
-        if a.cr11 != b.cr11 { output = format!("{}{} {:x} -> {:x}; ", output, "cr11", a.cr11, b.cr11); }
-        if a.cr12 != b.cr12 { output = format!("{}{} {:x} -> {:x}; ", output, "cr12", a.cr12, b.cr12); }
-        if a.cr13 != b.cr13 { output = format!("{}{} {:x} -> {:x}; ", output, "cr13", a.cr13, b.cr13); }
-        if a.cr14 != b.cr14 { output = format!("{}{} {:x} -> {:x}; ", output, "cr14", a.cr14, b.cr14); }
-        if a.cr15 != b.cr15 { output = format!("{}{} {:x} -> {:x}; ", output, "cr15", a.cr15, b.cr15); }
-        if a.msr != b.msr { output = format!("{}{} {:x} -> {:x}; ", output, "msr", a.msr, b.msr); }
-        if a.tr3 != b.tr3 { output = format!("{}{} {:x} -> {:x}; ", output, "tr3", a.tr3, b.tr3); }
-        if a.tr4 != b.tr4 { output = format!("{}{} {:x} -> {:x}; ", output, "tr4", a.tr4, b.tr4); }
-        if a.tr5 != b.tr5 { output = format!("{}{} {:x} -> {:x}; ", output, "tr5", a.tr5, b.tr5); }
-        if a.tr6 != b.tr6 { output = format!("{}{} {:x} -> {:x}; ", output, "tr6", a.tr6, b.tr6); }
-        if a.tr7 != b.tr7 { output = format!("{}{} {:x} -> {:x}; ", output, "tr7", a.tr7, b.tr7); }
-        if a.xmm0 != b.xmm0 { output = format!("{}{} {:x} -> {:x}; ", output, "xmm0", a.xmm0, b.xmm0); }
-        if a.xmm1 != b.xmm1 { output = format!("{}{} {:x} -> {:x}; ", output, "xmm1", a.xmm1, b.xmm1); }
-        if a.xmm2 != b.xmm2 { output = format!("{}{} {:x} -> {:x}; ", output, "xmm2", a.xmm2, b.xmm2); }
-        if a.xmm3 != b.xmm3 { output = format!("{}{} {:x} -> {:x}; ", output, "xmm3", a.xmm3, b.xmm3); }
-        if a.xmm4 != b.xmm4 { output = format!("{}{} {:x} -> {:x}; ", output, "xmm4", a.xmm4, b.xmm4); }
-        if a.xmm5 != b.xmm5 { output = format!("{}{} {:x} -> {:x}; ", output, "xmm5", a.xmm5, b.xmm5); }
-        if a.xmm6 != b.xmm6 { output = format!("{}{} {:x} -> {:x}; ", output, "xmm6", a.xmm6, b.xmm6); }
-        if a.xmm7 != b.xmm7 { output = format!("{}{} {:x} -> {:x}; ", output, "xmm7", a.xmm7, b.xmm7); }
-        if a.xmm8 != b.xmm8 { output = format!("{}{} {:x} -> {:x}; ", output, "xmm8", a.xmm8, b.xmm8); }
-        if a.xmm9 != b.xmm9 { output = format!("{}{} {:x} -> {:x}; ", output, "xmm9", a.xmm9, b.xmm9); }
-        if a.xmm10 != b.xmm10 { output = format!("{}{} {:x} -> {:x}; ", output, "xmm10", a.xmm10, b.xmm10); }
-        if a.xmm11 != b.xmm11 { output = format!("{}{} {:x} -> {:x}; ", output, "xmm11", a.xmm11, b.xmm11); }
-        if a.xmm12 != b.xmm12 { output = format!("{}{} {:x} -> {:x}; ", output, "xmm12", a.xmm12, b.xmm12); }
-        if a.xmm13 != b.xmm13 { output = format!("{}{} {:x} -> {:x}; ", output, "xmm13", a.xmm13, b.xmm13); }
-        if a.xmm14 != b.xmm14 { output = format!("{}{} {:x} -> {:x}; ", output, "xmm14", a.xmm14, b.xmm14); }
-        if a.xmm15 != b.xmm15 { output = format!("{}{} {:x} -> {:x}; ", output, "xmm15", a.xmm15, b.xmm15); }
-        if a.mm0 != b.mm0 { output = format!("{}{} {:x} -> {:x}; ", output, "xmm0", a.mm0, b.mm0); }
-        if a.mm1 != b.mm1 { output = format!("{}{} {:x} -> {:x}; ", output, "xmm1", a.mm1, b.mm1); }
-        if a.mm2 != b.mm2 { output = format!("{}{} {:x} -> {:x}; ", output, "xmm2", a.mm2, b.mm2); }
-        if a.mm3 != b.mm3 { output = format!("{}{} {:x} -> {:x}; ", output, "xmm3", a.mm3, b.mm3); }
-        if a.mm4 != b.mm4 { output = format!("{}{} {:x} -> {:x}; ", output, "xmm4", a.mm4, b.mm4); }
-        if a.mm5 != b.mm5 { output = format!("{}{} {:x} -> {:x}; ", output, "xmm5", a.mm5, b.mm5); }
-        if a.mm6 != b.mm6 { output = format!("{}{} {:x} -> {:x}; ", output, "xmm6", a.mm6, b.mm6); }
-        if a.mm7 != b.mm7 { output = format!("{}{} {:x} -> {:x}; ", output, "xmm7", a.mm7, b.mm7); }
+        if a.r8 != b.r8 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "r8", a.r8, b.r8);
+        }
+        if a.r9 != b.r9 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "r9", a.r9, b.r9);
+        }
+        if a.r10 != b.r10 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "r10", a.r10, b.r10);
+        }
+        if a.r11 != b.r11 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "r11", a.r11, b.r11);
+        }
+        if a.r12 != b.r12 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "r12", a.r12, b.r12);
+        }
+        if a.r13 != b.r13 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "r13", a.r13, b.r13);
+        }
+        if a.r14 != b.r14 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "r14", a.r14, b.r14);
+        }
+        if a.r15 != b.r15 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "r15", a.r15, b.r15);
+        }
+        if a.cr0 != b.cr0 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "cr0", a.cr0, b.cr0);
+        }
+        if a.cr1 != b.cr1 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "cr1", a.cr1, b.cr1);
+        }
+        if a.cr2 != b.cr2 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "cr2", a.cr2, b.cr2);
+        }
+        if a.cr3 != b.cr3 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "cr3", a.cr3, b.cr3);
+        }
+        if a.cr4 != b.cr4 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "cr4", a.cr4, b.cr4);
+        }
+        if a.cr5 != b.cr5 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "cr5", a.cr5, b.cr5);
+        }
+        if a.cr6 != b.cr6 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "cr6", a.cr6, b.cr6);
+        }
+        if a.cr7 != b.cr7 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "cr7", a.cr7, b.cr7);
+        }
+        if a.cr8 != b.cr8 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "cr8", a.cr8, b.cr8);
+        }
+        if a.cr9 != b.cr9 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "cr9", a.cr9, b.cr9);
+        }
+        if a.cr10 != b.cr10 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "cr10", a.cr10, b.cr10);
+        }
+        if a.cr11 != b.cr11 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "cr11", a.cr11, b.cr11);
+        }
+        if a.cr12 != b.cr12 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "cr12", a.cr12, b.cr12);
+        }
+        if a.cr13 != b.cr13 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "cr13", a.cr13, b.cr13);
+        }
+        if a.cr14 != b.cr14 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "cr14", a.cr14, b.cr14);
+        }
+        if a.cr15 != b.cr15 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "cr15", a.cr15, b.cr15);
+        }
+        if a.msr != b.msr {
+            output = format!("{}{} {:x} -> {:x}; ", output, "msr", a.msr, b.msr);
+        }
+        if a.tr3 != b.tr3 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "tr3", a.tr3, b.tr3);
+        }
+        if a.tr4 != b.tr4 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "tr4", a.tr4, b.tr4);
+        }
+        if a.tr5 != b.tr5 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "tr5", a.tr5, b.tr5);
+        }
+        if a.tr6 != b.tr6 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "tr6", a.tr6, b.tr6);
+        }
+        if a.tr7 != b.tr7 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "tr7", a.tr7, b.tr7);
+        }
+        if a.xmm0 != b.xmm0 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "xmm0", a.xmm0, b.xmm0);
+        }
+        if a.xmm1 != b.xmm1 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "xmm1", a.xmm1, b.xmm1);
+        }
+        if a.xmm2 != b.xmm2 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "xmm2", a.xmm2, b.xmm2);
+        }
+        if a.xmm3 != b.xmm3 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "xmm3", a.xmm3, b.xmm3);
+        }
+        if a.xmm4 != b.xmm4 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "xmm4", a.xmm4, b.xmm4);
+        }
+        if a.xmm5 != b.xmm5 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "xmm5", a.xmm5, b.xmm5);
+        }
+        if a.xmm6 != b.xmm6 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "xmm6", a.xmm6, b.xmm6);
+        }
+        if a.xmm7 != b.xmm7 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "xmm7", a.xmm7, b.xmm7);
+        }
+        if a.xmm8 != b.xmm8 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "xmm8", a.xmm8, b.xmm8);
+        }
+        if a.xmm9 != b.xmm9 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "xmm9", a.xmm9, b.xmm9);
+        }
+        if a.xmm10 != b.xmm10 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "xmm10", a.xmm10, b.xmm10);
+        }
+        if a.xmm11 != b.xmm11 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "xmm11", a.xmm11, b.xmm11);
+        }
+        if a.xmm12 != b.xmm12 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "xmm12", a.xmm12, b.xmm12);
+        }
+        if a.xmm13 != b.xmm13 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "xmm13", a.xmm13, b.xmm13);
+        }
+        if a.xmm14 != b.xmm14 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "xmm14", a.xmm14, b.xmm14);
+        }
+        if a.xmm15 != b.xmm15 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "xmm15", a.xmm15, b.xmm15);
+        }
+        if a.mm0 != b.mm0 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "xmm0", a.mm0, b.mm0);
+        }
+        if a.mm1 != b.mm1 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "xmm1", a.mm1, b.mm1);
+        }
+        if a.mm2 != b.mm2 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "xmm2", a.mm2, b.mm2);
+        }
+        if a.mm3 != b.mm3 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "xmm3", a.mm3, b.mm3);
+        }
+        if a.mm4 != b.mm4 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "xmm4", a.mm4, b.mm4);
+        }
+        if a.mm5 != b.mm5 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "xmm5", a.mm5, b.mm5);
+        }
+        if a.mm6 != b.mm6 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "xmm6", a.mm6, b.mm6);
+        }
+        if a.mm7 != b.mm7 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "xmm7", a.mm7, b.mm7);
+        }
         println!("{}", output);
     }
 
-    pub fn clear<const B:usize>(&mut self) {
+    pub fn clear<const B: usize>(&mut self) {
         match B {
             64 => {
                 self.rax = 0;
@@ -350,7 +485,7 @@ impl Regs64 {
     }
 
     pub fn sanitize32(&mut self) {
-        let mask:u64 = 0x00000000ffffffff;
+        let mask: u64 = 0x00000000ffffffff;
         self.rax &= mask;
         self.rbx &= mask;
         self.rcx &= mask;
@@ -362,7 +497,7 @@ impl Regs64 {
         self.rip &= mask;
     }
 
-    pub fn print<const B:usize>(&self) {
+    pub fn print<const B: usize>(&self) {
         println!("regs:");
 
         match B {
@@ -412,7 +547,7 @@ impl Regs64 {
         println!("  xmm13: {}", self.xmm13);
         println!("  xmm14: {}", self.xmm14);
         println!("  xmm15: {}", self.xmm15);
-    }   
+    }
 
     // get 16 bits
 
@@ -483,8 +618,6 @@ impl Regs64 {
     pub fn get_r15w(&self) -> u64 {
         get_reg16!(self.r15);
     }
-
-
 
     // get 8bits
 
@@ -705,262 +838,261 @@ impl Regs64 {
 
     // set 16bits
 
-    pub fn set_ax(&mut self, val:u64) {
+    pub fn set_ax(&mut self, val: u64) {
         set_reg16!(self.rax, val);
     }
 
-    pub fn set_bx(&mut self, val:u64) {
+    pub fn set_bx(&mut self, val: u64) {
         set_reg16!(self.rbx, val);
     }
 
-    pub fn set_cx(&mut self, val:u64) {
+    pub fn set_cx(&mut self, val: u64) {
         set_reg16!(self.rcx, val);
     }
 
-    pub fn set_dx(&mut self, val:u64) {
+    pub fn set_dx(&mut self, val: u64) {
         set_reg16!(self.rdx, val);
     }
 
-    pub fn set_si(&mut self, val:u64) {
+    pub fn set_si(&mut self, val: u64) {
         set_reg16!(self.rsi, val);
     }
 
-    pub fn set_di(&mut self, val:u64) {
+    pub fn set_di(&mut self, val: u64) {
         set_reg16!(self.rdi, val);
     }
 
-    pub fn set_sp(&mut self, val:u64) {
+    pub fn set_sp(&mut self, val: u64) {
         set_reg16!(self.rsp, val);
     }
 
-    pub fn set_bp(&mut self, val:u64) {
+    pub fn set_bp(&mut self, val: u64) {
         set_reg16!(self.rbp, val);
     }
 
-    pub fn set_ip(&mut self, val:u64) {
+    pub fn set_ip(&mut self, val: u64) {
         set_reg16!(self.rip, val);
     }
 
-    pub fn set_r8w(&mut self, val:u64) {
+    pub fn set_r8w(&mut self, val: u64) {
         set_reg16!(self.r8, val);
     }
 
-    pub fn set_r9w(&mut self, val:u64) {
+    pub fn set_r9w(&mut self, val: u64) {
         set_reg16!(self.r9, val);
     }
 
-    pub fn set_r10w(&mut self, val:u64) {
+    pub fn set_r10w(&mut self, val: u64) {
         set_reg16!(self.r10, val);
     }
 
-    pub fn set_r11w(&mut self, val:u64) {
+    pub fn set_r11w(&mut self, val: u64) {
         set_reg16!(self.r11, val);
     }
 
-    pub fn set_r12w(&mut self, val:u64) {
+    pub fn set_r12w(&mut self, val: u64) {
         set_reg16!(self.r12, val);
     }
 
-    pub fn set_r13w(&mut self, val:u64) {
+    pub fn set_r13w(&mut self, val: u64) {
         set_reg16!(self.r13, val);
     }
 
-    pub fn set_r14w(&mut self, val:u64) {
+    pub fn set_r14w(&mut self, val: u64) {
         set_reg16!(self.r14, val);
     }
 
-    pub fn set_r15w(&mut self, val:u64) {
+    pub fn set_r15w(&mut self, val: u64) {
         set_reg16!(self.r15, val);
     }
 
     // set 32bits
 
-    pub fn set_eax(&mut self, val:u64) {
+    pub fn set_eax(&mut self, val: u64) {
         set_reg32!(self.rax, val);
     }
 
-    pub fn set_ebx(&mut self, val:u64) {
+    pub fn set_ebx(&mut self, val: u64) {
         set_reg32!(self.rbx, val);
     }
 
-    pub fn set_ecx(&mut self, val:u64) {
+    pub fn set_ecx(&mut self, val: u64) {
         set_reg32!(self.rcx, val);
     }
 
-    pub fn set_edx(&mut self, val:u64) {
+    pub fn set_edx(&mut self, val: u64) {
         set_reg32!(self.rdx, val);
     }
 
-    pub fn set_esi(&mut self, val:u64) {
+    pub fn set_esi(&mut self, val: u64) {
         set_reg32!(self.rsi, val);
     }
 
-    pub fn set_edi(&mut self, val:u64) {
+    pub fn set_edi(&mut self, val: u64) {
         set_reg32!(self.rdi, val);
     }
 
-    pub fn set_ebp(&mut self, val:u64) {
+    pub fn set_ebp(&mut self, val: u64) {
         set_reg32!(self.rbp, val);
     }
 
-    pub fn set_esp(&mut self, val:u64) {
+    pub fn set_esp(&mut self, val: u64) {
         set_reg32!(self.rsp, val);
     }
 
-    pub fn set_eip(&mut self, val:u64) {
+    pub fn set_eip(&mut self, val: u64) {
         set_reg32!(self.rip, val);
     }
 
-    pub fn set_r8d(&mut self, val:u64) {
+    pub fn set_r8d(&mut self, val: u64) {
         set_reg32!(self.r8, val);
     }
 
-    pub fn set_r9d(&mut self, val:u64) {
+    pub fn set_r9d(&mut self, val: u64) {
         set_reg32!(self.r9, val);
     }
 
-    pub fn set_r10d(&mut self, val:u64) {
+    pub fn set_r10d(&mut self, val: u64) {
         set_reg32!(self.r10, val);
     }
 
-    pub fn set_r11d(&mut self, val:u64) {
+    pub fn set_r11d(&mut self, val: u64) {
         set_reg32!(self.r11, val);
     }
 
-    pub fn set_r12d(&mut self, val:u64) {
+    pub fn set_r12d(&mut self, val: u64) {
         set_reg32!(self.r12, val);
     }
 
-    pub fn set_r13d(&mut self, val:u64) {
+    pub fn set_r13d(&mut self, val: u64) {
         set_reg32!(self.r13, val);
     }
 
-    pub fn set_r14d(&mut self, val:u64) {
+    pub fn set_r14d(&mut self, val: u64) {
         set_reg32!(self.r14, val);
     }
 
-    pub fn set_r15d(&mut self, val:u64) {
+    pub fn set_r15d(&mut self, val: u64) {
         set_reg32!(self.r15, val);
     }
 
-
     // set 8bits
 
-    pub fn set_ah(&mut self, val:u64) {
+    pub fn set_ah(&mut self, val: u64) {
         set_reg8h!(self.rax, val);
     }
 
-    pub fn set_bh(&mut self, val:u64) {
+    pub fn set_bh(&mut self, val: u64) {
         set_reg8h!(self.rbx, val);
     }
 
-    pub fn set_ch(&mut self, val:u64) {
+    pub fn set_ch(&mut self, val: u64) {
         set_reg8h!(self.rcx, val);
     }
 
-    pub fn set_dh(&mut self, val:u64) {
+    pub fn set_dh(&mut self, val: u64) {
         set_reg8h!(self.rdx, val);
     }
 
-    pub fn set_al(&mut self, val:u64) {
+    pub fn set_al(&mut self, val: u64) {
         set_reg8l!(self.rax, val);
     }
-    
-    pub fn set_bl(&mut self, val:u64) {
+
+    pub fn set_bl(&mut self, val: u64) {
         set_reg8l!(self.rbx, val);
     }
 
-    pub fn set_cl(&mut self, val:u64) {
+    pub fn set_cl(&mut self, val: u64) {
         set_reg8l!(self.rcx, val);
     }
 
-    pub fn set_dl(&mut self, val:u64) {
+    pub fn set_dl(&mut self, val: u64) {
         set_reg8l!(self.rdx, val);
     }
 
-    pub fn set_r8l(&mut self, val:u64) {
+    pub fn set_r8l(&mut self, val: u64) {
         set_reg8l!(self.r8, val);
     }
 
-    pub fn set_r9l(&mut self, val:u64) {
+    pub fn set_r9l(&mut self, val: u64) {
         set_reg8l!(self.r9, val);
     }
 
-    pub fn set_r10l(&mut self, val:u64) {
+    pub fn set_r10l(&mut self, val: u64) {
         set_reg8l!(self.r10, val);
     }
 
-    pub fn set_r11l(&mut self, val:u64) {
+    pub fn set_r11l(&mut self, val: u64) {
         set_reg8l!(self.r11, val);
     }
 
-    pub fn set_r12l(&mut self, val:u64) {
+    pub fn set_r12l(&mut self, val: u64) {
         set_reg8l!(self.r12, val);
     }
 
-    pub fn set_r13l(&mut self, val:u64) {
+    pub fn set_r13l(&mut self, val: u64) {
         set_reg8l!(self.r13, val);
     }
 
-    pub fn set_r14l(&mut self, val:u64) {
+    pub fn set_r14l(&mut self, val: u64) {
         set_reg8l!(self.r14, val);
     }
 
-    pub fn set_r15l(&mut self, val:u64) {
+    pub fn set_r15l(&mut self, val: u64) {
         set_reg8l!(self.r15, val);
     }
 
-    pub fn set_r8h(&mut self, val:u64) {
+    pub fn set_r8h(&mut self, val: u64) {
         set_reg8h!(self.r8, val);
     }
 
-    pub fn set_r9h(&mut self, val:u64) {
+    pub fn set_r9h(&mut self, val: u64) {
         set_reg8h!(self.r9, val);
     }
 
-    pub fn set_r10h(&mut self, val:u64) {
+    pub fn set_r10h(&mut self, val: u64) {
         set_reg8h!(self.r10, val);
     }
 
-    pub fn set_r11h(&mut self, val:u64) {
+    pub fn set_r11h(&mut self, val: u64) {
         set_reg8h!(self.r11, val);
     }
 
-    pub fn set_r12h(&mut self, val:u64) {
+    pub fn set_r12h(&mut self, val: u64) {
         set_reg8h!(self.r12, val);
     }
 
-    pub fn set_r13h(&mut self, val:u64) {
+    pub fn set_r13h(&mut self, val: u64) {
         set_reg8h!(self.r13, val);
     }
 
-    pub fn set_r14h(&mut self, val:u64) {
+    pub fn set_r14h(&mut self, val: u64) {
         set_reg8h!(self.r14, val);
     }
 
-    pub fn set_r15h(&mut self, val:u64) {
+    pub fn set_r15h(&mut self, val: u64) {
         set_reg8h!(self.r15, val);
     }
 
-    pub fn set_sil(&mut self, val:u64) {
+    pub fn set_sil(&mut self, val: u64) {
         set_reg8l!(self.rsi, val);
     }
 
-    pub fn set_dil(&mut self, val:u64) {
+    pub fn set_dil(&mut self, val: u64) {
         set_reg8l!(self.rdi, val);
     }
 
-    pub fn set_bpl(&mut self, val:u64) {
+    pub fn set_bpl(&mut self, val: u64) {
         set_reg8l!(self.rbp, val);
     }
 
-    pub fn set_spl(&mut self, val:u64) {
+    pub fn set_spl(&mut self, val: u64) {
         set_reg8l!(self.rsp, val);
     }
 
-    // xmm 
+    // xmm
 
-    pub fn is_xmm(&self, reg:Register) -> bool {
+    pub fn is_xmm(&self, reg: Register) -> bool {
         let result = match reg {
             Register::XMM0 => true,
             Register::XMM1 => true,
@@ -991,7 +1123,7 @@ impl Regs64 {
         return result;
     }
 
-    pub fn get_xmm_reg(&self, reg:Register) -> u128 {
+    pub fn get_xmm_reg(&self, reg: Register) -> u128 {
         let value = match reg {
             Register::XMM0 => self.xmm0,
             Register::XMM1 => self.xmm1,
@@ -1023,7 +1155,7 @@ impl Regs64 {
         return value;
     }
 
-    pub fn set_xmm_reg(&mut self, reg:Register, value:u128)  {
+    pub fn set_xmm_reg(&mut self, reg: Register, value: u128) {
         match reg {
             Register::XMM0 => self.xmm0 = value,
             Register::XMM1 => self.xmm1 = value,
@@ -1054,9 +1186,7 @@ impl Regs64 {
         };
     }
 
-
-
-    pub fn get_reg(&self, reg:Register) -> u64 {
+    pub fn get_reg(&self, reg: Register) -> u64 {
         let value = match reg {
             // 64bits
             Register::RAX => self.rax,
@@ -1160,7 +1290,7 @@ impl Regs64 {
         return value;
     }
 
-    pub fn set_reg(&mut self, reg:Register, value:u64) {
+    pub fn set_reg(&mut self, reg: Register, value: u64) {
         match reg {
             // 64bits
             Register::RAX => self.rax = value,
@@ -1237,31 +1367,31 @@ impl Regs64 {
             Register::BPL => self.set_bpl(value),
             Register::SPL => self.set_spl(value),
             // segments
-            Register::SS => { },
-            Register::ES => { },
-            Register::FS => { },
-            Register::GS => { },
-            Register::DS => { },
-            Register::DR0 => { },
-            Register::DR1 => { },
-            Register::DR2 => { },
-            Register::DR3 => { },
-            Register::DR4 => { },
-            Register::DR5 => { },
-            Register::DR6 => { },
-            Register::DR7 => { },
-            Register::CR0 => { },
-            Register::CR1 => { },
-            Register::CR2 => { },
-            Register::CR3 => { },
-            Register::CR4 => { },
-            Register::CR5 => { },
+            Register::SS => {}
+            Register::ES => {}
+            Register::FS => {}
+            Register::GS => {}
+            Register::DS => {}
+            Register::DR0 => {}
+            Register::DR1 => {}
+            Register::DR2 => {}
+            Register::DR3 => {}
+            Register::DR4 => {}
+            Register::DR5 => {}
+            Register::DR6 => {}
+            Register::DR7 => {}
+            Register::CR0 => {}
+            Register::CR1 => {}
+            Register::CR2 => {}
+            Register::CR3 => {}
+            Register::CR4 => {}
+            Register::CR5 => {}
             _ => unimplemented!("unimplemented register {:?}", reg),
         };
     }
 
-    pub fn get_size(&self, reg:Register) -> u8 {
-        let sz:u8 = match reg {
+    pub fn get_size(&self, reg: Register) -> u8 {
+        let sz: u8 = match reg {
             Register::RAX => 64,
             Register::RBX => 64,
             Register::RCX => 64,
@@ -1363,7 +1493,7 @@ impl Regs64 {
         return sz;
     }
 
-    pub fn get_xmm_by_name(&self, reg_name:&str) -> u128 {
+    pub fn get_xmm_by_name(&self, reg_name: &str) -> u128 {
         match reg_name {
             "xmm0" => return self.xmm0,
             "xmm1" => return self.xmm1,
@@ -1385,7 +1515,7 @@ impl Regs64 {
         }
     }
 
-    pub fn get_by_name(&self, reg_name:&str) -> u64 {
+    pub fn get_by_name(&self, reg_name: &str) -> u64 {
         match reg_name {
             // 64bits
             "rax" => return self.rax,
@@ -1465,7 +1595,7 @@ impl Regs64 {
         }
     }
 
-    pub fn set_xmm_by_name(&mut self,  reg_name:&str, value:u128) {
+    pub fn set_xmm_by_name(&mut self, reg_name: &str, value: u128) {
         match reg_name {
             "xmm0" => self.xmm0 = value,
             "xmm1" => self.xmm1 = value,
@@ -1487,8 +1617,7 @@ impl Regs64 {
         }
     }
 
-
-    pub fn set_by_name(&mut self, reg_name:&str, value:u64) {
+    pub fn set_by_name(&mut self, reg_name: &str, value: u64) {
         match reg_name {
             // 64bits
             "rax" => self.rax = value,
@@ -1568,28 +1697,30 @@ impl Regs64 {
         }
     }
 
-    pub fn show_reg64(&self, maps:&Maps, sreg:&str, value:u64, pos:u64) {
+    pub fn show_reg64(&self, maps: &Maps, sreg: &str, value: u64, pos: u64) {
         if maps.is_mapped(value) {
-
             let mut s = maps.read_string(value);
             if s.len() < 2 {
                 s = maps.read_wide_string(value);
             }
 
             maps.filter_string(&mut s);
-           
+
             if s.len() > 50 {
                 s = s[..50].to_string();
             }
- 
+
             let name = match maps.get_addr_name(value) {
                 Some(v) => format!("({})", v),
                 None => "".to_string(),
             };
-            
+
             if s.len() > 1 {
                 if pos > 0 {
-                    println!("\t{} {}: 0x{:x} {} '{}' {}", pos, sreg, value, value, s, name);
+                    println!(
+                        "\t{} {}: 0x{:x} {} '{}' {}",
+                        pos, sreg, value, value, s, name
+                    );
                 } else {
                     println!("\t{}: 0x{:x} {} '{}' {}", sreg, value, value, s, name);
                 }
@@ -1600,7 +1731,6 @@ impl Regs64 {
                     println!("\t{}: 0x{:x} {} {}", sreg, value, value, name);
                 }
             }
-
         } else {
             if pos > 0 {
                 println!("\t{} {}: 0x{:x} {}", pos, sreg, value, value);
@@ -1610,39 +1740,46 @@ impl Regs64 {
         }
     }
 
-    pub fn show_reg32(&self, maps:&Maps, sreg:&str, value:u64, pos:u64) {
+    pub fn show_reg32(&self, maps: &Maps, sreg: &str, value: u64, pos: u64) {
         if maps.is_mapped(value) {
-
             let mut s = maps.read_string(value);
             if s.len() < 2 {
                 s = maps.read_wide_string(value);
             }
 
             maps.filter_string(&mut s);
-           
+
             if s.len() > 50 {
                 s = s[..50].to_string();
             }
- 
+
             let name = match maps.get_addr_name(value) {
                 Some(v) => format!("({})", v),
                 None => "".to_string(),
             };
-            
+
             if s.len() > 1 {
                 if pos > 0 {
-                    println!("\t{} {}: 0x{:x} {} '{}' {}", pos, sreg, value as u32, value as u32, s, name);
+                    println!(
+                        "\t{} {}: 0x{:x} {} '{}' {}",
+                        pos, sreg, value as u32, value as u32, s, name
+                    );
                 } else {
-                    println!("\t{}: 0x{:x} {} '{}' {}", sreg, value as u32, value as u32, s, name);
+                    println!(
+                        "\t{}: 0x{:x} {} '{}' {}",
+                        sreg, value as u32, value as u32, s, name
+                    );
                 }
             } else {
                 if pos > 0 {
-                    println!("\t{} {}: 0x{:x} {} {}", pos, sreg, value as u32, value as u32, name);
+                    println!(
+                        "\t{} {}: 0x{:x} {} {}",
+                        pos, sreg, value as u32, value as u32, name
+                    );
                 } else {
                     println!("\t{}: 0x{:x} {} {}", sreg, value as u32, value as u32, name);
                 }
             }
-
         } else {
             if pos > 0 {
                 println!("\t{} {}: 0x{:x} {}", pos, sreg, value as u32, value as u32);
@@ -1652,213 +1789,214 @@ impl Regs64 {
         }
     }
 
-
-    pub fn show_eax(&self, maps:&Maps, pos:u64) {
+    pub fn show_eax(&self, maps: &Maps, pos: u64) {
         self.show_reg32(maps, "eax", self.get_eax(), pos);
     }
 
-    pub fn show_ebx(&self, maps:&Maps, pos:u64) {
+    pub fn show_ebx(&self, maps: &Maps, pos: u64) {
         self.show_reg32(maps, "ebx", self.get_ebx(), pos);
     }
 
-    pub fn show_ecx(&self, maps:&Maps, pos:u64) {
+    pub fn show_ecx(&self, maps: &Maps, pos: u64) {
         self.show_reg32(maps, "ecx", self.get_ecx(), pos);
     }
 
-    pub fn show_edx(&self, maps:&Maps, pos:u64) {
+    pub fn show_edx(&self, maps: &Maps, pos: u64) {
         self.show_reg32(maps, "edx", self.get_edx(), pos);
     }
 
-    pub fn show_esi(&self, maps:&Maps, pos:u64) {
+    pub fn show_esi(&self, maps: &Maps, pos: u64) {
         self.show_reg32(maps, "esi", self.get_esi(), pos);
     }
 
-    pub fn show_edi(&self, maps:&Maps, pos:u64) {
+    pub fn show_edi(&self, maps: &Maps, pos: u64) {
         self.show_reg32(maps, "edi", self.get_edi(), pos);
     }
 
-    pub fn show_rax(&self, maps:&Maps, pos:u64) {
+    pub fn show_rax(&self, maps: &Maps, pos: u64) {
         self.show_reg64(maps, "rax", self.rax, pos);
     }
 
-    pub fn show_rbx(&self, maps:&Maps, pos:u64) {
+    pub fn show_rbx(&self, maps: &Maps, pos: u64) {
         self.show_reg64(maps, "rbx", self.rbx, pos);
     }
 
-    pub fn show_rcx(&self, maps:&Maps, pos:u64) {
+    pub fn show_rcx(&self, maps: &Maps, pos: u64) {
         self.show_reg64(maps, "rcx", self.rcx, pos);
     }
 
-    pub fn show_rdx(&self, maps:&Maps, pos:u64) {
+    pub fn show_rdx(&self, maps: &Maps, pos: u64) {
         self.show_reg64(maps, "rdx", self.rdx, pos);
     }
 
-    pub fn show_rsi(&self, maps:&Maps, pos:u64) {
+    pub fn show_rsi(&self, maps: &Maps, pos: u64) {
         self.show_reg64(maps, "rsi", self.rsi, pos);
     }
 
-    pub fn show_rdi(&self, maps:&Maps, pos:u64) {
+    pub fn show_rdi(&self, maps: &Maps, pos: u64) {
         self.show_reg64(maps, "rdi", self.rdi, pos);
     }
 
-    pub fn show_r8(&self, maps:&Maps, pos:u64) {
+    pub fn show_r8(&self, maps: &Maps, pos: u64) {
         self.show_reg64(maps, "r8", self.r8, pos);
     }
 
-    pub fn show_r9(&self, maps:&Maps, pos:u64) {
+    pub fn show_r9(&self, maps: &Maps, pos: u64) {
         self.show_reg64(maps, "r9", self.r9, pos);
     }
 
-    pub fn show_r10(&self, maps:&Maps, pos:u64) {
+    pub fn show_r10(&self, maps: &Maps, pos: u64) {
         self.show_reg64(maps, "r10", self.r10, pos);
     }
 
-    pub fn show_r11(&self, maps:&Maps, pos:u64) {
+    pub fn show_r11(&self, maps: &Maps, pos: u64) {
         self.show_reg64(maps, "r11", self.r11, pos);
     }
 
-    pub fn show_r12(&self, maps:&Maps, pos:u64) {
+    pub fn show_r12(&self, maps: &Maps, pos: u64) {
         self.show_reg64(maps, "r12", self.r12, pos);
     }
 
-    pub fn show_r13(&self, maps:&Maps, pos:u64) {
+    pub fn show_r13(&self, maps: &Maps, pos: u64) {
         self.show_reg64(maps, "r13", self.r13, pos);
     }
 
-    pub fn show_r14(&self, maps:&Maps, pos:u64) {
+    pub fn show_r14(&self, maps: &Maps, pos: u64) {
         self.show_reg64(maps, "r14", self.r14, pos);
     }
 
-    pub fn show_r15(&self, maps:&Maps, pos:u64) {
+    pub fn show_r15(&self, maps: &Maps, pos: u64) {
         self.show_reg64(maps, "r15", self.r15, pos);
     }
 
-    pub fn show_r8d(&self, maps:&Maps, pos:u64) {
+    pub fn show_r8d(&self, maps: &Maps, pos: u64) {
         self.show_reg64(maps, "r8d", self.get_r8d(), pos);
     }
 
-    pub fn show_r9d(&self, maps:&Maps, pos:u64) {
+    pub fn show_r9d(&self, maps: &Maps, pos: u64) {
         self.show_reg64(maps, "r9d", self.get_r9d(), pos);
     }
 
-    pub fn show_r10d(&self, maps:&Maps, pos:u64) {
+    pub fn show_r10d(&self, maps: &Maps, pos: u64) {
         self.show_reg64(maps, "r10d", self.get_r10d(), pos);
     }
 
-    pub fn show_r11d(&self, maps:&Maps, pos:u64) {
+    pub fn show_r11d(&self, maps: &Maps, pos: u64) {
         self.show_reg64(maps, "r11d", self.get_r11d(), pos);
     }
 
-    pub fn show_r12d(&self, maps:&Maps, pos:u64) {
+    pub fn show_r12d(&self, maps: &Maps, pos: u64) {
         self.show_reg64(maps, "r12d", self.get_r12d(), pos);
     }
 
-    pub fn show_r13d(&self, maps:&Maps, pos:u64) {
+    pub fn show_r13d(&self, maps: &Maps, pos: u64) {
         self.show_reg64(maps, "r13d", self.get_r13d(), pos);
     }
 
-    pub fn show_r14d(&self, maps:&Maps, pos:u64) {
+    pub fn show_r14d(&self, maps: &Maps, pos: u64) {
         self.show_reg64(maps, "r14d", self.get_r14d(), pos);
     }
 
-    pub fn show_r15d(&self, maps:&Maps, pos:u64) {
+    pub fn show_r15d(&self, maps: &Maps, pos: u64) {
         self.show_reg64(maps, "r15d", self.get_r15d(), pos);
     }
 
-    pub fn show_r8w(&self, maps:&Maps, pos:u64) {
+    pub fn show_r8w(&self, maps: &Maps, pos: u64) {
         self.show_reg64(maps, "r8w", self.get_r8w(), pos);
     }
 
-    pub fn show_r9w(&self, maps:&Maps, pos:u64) {
+    pub fn show_r9w(&self, maps: &Maps, pos: u64) {
         self.show_reg64(maps, "r9w", self.get_r9w(), pos);
     }
 
-    pub fn show_r10w(&self, maps:&Maps, pos:u64) {
+    pub fn show_r10w(&self, maps: &Maps, pos: u64) {
         self.show_reg64(maps, "r10w", self.get_r10w(), pos);
     }
 
-    pub fn show_r11w(&self, maps:&Maps, pos:u64) {
+    pub fn show_r11w(&self, maps: &Maps, pos: u64) {
         self.show_reg64(maps, "r11w", self.get_r11w(), pos);
     }
 
-    pub fn show_r12w(&self, maps:&Maps, pos:u64) {
+    pub fn show_r12w(&self, maps: &Maps, pos: u64) {
         self.show_reg64(maps, "r12w", self.get_r12w(), pos);
     }
 
-    pub fn show_r13w(&self, maps:&Maps, pos:u64) {
+    pub fn show_r13w(&self, maps: &Maps, pos: u64) {
         self.show_reg64(maps, "r13w", self.get_r13w(), pos);
     }
 
-    pub fn show_r14w(&self, maps:&Maps, pos:u64) {
+    pub fn show_r14w(&self, maps: &Maps, pos: u64) {
         self.show_reg64(maps, "r14w", self.get_r14w(), pos);
     }
 
-    pub fn show_r15w(&self, maps:&Maps, pos:u64) {
+    pub fn show_r15w(&self, maps: &Maps, pos: u64) {
         self.show_reg64(maps, "r15w", self.get_r15w(), pos);
     }
 
-    pub fn show_r8l(&self, maps:&Maps, pos:u64) {
+    pub fn show_r8l(&self, maps: &Maps, pos: u64) {
         self.show_reg64(maps, "r8l", self.get_r8l(), pos);
     }
 
-    pub fn show_r9l(&self, maps:&Maps, pos:u64) {
+    pub fn show_r9l(&self, maps: &Maps, pos: u64) {
         self.show_reg64(maps, "r9l", self.get_r9l(), pos);
     }
 
-    pub fn show_r10l(&self, maps:&Maps, pos:u64) {
+    pub fn show_r10l(&self, maps: &Maps, pos: u64) {
         self.show_reg64(maps, "r10l", self.get_r10l(), pos);
     }
 
-    pub fn show_r11l(&self, maps:&Maps, pos:u64) {
+    pub fn show_r11l(&self, maps: &Maps, pos: u64) {
         self.show_reg64(maps, "r11l", self.get_r11l(), pos);
     }
 
-    pub fn show_r12l(&self, maps:&Maps, pos:u64) {
+    pub fn show_r12l(&self, maps: &Maps, pos: u64) {
         self.show_reg64(maps, "r12l", self.get_r12l(), pos);
     }
 
-    pub fn show_r13l(&self, maps:&Maps, pos:u64) {
+    pub fn show_r13l(&self, maps: &Maps, pos: u64) {
         self.show_reg64(maps, "r13l", self.get_r13l(), pos);
     }
 
-    pub fn show_r14l(&self, maps:&Maps, pos:u64) {
+    pub fn show_r14l(&self, maps: &Maps, pos: u64) {
         self.show_reg64(maps, "r14l", self.get_r14l(), pos);
     }
 
-    pub fn show_r15l(&self, maps:&Maps, pos:u64) {
+    pub fn show_r15l(&self, maps: &Maps, pos: u64) {
         self.show_reg64(maps, "r15l", self.get_r15l(), pos);
     }
 
-    pub fn show_sil(&self, maps:&Maps, pos:u64) {
+    pub fn show_sil(&self, maps: &Maps, pos: u64) {
         self.show_reg64(maps, "sil", self.get_sil(), pos);
     }
 
-    pub fn show_dil(&self, maps:&Maps, pos:u64) {
+    pub fn show_dil(&self, maps: &Maps, pos: u64) {
         self.show_reg64(maps, "dil", self.get_dil(), pos);
     }
 
-    pub fn show_bpl(&self, maps:&Maps, pos:u64) {
+    pub fn show_bpl(&self, maps: &Maps, pos: u64) {
         self.show_reg64(maps, "bpl", self.get_bpl(), pos);
     }
 
-    pub fn show_spl(&self, maps:&Maps, pos:u64) {                        
-        self.show_reg64(maps, "spl", self.get_spl(), pos);   
+    pub fn show_spl(&self, maps: &Maps, pos: u64) {
+        self.show_reg64(maps, "spl", self.get_spl(), pos);
     }
 
-    pub fn is_xmm_by_name(&self, reg:&str) -> bool {
+    pub fn is_xmm_by_name(&self, reg: &str) -> bool {
         match reg {
-            "xmm0"|"xmm1"|"xmm2"|"xmm3"|"xmm4"|"xmm5"|"xmm6"|"xmm7"|
-            "xmm8"|"xmm9"|"xmm10"|"xmm11"|"xmm12"|"xmm13"|"xmm14"|"xmm15" => true,
-                &_ => false,
+            "xmm0" | "xmm1" | "xmm2" | "xmm3" | "xmm4" | "xmm5" | "xmm6" | "xmm7" | "xmm8"
+            | "xmm9" | "xmm10" | "xmm11" | "xmm12" | "xmm13" | "xmm14" | "xmm15" => true,
+            &_ => false,
         }
     }
 
-    pub fn is_reg(&self, reg:&str) -> bool {
+    pub fn is_reg(&self, reg: &str) -> bool {
         match reg {
-            "rax"|"rbx"|"rcx"|"rdx"|"rsi"|"rdi"|"rbp"|"rsp"|"rip"|"r8"|"r9"|"r10"|"r11"|"r12"|
-            "eax"|"ebx"|"ecx"|"edx"|"esi"|"edi"|"esp"|"ebp"|"eip"|"r8d"|"r9d"|"r10d"|"r11d"|"r12d"|
-            "ax"|"bx"|"cx"|"dx"|"bp"|"sp"|"r8w"|"r9w"|"r10w"|"r11w"|"r12w"|
-            "si"|"di"|"al"|"ah"|"bl"|"bh"|"cl"|"ch"|"dl"|"dh"|"r8l"|"r9l"|"r10l"|"r11l"|"r12l"|"sil"|"dil"|"bpl"|"spl" => true,
+            "rax" | "rbx" | "rcx" | "rdx" | "rsi" | "rdi" | "rbp" | "rsp" | "rip" | "r8" | "r9"
+            | "r10" | "r11" | "r12" | "eax" | "ebx" | "ecx" | "edx" | "esi" | "edi" | "esp"
+            | "ebp" | "eip" | "r8d" | "r9d" | "r10d" | "r11d" | "r12d" | "ax" | "bx" | "cx"
+            | "dx" | "bp" | "sp" | "r8w" | "r9w" | "r10w" | "r11w" | "r12w" | "si" | "di"
+            | "al" | "ah" | "bl" | "bh" | "cl" | "ch" | "dl" | "dh" | "r8l" | "r9l" | "r10l"
+            | "r11l" | "r12l" | "sil" | "dil" | "bpl" | "spl" => true,
             &_ => false,
         }
     }

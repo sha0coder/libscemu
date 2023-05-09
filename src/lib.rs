@@ -1,9 +1,8 @@
-
-pub mod emu;
 pub mod config;
+pub mod emu;
 
-use emu::Emu;
 use config::Config;
+use emu::Emu;
 
 pub fn emu64() -> Emu {
     let mut emu = Emu::new();
@@ -18,13 +17,12 @@ pub fn emu64() -> Emu {
 pub fn emu32() -> Emu {
     let mut emu = Emu::new();
     let mut cfg = Config::new();
-    cfg.is_64bits = false; 
+    cfg.is_64bits = false;
     emu.set_config(cfg);
     emu.disable_ctrlc();
 
     emu
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -32,7 +30,6 @@ mod tests {
 
     #[test]
     fn test() {
-
         /*
         let mut emu = emu64();
         emu.set_maps_folder("../scemu/maps64/");
@@ -45,7 +42,7 @@ mod tests {
         emu.spawn_console_at(2586);
         emu.run(0);*/
 
-        assert!(1 == 1); 
+        assert!(1 == 1);
 
         // cannot do tests, maps folder cannot be predicted on test time.
 
@@ -66,10 +63,5 @@ mod tests {
         emu.run(0x3c002b);
         assert!(emu.regs.rax == 0x29);
         */
-
-    } 
-
-
+    }
 }
-
-

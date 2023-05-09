@@ -1,11 +1,11 @@
-use std::fs::File;
-use std::io::BufReader;
-use std::io::BufRead;
-use std::vec::Vec;
 use crate::emu;
-use crate::emu::peb64;
 use crate::emu::peb32;
+use crate::emu::peb64;
 use crate::emu::structures;
+use std::fs::File;
+use std::io::BufRead;
+use std::io::BufReader;
+use std::vec::Vec;
 
 pub struct Script {
     code: Vec<String>,
@@ -37,7 +37,7 @@ impl Script {
         }
     }
 
-    pub fn resolve(&self, arg:&str, i:usize, emu: &mut emu::Emu) -> u64 {
+    pub fn resolve(&self, arg: &str, i: usize, emu: &mut emu::Emu) -> u64 {
         if arg == "result" {
             return self.result;
         } else if arg.starts_with("0x") {
@@ -48,12 +48,12 @@ impl Script {
                 }
             };
             return a;
-        } 
+        }
         return emu.regs.get_by_name(arg);
     }
 
-    pub fn to_int(&self, s:&str) -> Option<u64> {
-        let value:u64 = match u64::from_str_radix(s, 10) {
+    pub fn to_int(&self, s: &str) -> Option<u64> {
+        let value: u64 = match u64::from_str_radix(s, 10) {
             Ok(value) => value,
             Err(_) => return None,
         };
@@ -64,13 +64,13 @@ impl Script {
     pub fn to_hex(&self, s: &str) -> Option<u64> {
         let mut x = s.to_string();
         if x.ends_with('h') {
-            x = x[0..x.len()-1].to_string();                                                         
+            x = x[0..x.len() - 1].to_string();
         }
         if x.starts_with("0x") {
             x = x[2..x.len()].to_string();
         }
 
-        let value:u64 = match u64::from_str_radix(x.as_str(), 16) {
+        let value: u64 = match u64::from_str_radix(x.as_str(), 16) {
             Ok(value) => value,
             Err(_) => return None,
         };
@@ -88,9 +88,11 @@ impl Script {
             if i > self.code.len() {
                 break;
             }
-            let line = &self.code[i-1];
-            if line.len() == 0 || line.starts_with(";") { continue }
-            let args:Vec<&str> = line.split_whitespace().collect();
+            let line = &self.code[i - 1];
+            if line.len() == 0 || line.starts_with(";") {
+                continue;
+            }
+            let args: Vec<&str> = line.split_whitespace().collect();
 
             if self.trace {
                 println!("==> {} {}", i, line);
@@ -108,20 +110,24 @@ impl Script {
             match args[0] {
                 "pr" => {
                     println!("result: 0x{:x}", self.result);
-                },
+                }
                 "p" => {
-                    if args.len() <2 {
-                        println!("error in line {}, `p` command needs a message to be printed", i);
+                    if args.len() < 2 {
+                        println!(
+                            "error in line {}, `p` command needs a message to be printed",
+                            i
+                        );
                         return;
                     }
-                    let msg = args.iter()
-                         .skip(1)
-                         .map(|s| s.to_owned())
-                         .collect::<Vec<_>>()
-                         .join(" ");
+                    let msg = args
+                        .iter()
+                        .skip(1)
+                        .map(|s| s.to_owned())
+                        .collect::<Vec<_>>()
+                        .join(" ");
 
                     println!("{}", msg);
-                },
+                }
                 "q" => std::process::exit(1),
                 "r" => {
                     if args.len() == 1 {
@@ -131,7 +137,6 @@ impl Script {
                             emu.featured_regs32();
                         }
                     } else {
-
                         self.result = emu.regs.get_by_name(&args[1]);
 
                         match args[1] {
@@ -204,30 +209,29 @@ impl Script {
                             _ => println!("unknown register r `{}` in line {}", args[1], i),
                         }
                     }
-                },
+                }
                 "rc" => {
                     if args.len() != 3 {
                         println!("expected: rc <register> <value>");
                     } else {
-                        let value:u64 = self.resolve(args[2], i, emu);
+                        let value: u64 = self.resolve(args[2], i, emu);
                         emu.regs.set_by_name(args[1], value);
                     }
-                },
-                "mr"|"rm" => {
-                    if args.len() < 2 { 
+                }
+                "mr" | "rm" => {
+                    if args.len() < 2 {
                         println!("error in line {}, command `mr` without arguments", i);
                         return;
                     }
 
-                    let ins = args.iter()
-                         .skip(1)
-                         .map(|s| s.to_owned())
-                         .collect::<Vec<_>>()
-                         .join(" ");
-                    
+                    let ins = args
+                        .iter()
+                        .skip(1)
+                        .map(|s| s.to_owned())
+                        .collect::<Vec<_>>()
+                        .join(" ");
 
-
-                    let addr:u64 = emu.memory_operand_to_address(&ins);
+                    let addr: u64 = emu.memory_operand_to_address(&ins);
                     let value = match emu.memory_read(&ins) {
                         Some(v) => v,
                         None => {
@@ -237,22 +241,21 @@ impl Script {
                     };
                     self.result = value;
                     println!("0x{:x}", value);
-
-                },
-                "mw"|"wm" => {
+                }
+                "mw" | "wm" => {
                     // mw 0x11223344 dword ptr [eax + 3]
 
-                    if args.len() < 3 { 
+                    if args.len() < 3 {
                         println!("error in line {}, command `mw` without arguments", i);
                         return;
                     }
 
-                    let ins = args.iter()
-                         .skip(2)
-                         .map(|s| s.to_owned())
-                         .collect::<Vec<_>>()
-                         .join(" ");
-
+                    let ins = args
+                        .iter()
+                        .skip(2)
+                        .map(|s| s.to_owned())
+                        .collect::<Vec<_>>()
+                        .join(" ");
 
                     let value = self.resolve(args[1], i, emu);
 
@@ -260,21 +263,22 @@ impl Script {
                         println!("error in line {}, cannot write on `{}`", i, args[1]);
                         return;
                     }
-                },
-                "mwb" => { 
+                }
+                "mwb" => {
                     let addr = self.resolve(args[1], i, emu);
-                    let bytes = args.iter()
-                         .skip(1)
-                         .take(args.len() - 2)
-                         .map(|s| s.to_owned())
-                         .collect::<Vec<_>>()
-                         .join(" ");
+                    let bytes = args
+                        .iter()
+                        .skip(1)
+                        .take(args.len() - 2)
+                        .map(|s| s.to_owned())
+                        .collect::<Vec<_>>()
+                        .join(" ");
 
                     emu.maps.write_spaced_bytes(addr, &bytes);
-                },
+                }
                 "b" => {
                     emu.bp.show();
-                },
+                }
                 "ba" => {
                     if args.len() < 2 {
                         println!("error in line {}, address is missing", i);
@@ -282,7 +286,7 @@ impl Script {
                     }
                     let addr = self.resolve(args[1], i, emu);
                     emu.bp.set_bp(addr);
-                },
+                }
                 "bmr" => {
                     if args.len() < 2 {
                         println!("error in line {}, address is missing", i);
@@ -291,7 +295,7 @@ impl Script {
                     let addr = self.resolve(args[1], i, emu);
 
                     emu.bp.set_mem_read(addr);
-                },
+                }
                 "bmw" => {
                     if args.len() < 2 {
                         println!("error in line {}, address is missing", i);
@@ -299,7 +303,7 @@ impl Script {
                     }
                     let addr = self.resolve(args[1], i, emu);
                     emu.bp.set_mem_write(addr);
-                },
+                }
                 "bi" => {
                     if args.len() < 2 {
                         println!("error in line {}, number is missing", i);
@@ -314,32 +318,34 @@ impl Script {
                     };
                     emu.bp.set_instruction(num);
                     emu.exp = num;
-                },
+                }
                 "bc" => {
                     emu.bp.clear_bp();
-                    emu.exp = emu.pos+1;
-                },
+                    emu.exp = emu.pos + 1;
+                }
                 "bcmp" => {
                     emu.break_on_next_cmp = true;
-                },
+                }
                 "cls" => {
                     println!("{}", emu.colors.clear_screen);
-                },
+                }
                 "s" => {
                     if emu.cfg.is_64bits {
                         emu.maps.dump_qwords(emu.regs.rsp, 10);
                     } else {
                         emu.maps.dump_dwords(emu.regs.get_esp(), 10);
                     }
-                },
+                }
                 "v" => {
                     if emu.cfg.is_64bits {
-                        emu.maps.dump_qwords(emu.regs.rbp-0x100, 100);
+                        emu.maps.dump_qwords(emu.regs.rbp - 0x100, 100);
                     } else {
-                        emu.maps.dump_dwords(emu.regs.get_ebp()-0x100, 100);
+                        emu.maps.dump_dwords(emu.regs.get_ebp() - 0x100, 100);
                     }
-                    emu.maps.get_mem("stack").print_dwords_from_to(emu.regs.get_ebp(), emu.regs.get_ebp()+0x100);
-                },
+                    emu.maps
+                        .get_mem("stack")
+                        .print_dwords_from_to(emu.regs.get_ebp(), emu.regs.get_ebp() + 0x100);
+                }
                 "sv" => {
                     if args.len() < 2 {
                         println!("error in line {}, number is missing", i);
@@ -353,7 +359,7 @@ impl Script {
                         }
                     };
                     emu.cfg.verbose = num as u32;
-                },
+                }
                 "tr" => {
                     if args.len() < 2 {
                         println!("error in line {}, register is missing", i);
@@ -361,20 +367,22 @@ impl Script {
                     }
                     emu.cfg.trace_reg = true;
                     emu.cfg.reg_names.push(args[1].to_string());
-                },
+                }
                 "trc" => {
                     emu.cfg.trace_reg = false;
                     emu.cfg.reg_names.clear();
-                },
+                }
                 "c" => {
-                    emu.is_running.store(1, std::sync::atomic::Ordering::Relaxed);
+                    emu.is_running
+                        .store(1, std::sync::atomic::Ordering::Relaxed);
                     emu.run(0);
-                },
+                }
                 "cr" => {
                     emu.break_on_next_return = true;
-                    emu.is_running.store(1, std::sync::atomic::Ordering::Relaxed);
+                    emu.is_running
+                        .store(1, std::sync::atomic::Ordering::Relaxed);
                     emu.run(0);
-                },
+                }
                 "f" => emu.flags.print(),
                 "fc" => emu.flags.clear(),
                 "fz" => emu.flags.f_zf = !emu.flags.f_zf,
@@ -404,7 +412,7 @@ impl Script {
                     map.set_size(sz);
                     println!("allocated {} at 0x{:x} sz: {}", &args[1], addr, sz);
                     self.result = addr;
-                },
+                }
                 "mca" => {
                     // mc mymap <addr> <sz>
                     if args.len() != 4 {
@@ -423,7 +431,7 @@ impl Script {
                     map.set_base(addr);
                     map.set_size(sz);
                     println!("allocated {} at 0x{:x} sz: {}", &args[1], addr, sz);
-                },
+                }
                 "ml" => {
                     // ml <mapname> <file>
                     if args.len() != 3 {
@@ -431,7 +439,7 @@ impl Script {
                         return;
                     }
                     emu.maps.get_mem(&args[1]).load(&args[2]);
-                },
+                }
                 "mn" => {
                     // mn <address>
                     if args.len() != 2 {
@@ -451,14 +459,26 @@ impl Script {
 
                     let mem = emu.maps.get_mem(&name);
                     if emu.cfg.is_64bits {
-                        println!("map: {} 0x{:x}-0x{:x} ({})", name, mem.get_base(), mem.get_bottom(), mem.size());
+                        println!(
+                            "map: {} 0x{:x}-0x{:x} ({})",
+                            name,
+                            mem.get_base(),
+                            mem.get_bottom(),
+                            mem.size()
+                        );
                     } else {
-                        println!("map: {} 0x{:x}-0x{:x} ({})", name, mem.get_base() as u32, mem.get_bottom() as u32, mem.size());
+                        println!(
+                            "map: {} 0x{:x}-0x{:x} ({})",
+                            name,
+                            mem.get_base() as u32,
+                            mem.get_bottom() as u32,
+                            mem.size()
+                        );
                     }
-                },
+                }
                 "ma" => {
                     emu.maps.show_allocs();
-                },
+                }
                 "md" => {
                     // md <addr>
                     if args.len() != 2 {
@@ -469,7 +489,7 @@ impl Script {
                     let addr = self.resolve(args[1], i, emu);
 
                     emu.maps.dump(addr);
-                },
+                }
                 "mrd" => {
                     // mrd <addr> <n>
                     if args.len() != 3 {
@@ -488,7 +508,7 @@ impl Script {
                     };
 
                     emu.maps.dump_dwords(addr, num);
-                },
+                }
                 "mrq" => {
                     // mrq <addr> <n>
                     if args.len() != 3 {
@@ -507,9 +527,9 @@ impl Script {
                     };
 
                     emu.maps.dump_qwords(addr, num);
-                },
+                }
                 "mds" => {
-                    // mds <addr> 
+                    // mds <addr>
                     if args.len() != 2 {
                         println!("error in line {}, address is missing", i);
                         return;
@@ -522,7 +542,7 @@ impl Script {
                     } else {
                         println!("0x{:x}: '{}'", addr as u32, emu.maps.read_string(addr));
                     }
-                },
+                }
                 "mdw" => {
                     // mdw <addr>
                     if args.len() != 2 {
@@ -537,7 +557,7 @@ impl Script {
                     } else {
                         println!("0x{:x}: '{}'", addr as u32, emu.maps.read_wide_string(addr));
                     }
-                },
+                }
                 "mdd" => {
                     // mdd <addr> <sz> <filename>
                     if args.len() != 4 {
@@ -560,7 +580,7 @@ impl Script {
                         return;
                     }
                     emu.maps.save(addr, sz, args[3].to_string());
-                },
+                }
                 "mdda" => {
                     // mdda <folder>
                     if args.len() != 2 {
@@ -568,14 +588,14 @@ impl Script {
                         return;
                     }
                     emu.maps.save_all_allocs(args[1].to_string());
-                },
+                }
                 "mt" => {
                     if emu.maps.mem_test() {
                         println!("mem tests passed ok.");
                     } else {
                         println!("memory errors.");
                     }
-                },
+                }
                 "eip" => {
                     // eip <addr>
                     if args.len() != 2 {
@@ -584,9 +604,9 @@ impl Script {
                     }
 
                     let addr = self.resolve(args[1], i, emu);
-    
+
                     emu.set_eip(addr, false);
-                },
+                }
                 "rip" => {
                     // rip <addr>
                     if args.len() != 2 {
@@ -595,9 +615,9 @@ impl Script {
                     }
 
                     let addr = self.resolve(args[1], i, emu);
-    
+
                     emu.set_rip(addr, false);
-                },
+                }
                 "push" => {
                     // push <hexvalue>
                     if args.len() != 2 {
@@ -612,7 +632,7 @@ impl Script {
                     } else {
                         emu.stack_push32((value & 0xffffffff) as u32);
                     }
-                },
+                }
                 "pop" => {
                     // pop
                     if args.len() != 1 {
@@ -629,7 +649,7 @@ impl Script {
                         println!("poped value 0x{:x}", value);
                         self.result = value as u64;
                     }
-                },
+                }
                 "fpu" => emu.fpu.print(),
                 "md5" => {
                     // md5 <mapname>
@@ -641,7 +661,7 @@ impl Script {
                     let mem = emu.maps.get_mem(&args[1]);
                     let md5 = mem.md5();
                     println!("md5sum: {:x}", md5);
-                },
+                }
                 "ss" => {
                     // ss <mapname> <string>
                     if args.len() < 2 {
@@ -649,11 +669,12 @@ impl Script {
                         return;
                     }
 
-                    let kw = args.iter()
-                         .skip(2)
-                         .map(|s| s.to_owned())
-                         .collect::<Vec<_>>()
-                         .join(" ");
+                    let kw = args
+                        .iter()
+                        .skip(2)
+                        .map(|s| s.to_owned())
+                        .collect::<Vec<_>>()
+                        .join(" ");
 
                     let result = match emu.maps.search_string(&kw, &args[1]) {
                         Some(v) => v,
@@ -667,11 +688,14 @@ impl Script {
                         if emu.cfg.is_64bits {
                             println!("found 0x{:x} '{}'", *addr, emu.maps.read_string(*addr));
                         } else {
-                            println!("found 0x{:x} '{}'", *addr as u32, emu.maps.read_string(*addr));
+                            println!(
+                                "found 0x{:x} '{}'",
+                                *addr as u32,
+                                emu.maps.read_string(*addr)
+                            );
                         }
                     }
-
-                },
+                }
                 "sb" => {
                     // sb <map> <spaced bytes>
                     if args.len() < 2 {
@@ -679,48 +703,51 @@ impl Script {
                         return;
                     }
 
-                    let bytes = args.iter()
-                         .skip(2)
-                         .map(|s| s.to_owned())
-                         .collect::<Vec<_>>()
-                         .join(" ");
+                    let bytes = args
+                        .iter()
+                        .skip(2)
+                        .map(|s| s.to_owned())
+                        .collect::<Vec<_>>()
+                        .join(" ");
 
                     if emu.maps.search_spaced_bytes(&bytes, &args[1]).len() == 0 {
                         println!("bytes not found.");
                     }
-                },
+                }
                 "sba" => {
                     // sba <spaced bytes>
 
-                    let bytes = args.iter()
-                         .skip(1)
-                         .map(|s| s.to_owned())
-                         .collect::<Vec<_>>()
-                         .join(" ");
+                    let bytes = args
+                        .iter()
+                        .skip(1)
+                        .map(|s| s.to_owned())
+                        .collect::<Vec<_>>()
+                        .join(" ");
 
                     let results = emu.maps.search_spaced_bytes_in_all(&bytes);
                     for addr in results.iter() {
                         println!("found at 0x{:x}", addr);
                         self.result = *addr;
                     }
-                },
+                }
                 "ssa" => {
                     // ssa <string>
 
-                    let s = args.iter()
-                         .skip(1)
-                         .map(|s| s.to_owned())
-                         .collect::<Vec<_>>()
-                         .join(" ");
+                    let s = args
+                        .iter()
+                        .skip(1)
+                        .map(|s| s.to_owned())
+                        .collect::<Vec<_>>()
+                        .join(" ");
 
                     emu.maps.search_string_in_all(s);
-                },
+                }
                 "seh" => {
                     println!("0x{:x}", emu.seh);
-                },
+                }
                 "veh" => {
                     println!("0x{:x}", emu.veh);
-                },
+                }
                 "ll" => {
                     // ll <addr>
                     let addr = self.resolve(args[1], i, emu);
@@ -735,13 +762,13 @@ impl Script {
                             break;
                         }
                     }
-                },
+                }
                 "n" => {
                     emu.step();
-                },
+                }
                 "m" => {
                     emu.maps.print_maps();
-                },
+                }
                 "ms" => {
                     // ms <keyword>
                     if args.len() != 2 {
@@ -757,7 +784,7 @@ impl Script {
                         return;
                     }
 
-                    let addr = self.resolve(args[1], i, emu); 
+                    let addr = self.resolve(args[1], i, emu);
 
                     let sz = match self.to_int(&args[2]) {
                         Some(v) => v,
@@ -768,7 +795,7 @@ impl Script {
                     };
 
                     emu.disassemble(addr, sz as u32);
-                },
+                }
                 "ldr" => {
                     // ldr
                     if emu.cfg.is_64bits {
@@ -776,7 +803,7 @@ impl Script {
                     } else {
                         peb32::show_linked_modules(emu);
                     }
-                },
+                }
                 "iat" => {
                     // iat <keyword>
                     if args.len() != 2 {
@@ -784,9 +811,9 @@ impl Script {
                         return;
                     }
 
-                    let addr:u64;
-                    let lib:String;
-                    let name:String;
+                    let addr: u64;
+                    let lib: String;
+                    let name: String;
                     if emu.cfg.is_64bits {
                         (addr, lib, name) = emu::winapi64::kernel32::search_api_name(emu, &args[1]);
                     } else {
@@ -798,7 +825,7 @@ impl Script {
                     } else {
                         println!("found: 0x{:x} {}!{}", addr, lib, name);
                     }
-                },
+                }
                 "iatx" => {
                     // iatx <api>
                     //TODO: implement this well
@@ -807,9 +834,9 @@ impl Script {
                         return;
                     }
 
-                    let addr:u64;
-                    let lib:String;
-                    let name:String;
+                    let addr: u64;
+                    let lib: String;
+                    let name: String;
                     if emu.cfg.is_64bits {
                         (addr, lib, name) = emu::winapi64::kernel32::search_api_name(emu, &args[1]);
                     } else {
@@ -821,7 +848,7 @@ impl Script {
                     } else {
                         println!("found: 0x{:x} {}!{}", addr, lib, name);
                     }
-                },
+                }
                 "iatd" => {
                     // iatd <module>
                     if args.len() != 2 {
@@ -833,7 +860,7 @@ impl Script {
                     } else {
                         emu::winapi32::kernel32::dump_module_iat(emu, &args[1]);
                     }
-                },
+                }
                 "dt" => {
                     // dt <structure> <address>
                     if args.len() != 3 {
@@ -841,7 +868,7 @@ impl Script {
                         return;
                     }
 
-                    let addr = self.resolve(args[2], i, emu); 
+                    let addr = self.resolve(args[2], i, emu);
 
                     match args[1] {
                         "peb" => {
@@ -897,9 +924,9 @@ impl Script {
                             s.print();
                         }
 
-                        _  => println!("unrecognized structure."),
+                        _ => println!("unrecognized structure."),
                     }
-                },
+                }
                 "if" => {
                     // if result == rax
                     // if rbx > 0x123
@@ -909,8 +936,8 @@ impl Script {
                         return;
                     }
 
-                    let a:u64 = self.resolve(args[1], i, emu);
-                    let b:u64 = self.resolve(args[3], i, emu);
+                    let a: u64 = self.resolve(args[1], i, emu);
+                    let b: u64 = self.resolve(args[3], i, emu);
 
                     if args[2] == "==" {
                         if a != b {
@@ -940,15 +967,14 @@ impl Script {
                         println!("error in line {}, if with worng operator", i);
                         return;
                     }
-
-                },
+                }
                 "console" => {
                     emu.spawn_console();
-                },
+                }
                 "call" => {
                     // call <addr> <args>
                     if args.len() < 2 {
-                        panic!("error in line {}, call with no address", i);                        
+                        panic!("error in line {}, call with no address", i);
                     }
 
                     let addr = self.resolve(args[1], i, emu);
@@ -964,7 +990,7 @@ impl Script {
                     }
 
                     // push return address
-                    let retaddr:u64;
+                    let retaddr: u64;
                     if emu.cfg.is_64bits {
                         retaddr = emu.regs.rip;
                         emu.stack_push64(emu.regs.rip);
@@ -979,10 +1005,10 @@ impl Script {
                         emu.set_eip(addr, false);
                     }
 
-                    emu.is_running.store(1, std::sync::atomic::Ordering::Relaxed);
+                    emu.is_running
+                        .store(1, std::sync::atomic::Ordering::Relaxed);
                     emu.run(retaddr);
-
-                },
+                }
                 "set" => {
                     //set <hexnum>
                     if args.len() < 2 {
@@ -992,10 +1018,10 @@ impl Script {
                     let value = self.resolve(args[1], i, emu);
 
                     self.result = value;
-                },
+                }
                 "loop" => {
                     self.looped = i as u64;
-                },
+                }
                 "endloop" => {
                     if self.result <= 1 {
                         self.looped = 0;
@@ -1005,14 +1031,13 @@ impl Script {
                     self.result -= 1;
                     i = self.looped as usize;
                     continue;
-                },
+                }
                 "trace" => {
                     self.trace = true;
                 }
 
                 _ => panic!("error in line {}, unknown command", i),
             }
-
         }
     }
 }

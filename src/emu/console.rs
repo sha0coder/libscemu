@@ -1,18 +1,15 @@
 use std::io::Write;
 use std::num::ParseIntError;
 
-
-pub struct Console {
-
-}
+pub struct Console {}
 
 impl Console {
     pub fn new() -> Console {
         println!("--- console ---");
-        Console{}
+        Console {}
     }
 
-    pub fn print(&self, msg:&str) {
+    pub fn print(&self, msg: &str) {
         print!("{}", msg);
         std::io::stdout().flush().unwrap();
     }
@@ -35,11 +32,11 @@ impl Console {
         line
     }
 
-    pub fn cmd_hex32(&self) -> Result<u32,ParseIntError> {
+    pub fn cmd_hex32(&self) -> Result<u32, ParseIntError> {
         let mut x = self.cmd();
 
         if x.ends_with('h') {
-            x = x[0..x.len()-1].to_string();
+            x = x[0..x.len() - 1].to_string();
         }
         if x.starts_with("0x") {
             x = x[2..x.len()].to_string();
@@ -48,10 +45,10 @@ impl Console {
         return u32::from_str_radix(x.as_str(), 16);
     }
 
-    pub fn cmd_hex64(&self) -> Result<u64,ParseIntError> {
+    pub fn cmd_hex64(&self) -> Result<u64, ParseIntError> {
         let mut x = self.cmd();
         if x.ends_with('h') {
-            x = x[0..x.len()-1].to_string();
+            x = x[0..x.len() - 1].to_string();
         }
         if x.starts_with("0x") {
             x = x[2..x.len()].to_string();
@@ -60,11 +57,11 @@ impl Console {
         return u64::from_str_radix(x.as_str(), 16);
     }
 
-    pub fn cmd_num(&self) -> Result<u64,ParseIntError> {
+    pub fn cmd_num(&self) -> Result<u64, ParseIntError> {
         u64::from_str_radix(self.cmd().as_str(), 10)
     }
 
-/*
+    /*
     pub fn cmd_num<T>(&self) -> Result<T,ParseIntError> {
         self.cmd().as_str().parse::<T>()
     }*/
@@ -109,7 +106,9 @@ impl Console {
         println!("mn ..................... memory name of an address");
         println!("ml ..................... memory load file content to map");
         println!("mr ..................... memory read, speficy ie: dword ptr [esi]");
-        println!("mw ..................... memory write, speficy ie: dword ptr [esi]  and then: 1af");
+        println!(
+            "mw ..................... memory write, speficy ie: dword ptr [esi]  and then: 1af"
+        );
         println!("mwb .................... memory write bytes, input spaced bytes");
         println!("md ..................... memory dump");
         println!("mrd .................... memory read dwords");
@@ -138,5 +137,4 @@ impl Console {
         println!();
         println!("---");
     }
-
 }

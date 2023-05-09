@@ -1,9 +1,9 @@
 #[derive(Clone)]
 pub struct Breakpoint {
-    addr:u64,
+    addr: u64,
     instruction: u64,
-    mem_read_addr:u64,
-    mem_write_addr:u64,
+    mem_read_addr: u64,
+    mem_write_addr: u64,
 }
 
 impl Breakpoint {
@@ -16,7 +16,7 @@ impl Breakpoint {
         }
     }
 
-    pub fn set_bp(&mut self, addr:u64) {
+    pub fn set_bp(&mut self, addr: u64) {
         self.addr = addr;
     }
 
@@ -26,15 +26,15 @@ impl Breakpoint {
         self.mem_write_addr = 0;
     }
 
-    pub fn set_mem_read(&mut self, addr:u64) {
+    pub fn set_mem_read(&mut self, addr: u64) {
         self.mem_read_addr = addr;
     }
 
-    pub fn set_mem_write(&mut self, addr:u64) {
+    pub fn set_mem_write(&mut self, addr: u64) {
         self.mem_write_addr = addr;
     }
 
-    pub fn set_instruction(&mut self, ins:u64) {
+    pub fn set_instruction(&mut self, ins: u64) {
         self.instruction = ins;
     }
 

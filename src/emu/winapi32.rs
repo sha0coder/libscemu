@@ -1,21 +1,20 @@
-pub mod kernel32;
-mod ntdll;
-mod user32;
-mod wininet;
-mod ws2_32;
 mod advapi32;
 mod crypt32;
 mod dnsapi;
+pub mod helper;
+pub mod kernel32;
 mod mscoree;
 mod msvcrt;
-mod shlwapi;
+mod ntdll;
 mod oleaut32;
-pub mod helper;
+mod shlwapi;
+mod user32;
+mod wininet;
+mod ws2_32;
 
 use crate::emu;
 
-
-pub fn gateway(addr:u32, name:String, emu:&mut emu::Emu) { 
+pub fn gateway(addr: u32, name: String, emu: &mut emu::Emu) {
     emu.regs.sanitize32();
     let unimplemented_api = match name.as_str() {
         "kernel32_text" => kernel32::gateway(addr, emu),
@@ -34,9 +33,7 @@ pub fn gateway(addr:u32, name:String, emu:&mut emu::Emu) {
         _ => panic!("/!\\ trying to execute on {} at 0x{:x}", name, addr),
     };
 
-
     if unimplemented_api.len() > 0 {
-
         if emu.cfg.skip_unimplemented {
             let params = emu.banzai.get_params(&unimplemented_api);
             println!("{} {} parameters", unimplemented_api, params);
@@ -45,10 +42,8 @@ pub fn gateway(addr:u32, name:String, emu:&mut emu::Emu) {
                 emu.stack_pop32(false);
             }
             emu.regs.rax = 1;
-
         } else {
             panic!("function is not in emulation list.");
         }
     }
-
 }
