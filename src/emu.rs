@@ -3673,9 +3673,11 @@ impl Emu {
             self.stack_push32(*arg as u32);
         }
         let ret_addr = self.regs.get_eip();
+        let orig_stack = self.regs.get_esp();
         self.stack_push32(ret_addr as u32);
         self.regs.set_eip(addr);
         self.run(Some(ret_addr))?;
+        self.regs.set_esp(orig_stack);
         return Ok(self.regs.get_eax() as u32);
     }
 
@@ -3684,9 +3686,11 @@ impl Emu {
             self.stack_push64(*arg);
         }
         let ret_addr = self.regs.rip;
+        let orig_stack = self.regs.rsp;
         self.stack_push64(ret_addr);
         self.regs.rip = addr;
         self.run(Some(ret_addr))?;
+        self.regs.rsp = orig_stack;
         return Ok(self.regs.rax);
     }
 
