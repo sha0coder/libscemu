@@ -24,6 +24,7 @@ mod pe32;
 mod pe64;
 mod peb32;
 mod peb64;
+mod elf32;
 pub mod regs64;
 pub mod script;
 pub mod structures;
@@ -47,6 +48,7 @@ use maps::Maps;
 use pe32::PE32;
 use pe64::PE64;
 use regs64::Regs64;
+//use elf32::Elf32;
 use std::sync::atomic;
 use std::sync::Arc;
 
