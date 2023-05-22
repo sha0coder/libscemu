@@ -6,6 +6,8 @@ pub const EI_NIDENT:usize = 16;
 pub struct Elf32 {
     pub bin: Mem64,
     pub elf_hdr: Elf32Ehdr,
+    pub elf_phdr: Elf32Phdr,
+    pub elf_shdr: Elf32Shdr,
 }
 
 impl Elf32 {
@@ -16,10 +18,14 @@ impl Elf32 {
         }
 
         let ehdr:Elf32Ehdr = Elf32Ehdr::parse(&bin);
+        let phdr:Elf32Phdr = Elf32Phdr::parse(&bin);
+        let shdr:Elf32Shdr = Elf32Shdr::parse(&bin);
 
         Ok(Elf32 {
             bin: bin,
             elf_hdr: ehdr,
+            elf_phdr: phdr,
+            elf_shdr: shdr,
         })
     }
 
@@ -106,6 +112,62 @@ impl Elf32Ehdr {
             e_shentsize: bin.read_word(off+30),
             e_shnum: bin.read_word(off+32),
             e_shstrndx: bin.read_word(off+34),
+        }
+    }
+}
+
+pub struct Elf32Phdr {
+    pub p_type: u32,
+    pub p_offset: u32,
+    pub p_vaddr: u32,
+    pub p_paddr: u32,
+    pub p_filesz: u32,
+    pub p_memsz: u32,
+    pub p_flags: u32,
+    pub p_align: u32,
+}
+
+impl Elf32Phdr {
+    pub fn parse(bin: &Mem64) -> Elf32Phdr {
+        Elf32Phdr {
+            p_type: bin.read_dword(0),
+            p_offset: bin.read_dword(4),
+            p_vaddr: bin.read_dword(8),
+            p_paddr: bin.read_dword(12),
+            p_filesz: bin.read_dword(16),
+            p_memsz: bin.read_dword(20),
+            p_flags: bin.read_dword(24),
+            p_align: bin.read_dword(28),
+        }
+    }
+}
+
+pub struct Elf32Shdr {
+    pub sh_name: u32,
+    pub sh_type: u32,
+    pub sh_flags: u32,
+    pub sh_addr: u32,
+    pub sh_offset: u32,
+    pub sh_size: u32,
+    pub sh_link: u32,
+    pub sh_info: u32,
+    pub sh_addralign: u32,
+    pub sh_entsize: u32,
+}
+
+impl Elf32Shdr {
+    pub fn parse(bin: &Mem64) -> Elf32Shdr {
+        Elf32Shdr {
+            sh_name: bin.read_dword(0),
+            sh_type: bin.read_dword(4),
+            sh_flags: bin.read_dword(8),
+            sh_addr: bin.read_dword(12),
+            sh_offset: bin.read_dword(16),
+            sh_size: bin.read_dword(20),
+            sh_link: bin.read_dword(24),
+            sh_info: bin.read_dword(28),
+            sh_addralign: bin.read_dword(32),
+            sh_entsize: bin.read_dword(36),
         }
     }
 }
