@@ -1,6 +1,6 @@
 /*
  * PE64 Structures and loader
-*/
+ */
 
 use crate::emu;
 use crate::emu::pe32;
@@ -8,6 +8,7 @@ use crate::emu::pe32::PE32;
 use std::fs::File;
 use std::io::Read;
 use std::str;
+
 
 macro_rules! read_u8 {
     ($raw:expr, $off:expr) => {
@@ -52,7 +53,8 @@ macro_rules! read_u64_le {
     };
 }
 
-/*macro_rules! write_u64_le {
+/*
+macro_rules! write_u64_le {
     ($raw:expr, $off:expr, $val:expr) => {
       $raw[$off+0]  = ($val & 0x00000000_000000ff) as u8;
       $raw[$off+1] = (($val & 0x00000000_0000ff00) >> 8) as u8;

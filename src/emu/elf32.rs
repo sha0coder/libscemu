@@ -1,10 +1,33 @@
 use super::err::ScemuError;
 use super::maps::mem64::Mem64;
 
+macro_rules! read_u8 {
+    ($raw:expr, $off:expr) => {
+        $raw[$off]
+    };
+}
+
+macro_rules! read_u16_le {
+    ($raw:expr, $off:expr) => {
+        (($raw[$off + 1] as u16) << 8) | ($raw[$off] as u16)
+    };
+}
+
+macro_rules! read_u32_le {
+    ($raw:expr, $off:expr) => {
+        (($raw[$off + 3] as u32) << 24)
+            | (($raw[$off + 2] as u32) << 16)
+            | (($raw[$off + 1] as u32) << 8)
+            | ($raw[$off] as u32)
+    };
+}
+
+
+
 pub const EI_NIDENT:usize = 16;
 
 pub struct Elf32 {
-    pub bin: Mem64,
+    pub bin: Vec<u8>,
     pub elf_hdr: Elf32Ehdr,
     pub elf_phdr: Elf32Phdr,
     pub elf_shdr: Elf32Shdr,
@@ -12,14 +35,16 @@ pub struct Elf32 {
 
 impl Elf32 {
     pub fn parse(filename: &str) -> Result<Elf32, ScemuError> {
-        let mut bin: Mem64 = Mem64::new();
-        if !bin.load(&filename) {
+        let mut mem: Mem64 = Mem64::new();
+        if !mem.load(&filename) {
             return Err(ScemuError::new("cannot open elf binary"));
         }
+        let bin = mem.get_mem();
 
         let ehdr:Elf32Ehdr = Elf32Ehdr::parse(&bin);
-        let phdr:Elf32Phdr = Elf32Phdr::parse(&bin);
-        let shdr:Elf32Shdr = Elf32Shdr::parse(&bin);
+        let phdr:Elf32Phdr = Elf32Phdr::parse(&bin, ehdr.e_phoff as usize);
+        let shdr:Elf32Shdr = Elf32Shdr::parse(&bin, ehdr.e_shoff as usize);
+
 
         Ok(Elf32 {
             bin: bin,
@@ -78,40 +103,40 @@ impl Elf32Ehdr {
         }
     }
 
-    pub fn parse(bin: &Mem64) -> Elf32Ehdr { 
+    pub fn parse(bin: &[u8]) -> Elf32Ehdr { 
         let off = EI_NIDENT as u64;
         Elf32Ehdr {
             e_ident: [
-                bin.read_byte(0),
-                bin.read_byte(1),
-                bin.read_byte(2),
-                bin.read_byte(3),
-                bin.read_byte(4),
-                bin.read_byte(5),
-                bin.read_byte(6),
-                bin.read_byte(7),
-                bin.read_byte(8),
-                bin.read_byte(9),
-                bin.read_byte(10),
-                bin.read_byte(11),
-                bin.read_byte(12),
-                bin.read_byte(13),
-                bin.read_byte(14),
-                bin.read_byte(15),
+                read_u8!(bin, 0),
+                read_u8!(bin, 1),
+                read_u8!(bin, 2),
+                read_u8!(bin, 3),
+                read_u8!(bin, 4),
+                read_u8!(bin, 5),
+                read_u8!(bin, 6),
+                read_u8!(bin, 7),
+                read_u8!(bin, 8),
+                read_u8!(bin, 9),
+                read_u8!(bin, 10),
+                read_u8!(bin, 11),
+                read_u8!(bin, 12),
+                read_u8!(bin, 13),
+                read_u8!(bin, 14),
+                read_u8!(bin, 15),
             ],
-            e_type: bin.read_word(off),
-            e_machine: bin.read_word(off+2),
-            e_version: bin.read_dword(off+4),
-            e_entry: bin.read_dword(off+8),
-            e_phoff: bin.read_dword(off+12),
-            e_shoff: bin.read_dword(off+16),
-            e_flags: bin.read_dword(off+20),
-            e_ehsize: bin.read_word(off+24),
-            e_phentsize: bin.read_word(off+26),
-            e_phnum: bin.read_word(off+28),
-            e_shentsize: bin.read_word(off+30),
-            e_shnum: bin.read_word(off+32),
-            e_shstrndx: bin.read_word(off+34),
+            e_type: read_u16_le!(bin, 16),
+            e_machine: read_u16_le!(bin, 18),
+            e_version: read_u32_le!(bin, 20),
+            e_entry: read_u32_le!(bin, 24),
+            e_phoff: read_u32_le!(bin, 28),
+            e_shoff: read_u32_le!(bin, 32),
+            e_flags: read_u32_le!(bin, 36),
+            e_ehsize: read_u16_le!(bin, 40),
+            e_phentsize: read_u16_le!(bin, 42),
+            e_phnum: read_u16_le!(bin, 44),
+            e_shentsize: read_u16_le!(bin, 46),
+            e_shnum: read_u16_le!(bin, 48),
+            e_shstrndx: read_u16_le!(bin, 50),
         }
     }
 }
@@ -128,16 +153,16 @@ pub struct Elf32Phdr {
 }
 
 impl Elf32Phdr {
-    pub fn parse(bin: &Mem64) -> Elf32Phdr {
+    pub fn parse(bin: &[u8], phoff: usize) -> Elf32Phdr {
         Elf32Phdr {
-            p_type: bin.read_dword(0),
-            p_offset: bin.read_dword(4),
-            p_vaddr: bin.read_dword(8),
-            p_paddr: bin.read_dword(12),
-            p_filesz: bin.read_dword(16),
-            p_memsz: bin.read_dword(20),
-            p_flags: bin.read_dword(24),
-            p_align: bin.read_dword(28),
+            p_type: read_u32_le!(bin, phoff),
+            p_offset: read_u32_le!(bin, phoff+4),
+            p_vaddr: read_u32_le!(bin, phoff+8),
+            p_paddr: read_u32_le!(bin, phoff+12),
+            p_filesz: read_u32_le!(bin, phoff+16),
+            p_memsz: read_u32_le!(bin, phoff+20),
+            p_flags: read_u32_le!(bin, phoff+24),
+            p_align: read_u32_le!(bin, phoff+28),
         }
     }
 }
@@ -156,18 +181,18 @@ pub struct Elf32Shdr {
 }
 
 impl Elf32Shdr {
-    pub fn parse(bin: &Mem64) -> Elf32Shdr {
+    pub fn parse(bin: &[u8], shoff: usize) -> Elf32Shdr {
         Elf32Shdr {
-            sh_name: bin.read_dword(0),
-            sh_type: bin.read_dword(4),
-            sh_flags: bin.read_dword(8),
-            sh_addr: bin.read_dword(12),
-            sh_offset: bin.read_dword(16),
-            sh_size: bin.read_dword(20),
-            sh_link: bin.read_dword(24),
-            sh_info: bin.read_dword(28),
-            sh_addralign: bin.read_dword(32),
-            sh_entsize: bin.read_dword(36),
+            sh_name: read_u32_le!(bin, shoff),
+            sh_type: read_u32_le!(bin, shoff+4),
+            sh_flags: read_u32_le!(bin, shoff+8),
+            sh_addr: read_u32_le!(bin, shoff+12),
+            sh_offset: read_u32_le!(bin, shoff+16),
+            sh_size: read_u32_le!(bin, shoff+20),
+            sh_link: read_u32_le!(bin, shoff+24),
+            sh_info: read_u32_le!(bin, shoff+28),
+            sh_addralign: read_u32_le!(bin, shoff+32),
+            sh_entsize: read_u32_le!(bin, 36),
         }
     }
 }

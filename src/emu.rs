@@ -33,6 +33,7 @@ pub mod syscall64;
 mod winapi32;
 mod winapi64;
 
+
 use err::ScemuError;
 use crate::config::Config;
 use atty::Stream;

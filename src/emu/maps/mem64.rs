@@ -36,6 +36,10 @@ impl Mem64 {
         self.mem_name = name.to_string();
     }
 
+    pub fn get_mem(&self) -> Vec<u8> {
+        return self.mem.clone();
+    }
+
     pub fn alloc(&mut self, amount: usize) {
         self.mem = vec![0; amount];
     }
