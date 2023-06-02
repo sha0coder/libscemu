@@ -1,5 +1,7 @@
 use super::err::ScemuError;
+use crate::emu::maps::Maps;
 use super::maps::mem64::Mem64;
+use super::constants;
 
 macro_rules! read_u8 {
     ($raw:expr, $off:expr) => {
@@ -29,8 +31,8 @@ pub const EI_NIDENT:usize = 16;
 pub struct Elf32 {
     pub bin: Vec<u8>,
     pub elf_hdr: Elf32Ehdr,
-    pub elf_phdr: Elf32Phdr,
-    pub elf_shdr: Elf32Shdr,
+    pub elf_phdr: Vec<Elf32Phdr>,
+    pub elf_shdr: Vec<Elf32Shdr>,
 }
 
 impl Elf32 {
@@ -42,16 +44,45 @@ impl Elf32 {
         let bin = mem.get_mem();
 
         let ehdr:Elf32Ehdr = Elf32Ehdr::parse(&bin);
-        let phdr:Elf32Phdr = Elf32Phdr::parse(&bin, ehdr.e_phoff as usize);
-        let shdr:Elf32Shdr = Elf32Shdr::parse(&bin, ehdr.e_shoff as usize);
-
 
         Ok(Elf32 {
             bin: bin,
             elf_hdr: ehdr,
-            elf_phdr: phdr,
-            elf_shdr: shdr,
+            elf_phdr: Vec::new(),
+            elf_shdr: Vec::new(),
         })
+    }
+
+    pub fn load(&mut self, maps: &mut Maps) {
+        let mut off = self.elf_hdr.e_phoff as usize;
+
+        for _ in 0..self.elf_hdr.e_phnum {
+            let phdr:Elf32Phdr = Elf32Phdr::parse(&self.bin, off);
+            self.elf_phdr.push(phdr);
+            off += self.elf_hdr.e_phentsize as usize;
+        }
+
+        off = self.elf_hdr.e_shoff as usize;
+
+        for _ in 0..self.elf_hdr.e_shnum {
+            let shdr:Elf32Shdr = Elf32Shdr::parse(&self.bin, off);
+            self.elf_shdr.push(shdr);
+            off += self.elf_hdr.e_shentsize as usize;
+        }
+
+        for phdr in &self.elf_phdr {
+            if phdr.p_type == constants::PT_LOAD {
+                let mem = maps.create_map(&format!("elf_{}",phdr.p_vaddr));
+                mem.set_base(phdr.p_vaddr.into());
+                mem.set_size(phdr.p_memsz.into());
+                if phdr.p_filesz >phdr.p_memsz {
+                    println!("p_filesz > p_memsz bigger in file than in memory.");
+                }
+                let segment = &self.bin[phdr.p_offset as usize..(phdr.p_offset + phdr.p_filesz) as usize];
+                mem.write_bytes(0, segment.to_vec());
+            }
+        }
+
     }
 
     pub fn is_elf(&self) -> bool {

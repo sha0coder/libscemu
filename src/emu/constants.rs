@@ -123,6 +123,9 @@ pub const EN_US_LOCALE: u32 = 0x0409;
 
 //// LINUX ////
 
+// elf
+pub const PT_LOAD: u32 = 1;
+
 // linux errors
 pub const ENOTSOCK: u64 = -1i64 as u64; /* not open sock */
 pub const EPERM: u64 = -1i64 as u64; /* permissions error */
