@@ -41,12 +41,12 @@ impl Elf32 {
         if !mem.load(&filename) {
             return Err(ScemuError::new("cannot open elf binary"));
         }
-        //let bin = mem.get_mem();
+        let bin = mem.get_mem();
 
         let ehdr:Elf32Ehdr = Elf32Ehdr::parse(&bin);
 
         Ok(Elf32 {
-            bin: mem.get_mem(),
+            bin: bin,
             elf_hdr: ehdr,
             elf_phdr: Vec::new(),
             elf_shdr: Vec::new(),
