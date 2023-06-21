@@ -3672,11 +3672,11 @@ impl Emu {
     }
 
     pub fn call32(&mut self, addr: u64, args: &[u64]) -> Result<u32, ScemuError> {
+        let orig_stack = self.regs.get_esp();
         for arg in args.iter().rev() {
             self.stack_push32(*arg as u32);
         }
         let ret_addr = self.regs.get_eip();
-        let orig_stack = self.regs.get_esp();
         self.stack_push32(ret_addr as u32);
         self.regs.set_eip(addr);
         self.run(Some(ret_addr))?;
@@ -3685,11 +3685,11 @@ impl Emu {
     }
 
     pub fn call64(&mut self, addr: u64, args: &[u64]) -> Result<u64, ScemuError> {
+        let orig_stack = self.regs.rsp;
         for arg in args.iter().rev() {
             self.stack_push64(*arg);
         }
         let ret_addr = self.regs.rip;
-        let orig_stack = self.regs.rsp;
         self.stack_push64(ret_addr);
         self.regs.rip = addr;
         self.run(Some(ret_addr))?;
