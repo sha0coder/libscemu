@@ -465,9 +465,11 @@ fn LoadLibraryW(emu: &mut emu::Emu) {
         emu.colors.light_red, emu.pos, dll, emu.colors.nc
     );
 
-    if dll == "ntdll.dll" {
-        emu.regs.rax = emu.maps.get_mem("ntdll").get_base();
-    }
+    //if dll == "ntdll.dll" {
+    //  emu.regs.rax = emu.maps.get_mem("ntdll").get_base();
+    //}
+
+    emu.regs.rax = load_library(emu, &dll);
 
     emu.stack_pop32(false);
 }
