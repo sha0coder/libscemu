@@ -79,7 +79,7 @@ impl Elf32 {
                     println!("p_filesz > p_memsz bigger in file than in memory.");
                 }
                 let segment = &self.bin[phdr.p_offset as usize..(phdr.p_offset + phdr.p_filesz) as usize];
-                mem.write_bytes(0, segment.to_vec());
+                mem.write_bytes(0, segment);
             }
         }
 

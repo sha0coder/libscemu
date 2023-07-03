@@ -93,7 +93,7 @@ impl Maps {
     pub fn write_bytes(&mut self, addr: u64, data: Vec<u8>) {
         for mem in self.maps.iter_mut() {
             if mem.inside(addr) {
-                mem.write_bytes(addr, data);
+                mem.write_bytes(addr, &data);
                 return;
             }
         }

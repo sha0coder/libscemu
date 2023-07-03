@@ -160,7 +160,7 @@ impl Mem64 {
         self.mem[idx] = value;
     }
 
-    pub fn write_bytes(&mut self, addr: u64, bs: Vec<u8>) {
+    pub fn write_bytes(&mut self, addr: u64, bs: &[u8]) {
         let idx = (addr - self.base_addr) as usize;
         for i in 0..bs.len() {
             self.mem[idx + i] = bs[i];
@@ -192,7 +192,7 @@ impl Mem64 {
     pub fn write_string(&mut self, addr: u64, s: &str) {
         let mut v = s.as_bytes().to_vec();
         v.push(0);
-        self.write_bytes(addr, v);
+        self.write_bytes(addr, &v);
     }
 
     pub fn write_wide_string(&mut self, addr: u64, s: &str) {
@@ -204,7 +204,7 @@ impl Mem64 {
         }
         wv.push(0);
         wv.push(0);
-        self.write_bytes(addr, wv);
+        self.write_bytes(addr, &wv);
     }
 
     pub fn print_bytes(&self) {

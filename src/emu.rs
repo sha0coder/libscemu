@@ -1085,6 +1085,16 @@ impl Emu {
         }
     }
 
+    pub fn load_code_bytes(&mut self, bytes: &[u8]) {
+        if self.cfg.verbose >= 1 {
+            println!("Loading shellcode from bytes");
+        }
+        let code = self.maps.get_mem("code");
+        let base = code.get_base();
+        code.set_size(bytes.len() as u64);
+        code.write_bytes(base, bytes);
+    }
+
     pub fn alloc(&mut self, name: &str, size: u64) -> u64 {
         let addr = match self.maps.alloc(size) {
             Some(a) => a,
