@@ -32,7 +32,7 @@ pub fn and(a: u64, b: u64) -> u64 {
     r
 }
 
-pub fn not(a: u64, bits: u8) -> u64 {
+pub fn not(a: u64, bits: u32) -> u64 {
     let r: u64 = a;
     /*
     match bits {
@@ -69,7 +69,7 @@ pub fn not(a: u64, bits: u8) -> u64 {
     r
 }
 
-pub fn neg(a: u64, bits: u8) -> u64 {
+pub fn neg(a: u64, bits: u32) -> u64 {
     let r: u64 = a;
     /*
     match bits {
@@ -106,7 +106,7 @@ pub fn neg(a: u64, bits: u8) -> u64 {
     r
 }
 
-pub fn ror(a: u64, b: u64, bits: u8) -> u64 {
+pub fn ror(a: u64, b: u64, bits: u32) -> u64 {
     let bb = b as u8;
     let r: u64 = a;
 
@@ -157,7 +157,7 @@ pub fn ror(a: u64, b: u64, bits: u8) -> u64 {
     r
 }
 
-pub fn rol(a: u64, b: u64, sz: u8) -> u64 {
+pub fn rol(a: u64, b: u64, sz: u32) -> u64 {
     let bb = b as u8;
     let r: u64 = a;
     /*
@@ -219,7 +219,7 @@ pub fn rcr(a: u64, b: u64) -> u64 {
     r
 }
 
-pub fn sar1p(a: u64, bits: u8, cf: bool) -> u64 {
+pub fn sar1p(a: u64, bits: u32, cf: bool) -> u64 {
     let r: u64 = a;
 
     /*
@@ -268,7 +268,7 @@ pub fn sar1p(a: u64, bits: u8, cf: bool) -> u64 {
     r
 }
 
-pub fn sar2p(a: u64, b: u64, bits: u8, cf: bool) -> u64 {
+pub fn sar2p(a: u64, b: u64, bits: u32, cf: bool) -> u64 {
     let r: u64 = a;
     let b8 = b as u8;
 
@@ -311,7 +311,7 @@ pub fn sar2p(a: u64, b: u64, bits: u8, cf: bool) -> u64 {
     r
 }
 
-pub fn sal(a: u64, b: u64, bits: u8) -> u64 {
+pub fn sal(a: u64, b: u64, bits: u32) -> u64 {
     let r: u64 = a;
     let b8 = b as u8;
 
@@ -353,7 +353,7 @@ pub fn sal(a: u64, b: u64, bits: u8) -> u64 {
     r
 }
 
-pub fn shl(a: u64, b: u64, bits: u8) -> u64 {
+pub fn shl(a: u64, b: u64, bits: u32) -> u64 {
     let r: u64 = a;
     let b8 = b as u8;
 
@@ -395,7 +395,7 @@ pub fn shl(a: u64, b: u64, bits: u8) -> u64 {
     r
 }
 
-pub fn shr(a: u64, b: u64, bits: u8) -> u64 {
+pub fn shr(a: u64, b: u64, bits: u32) -> u64 {
     let r: u64 = a;
     let b8 = b as u8;
 
@@ -437,7 +437,7 @@ pub fn shr(a: u64, b: u64, bits: u8) -> u64 {
     r
 }
 
-pub fn shld(a: u64, b: u64, c: u64, bits: u8, flags: u32) -> (u64, u32) {
+pub fn shld(a: u64, b: u64, c: u64, bits: u32, flags: u32) -> (u64, u32) {
     let r: u64 = a;
     let c8 = c as u8;
     let new_flags: u32 = 0;
@@ -526,7 +526,7 @@ pub fn shld(a: u64, b: u64, c: u64, bits: u8, flags: u32) -> (u64, u32) {
     (r, new_flags)
 }
 
-pub fn shrd(a: u64, b: u64, c: u64, bits: u8, flags: u32) -> (u64, u32) {
+pub fn shrd(a: u64, b: u64, c: u64, bits: u32, flags: u32) -> (u64, u32) {
     let r: u64 = a;
     let c8 = c as u8;
     let new_flags: u32 = 0;
@@ -615,7 +615,7 @@ pub fn shrd(a: u64, b: u64, c: u64, bits: u8, flags: u32) -> (u64, u32) {
     (r, new_flags)
 }
 
-pub fn div(a: u64, rax: u64, rdx: u64, bits: u8) -> (u64, u64) {
+pub fn div(a: u64, rax: u64, rdx: u64, bits: u32) -> (u64, u64) {
     let r_rax: u64 = 0;
     let r_rdx: u64 = 0;
 
@@ -662,7 +662,7 @@ pub fn div(a: u64, rax: u64, rdx: u64, bits: u8) -> (u64, u64) {
     (r_rdx, r_rax)
 }
 
-pub fn idiv(a: u64, rax: u64, rdx: u64, bits: u8) -> (u64, u64) {
+pub fn idiv(a: u64, rax: u64, rdx: u64, bits: u32) -> (u64, u64) {
     let r_rax: u64 = 0;
     let r_rdx: u64 = 0;
 
@@ -710,7 +710,7 @@ pub fn idiv(a: u64, rax: u64, rdx: u64, bits: u8) -> (u64, u64) {
     (r_rdx, r_rax)
 }
 
-pub fn mul(a: u64, rax: u64, rdx: u64, bits: u8) -> (u64, u64) {
+pub fn mul(a: u64, rax: u64, rdx: u64, bits: u32) -> (u64, u64) {
     let r_rax: u64 = 0;
     let r_rdx: u64 = 0;
 
@@ -757,7 +757,7 @@ pub fn mul(a: u64, rax: u64, rdx: u64, bits: u8) -> (u64, u64) {
     (r_rdx, r_rax)
 }
 
-pub fn imul1p(a: u64, rax: u64, rdx: u64, bits: u8) -> (u64, u64) {
+pub fn imul1p(a: u64, rax: u64, rdx: u64, bits: u32) -> (u64, u64) {
     let r_rax: u64 = 0;
     let r_rdx: u64 = 0;
 
@@ -805,7 +805,7 @@ pub fn imul1p(a: u64, rax: u64, rdx: u64, bits: u8) -> (u64, u64) {
     (r_rdx, r_rax)
 }
 
-pub fn imul2p(a: u64, b: u64, bits: u8) -> u64 {
+pub fn imul2p(a: u64, b: u64, bits: u32) -> u64 {
     let r: u64 = a;
 
     /*
@@ -881,7 +881,7 @@ pub fn imul3p(b:u64, c:u64, bits:u8) -> u64 {
     r
 }*/
 
-pub fn bswap(a: u64, bits: u8) -> u64 {
+pub fn bswap(a: u64, bits: u32) -> u64 {
     let r: u64 = a;
 
     /*
@@ -920,7 +920,7 @@ pub fn movzx(b: u64) -> u64 {
     r
 }
 
-pub fn movsx(b: u64, bits0: u8, bits1: u8) -> u64 {
+pub fn movsx(b: u64, bits0: u32, bits1: u32) -> u64 {
     let r: u64 = 0;
     let b32 = b as u32;
     let b16 = b as u16;
@@ -1026,7 +1026,7 @@ pub fn bts(a: u64, b: u64) -> u64 {
     r
 }
 
-pub fn bsf(a: u64, b: u64, bits: u8, flags: u32) -> (u64, u32) {
+pub fn bsf(a: u64, b: u64, bits: u32, flags: u32) -> (u64, u32) {
     let new_flags: u32 = 0;
     let r: u64 = a;
     /*
@@ -1094,7 +1094,7 @@ pub fn bsf(a: u64, b: u64, bits: u8, flags: u32) -> (u64, u32) {
     (r, new_flags)
 }
 
-pub fn bsr(a: u64, b: u64, bits: u8, flags: u32) -> (u64, u32) {
+pub fn bsr(a: u64, b: u64, bits: u32, flags: u32) -> (u64, u32) {
     let new_flags: u32 = 0;
     let r: u64 = a;
     /*

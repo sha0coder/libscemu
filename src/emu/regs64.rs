@@ -1,4 +1,5 @@
 use crate::emu::maps::Maps;
+use uint::construct_uint;
 use iced_x86::Register;
 use rand;
 
@@ -60,6 +61,11 @@ macro_rules! get_reg8h {
 }
 
 //  https://wiki.osdev.org/CPU_Registers_x86-64
+
+
+construct_uint! {
+    pub struct U256(4);
+}
 
 #[derive(Clone, Copy)]
 pub struct Regs64 {
@@ -131,6 +137,23 @@ pub struct Regs64 {
     pub xmm14: u128,
     pub xmm15: u128,
 
+    pub ymm0: U256,
+    pub ymm1: U256,
+    pub ymm2: U256,
+    pub ymm3: U256,
+    pub ymm4: U256,
+    pub ymm5: U256,
+    pub ymm6: U256,
+    pub ymm7: U256,
+    pub ymm8: U256,
+    pub ymm9: U256,
+    pub ymm10: U256,
+    pub ymm11: U256,
+    pub ymm12: U256,
+    pub ymm13: U256,
+    pub ymm14: U256,
+    pub ymm15: U256,
+
     pub mm0: u128,
     pub mm1: u128,
     pub mm2: u128,
@@ -139,6 +162,9 @@ pub struct Regs64 {
     pub mm5: u128,
     pub mm6: u128,
     pub mm7: u128,
+
+    pub gs: u64,
+    pub fs: u64,
 }
 
 impl Regs64 {
@@ -212,6 +238,23 @@ impl Regs64 {
             xmm14: 0,
             xmm15: 0,
 
+            ymm0: U256::from(0),
+            ymm1: U256::from(0),
+            ymm2: U256::from(0),
+            ymm3: U256::from(0),
+            ymm4: U256::from(0),
+            ymm5: U256::from(0),
+            ymm6: U256::from(0),
+            ymm7: U256::from(0),
+            ymm8: U256::from(0),
+            ymm9: U256::from(0),
+            ymm10: U256::from(0),
+            ymm11: U256::from(0),
+            ymm12: U256::from(0),
+            ymm13: U256::from(0),
+            ymm14: U256::from(0),
+            ymm15: U256::from(0),
+
             mm0: 0,
             mm1: 0,
             mm2: 0,
@@ -220,8 +263,12 @@ impl Regs64 {
             mm5: 0,
             mm6: 0,
             mm7: 0,
+
+            gs: 0,
+            fs: 0,
         }
     }
+
 
     pub fn diff(rip: u64, pos: u64, a: Regs64, b: Regs64) {
         let mut output = format!("\tdiff_reg: pos = {} rip = {:x} ", pos, rip);
@@ -406,29 +453,83 @@ impl Regs64 {
         if a.xmm15 != b.xmm15 {
             output = format!("{}{} {:x} -> {:x}; ", output, "xmm15", a.xmm15, b.xmm15);
         }
+        if a.ymm0 != b.ymm0 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "ymm0", a.ymm0, b.ymm0);
+        }
+        if a.ymm1 != b.ymm1 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "ymm1", a.ymm1, b.ymm1);
+        }
+        if a.ymm2 != b.ymm2 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "ymm2", a.ymm2, b.ymm2);
+        }
+        if a.ymm3 != b.ymm3 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "ymm3", a.ymm3, b.ymm3);
+        }
+        if a.ymm4 != b.ymm4 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "ymm4", a.ymm4, b.ymm4);
+        }
+        if a.ymm5 != b.ymm5 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "ymm5", a.ymm5, b.ymm5);
+        }
+        if a.ymm6 != b.ymm6 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "ymm6", a.ymm6, b.ymm6);
+        }
+        if a.ymm7 != b.ymm7 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "ymm7", a.ymm7, b.ymm7);
+        }
+        if a.ymm8 != b.ymm8 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "ymm8", a.ymm8, b.ymm8);
+        }
+        if a.ymm9 != b.ymm9 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "ymm9", a.ymm9, b.ymm9);
+        }
+        if a.ymm10 != b.ymm10 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "ymm10", a.ymm10, b.ymm10);
+        }
+        if a.ymm11 != b.ymm11 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "ymm11", a.ymm11, b.ymm11);
+        }
+        if a.ymm12 != b.ymm12 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "ymm12", a.ymm12, b.ymm12);
+        }
+        if a.ymm13 != b.ymm13 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "ymm13", a.ymm13, b.ymm13);
+        }
+        if a.ymm14 != b.ymm14 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "ymm14", a.ymm14, b.ymm14);
+        }
+        if a.ymm15 != b.ymm15 {
+            output = format!("{}{} {:x} -> {:x}; ", output, "ymm15", a.ymm15, b.ymm15);
+        }
         if a.mm0 != b.mm0 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "xmm0", a.mm0, b.mm0);
+            output = format!("{}{} {:x} -> {:x}; ", output, "mm0", a.mm0, b.mm0);
         }
         if a.mm1 != b.mm1 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "xmm1", a.mm1, b.mm1);
+            output = format!("{}{} {:x} -> {:x}; ", output, "mm1", a.mm1, b.mm1);
         }
         if a.mm2 != b.mm2 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "xmm2", a.mm2, b.mm2);
+            output = format!("{}{} {:x} -> {:x}; ", output, "mm2", a.mm2, b.mm2);
         }
         if a.mm3 != b.mm3 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "xmm3", a.mm3, b.mm3);
+            output = format!("{}{} {:x} -> {:x}; ", output, "mm3", a.mm3, b.mm3);
         }
         if a.mm4 != b.mm4 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "xmm4", a.mm4, b.mm4);
+            output = format!("{}{} {:x} -> {:x}; ", output, "mm4", a.mm4, b.mm4);
         }
         if a.mm5 != b.mm5 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "xmm5", a.mm5, b.mm5);
+            output = format!("{}{} {:x} -> {:x}; ", output, "mm5", a.mm5, b.mm5);
         }
         if a.mm6 != b.mm6 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "xmm6", a.mm6, b.mm6);
+            output = format!("{}{} {:x} -> {:x}; ", output, "mm6", a.mm6, b.mm6);
         }
         if a.mm7 != b.mm7 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "xmm7", a.mm7, b.mm7);
+            output = format!("{}{} {:x} -> {:x}; ", output, "mm7", a.mm7, b.mm7);
+        }
+        if a.gs != b.gs {
+            output = format!("{}{} {:x} -> {:x}; ", output, "gs", a.gs, b.gs);
+        }
+        if a.fs != b.fs {
+            output = format!("{}{} {:x} -> {:x}; ", output, "fs", a.fs, b.fs);
         }
         println!("{}", output);
     }
@@ -445,6 +546,14 @@ impl Regs64 {
                 self.rbp = 0;
                 self.rsp = 0;
                 self.rip = 0;
+                self.r8 = 0;
+                self.r9 = 0;
+                self.r10 = 0;
+                self.r11 = 0;
+                self.r12 = 0;
+                self.r13 = 0;
+                self.r14 = 0;
+                self.r15 = 0;
             }
             32 => {
                 self.set_eax(0);
@@ -547,6 +656,26 @@ impl Regs64 {
         println!("  xmm13: {}", self.xmm13);
         println!("  xmm14: {}", self.xmm14);
         println!("  xmm15: {}", self.xmm15);
+    }
+
+    pub fn print_ymm(&self) {
+        println!("ymm regs:");
+        println!("  ymm0: {}", self.ymm0);
+        println!("  ymm1: {}", self.ymm1);
+        println!("  ymm2: {}", self.ymm2);
+        println!("  ymm3: {}", self.ymm3);
+        println!("  ymm4: {}", self.ymm4);
+        println!("  ymm5: {}", self.ymm5);
+        println!("  ymm6: {}", self.ymm6);
+        println!("  ymm7: {}", self.ymm7);
+        println!("  ymm8: {}", self.ymm8);
+        println!("  ymm9: {}", self.ymm9);
+        println!("  ymm10: {}", self.ymm10);
+        println!("  ymm11: {}", self.ymm11);
+        println!("  ymm12: {}", self.ymm12);
+        println!("  ymm13: {}", self.ymm13);
+        println!("  ymm14: {}", self.ymm14);
+        println!("  ymm15: {}", self.ymm15);
     }
 
     // get 16 bits
@@ -1186,6 +1315,87 @@ impl Regs64 {
         };
     }
 
+
+    // ymm
+
+    pub fn is_ymm(&self, reg: Register) -> bool {
+        let result = match reg {
+            Register::YMM0 => true,
+            Register::YMM1 => true,
+            Register::YMM2 => true,
+            Register::YMM3 => true,
+            Register::YMM4 => true,
+            Register::YMM5 => true,
+            Register::YMM6 => true,
+            Register::YMM7 => true,
+            Register::YMM8 => true,
+            Register::YMM9 => true,
+            Register::YMM10 => true,
+            Register::YMM11 => true,
+            Register::YMM12 => true,
+            Register::YMM13 => true,
+            Register::YMM14 => true,
+            Register::YMM15 => true,
+            Register::MM0 => true,
+            Register::MM1 => true,
+            Register::MM2 => true,
+            Register::MM3 => true,
+            Register::MM4 => true,
+            Register::MM5 => true,
+            Register::MM6 => true,
+            Register::MM7 => true,
+            _ => false,
+        };
+        return result;
+    }
+
+    pub fn get_ymm_reg(&self, reg: Register) -> U256 {
+        let value = match reg {
+            Register::YMM0 => self.ymm0,
+            Register::YMM1 => self.ymm1,
+            Register::YMM2 => self.ymm2,
+            Register::YMM3 => self.ymm3,
+            Register::YMM4 => self.ymm4,
+            Register::YMM5 => self.ymm5,
+            Register::YMM6 => self.ymm6,
+            Register::YMM7 => self.ymm7,
+            Register::YMM8 => self.ymm8,
+            Register::YMM9 => self.ymm9,
+            Register::YMM10 => self.ymm10,
+            Register::YMM11 => self.ymm11,
+            Register::YMM12 => self.ymm12,
+            Register::YMM13 => self.ymm13,
+            Register::YMM14 => self.ymm14,
+            Register::YMM15 => self.ymm15,
+
+            _ => unimplemented!("SSE  YMM register: {:?} ", reg),
+        };
+        return value;
+    }
+
+    pub fn set_ymm_reg(&mut self, reg: Register, value: U256) {
+        match reg {
+            Register::YMM0 => self.ymm0 = value,
+            Register::YMM1 => self.ymm1 = value,
+            Register::YMM2 => self.ymm2 = value,
+            Register::YMM3 => self.ymm3 = value,
+            Register::YMM4 => self.ymm4 = value,
+            Register::YMM5 => self.ymm5 = value,
+            Register::YMM6 => self.ymm6 = value,
+            Register::YMM7 => self.ymm7 = value,
+            Register::YMM8 => self.ymm8 = value,
+            Register::YMM9 => self.ymm9 = value,
+            Register::YMM10 => self.ymm10 = value,
+            Register::YMM11 => self.ymm11 = value,
+            Register::YMM12 => self.ymm12 = value,
+            Register::YMM13 => self.ymm13 = value,
+            Register::YMM14 => self.ymm14 = value,
+            Register::YMM15 => self.ymm15 = value,
+
+            _ => unimplemented!("SSE  YMM register: {:?} ", reg),
+        };
+    }
+
     pub fn get_reg(&self, reg: Register) -> u64 {
         let value = match reg {
             // 64bits
@@ -1390,8 +1600,8 @@ impl Regs64 {
         };
     }
 
-    pub fn get_size(&self, reg: Register) -> u8 {
-        let sz: u8 = match reg {
+    pub fn get_size(&self, reg: Register) -> u32 {
+        let sz: u32 = match reg {
             Register::RAX => 64,
             Register::RBX => 64,
             Register::RCX => 64,
@@ -1479,6 +1689,22 @@ impl Regs64 {
             Register::XMM13 => 128,
             Register::XMM14 => 128,
             Register::XMM15 => 128,
+            Register::YMM0 => 256,
+            Register::YMM1 => 256,
+            Register::YMM2 => 256,
+            Register::YMM3 => 256,
+            Register::YMM4 => 256,
+            Register::YMM5 => 256,
+            Register::YMM6 => 256,
+            Register::YMM7 => 256,
+            Register::YMM8 => 256,
+            Register::YMM9 => 256,
+            Register::YMM10 => 256,
+            Register::YMM11 => 256,
+            Register::YMM12 => 256,
+            Register::YMM13 => 256,
+            Register::YMM14 => 256,
+            Register::YMM15 => 256,
             Register::MM0 => 128,
             Register::MM1 => 128,
             Register::MM2 => 128,
@@ -1511,6 +1737,28 @@ impl Regs64 {
             "xmm13" => return self.xmm13,
             "xmm14" => return self.xmm14,
             "xmm15" => return self.xmm15,
+            &_ => unimplemented!("weird register name parsed {}", reg_name),
+        }
+    }
+
+    pub fn get_ymm_by_name(&self, reg_name: &str) -> U256 {
+        match reg_name {
+            "ymm0" => return self.ymm0,
+            "ymm1" => return self.ymm1,
+            "ymm2" => return self.ymm2,
+            "ymm3" => return self.ymm3,
+            "ymm4" => return self.ymm4,
+            "ymm5" => return self.ymm5,
+            "ymm6" => return self.ymm6,
+            "ymm7" => return self.ymm7,
+            "ymm8" => return self.ymm8,
+            "ymm9" => return self.ymm9,
+            "ymm10" => return self.ymm10,
+            "ymm11" => return self.ymm11,
+            "ymm12" => return self.ymm12,
+            "ymm13" => return self.ymm13,
+            "ymm14" => return self.ymm14,
+            "ymm15" => return self.ymm15,
             &_ => unimplemented!("weird register name parsed {}", reg_name),
         }
     }
@@ -1616,6 +1864,29 @@ impl Regs64 {
             &_ => unimplemented!("weird register name parsed {}", reg_name),
         }
     }
+
+    pub fn set_ymm_by_name(&mut self, reg_name: &str, value: U256) {
+        match reg_name {
+            "ymm0" => self.ymm0 = value,
+            "ymm1" => self.ymm1 = value,
+            "ymm2" => self.ymm2 = value,
+            "ymm3" => self.ymm3 = value,
+            "ymm4" => self.ymm4 = value,
+            "ymm5" => self.ymm5 = value,
+            "ymm6" => self.ymm6 = value,
+            "ymm7" => self.ymm7 = value,
+            "ymm8" => self.ymm8 = value,
+            "ymm9" => self.ymm9 = value,
+            "ymm10" => self.ymm10 = value,
+            "ymm11" => self.ymm11 = value,
+            "ymm12" => self.ymm12 = value,
+            "ymm13" => self.ymm13 = value,
+            "ymm14" => self.ymm14 = value,
+            "ymm15" => self.ymm15 = value,
+            &_ => unimplemented!("weird register name parsed {}", reg_name),
+        }
+    }
+
 
     pub fn set_by_name(&mut self, reg_name: &str, value: u64) {
         match reg_name {
@@ -1985,6 +2256,14 @@ impl Regs64 {
         match reg {
             "xmm0" | "xmm1" | "xmm2" | "xmm3" | "xmm4" | "xmm5" | "xmm6" | "xmm7" | "xmm8"
             | "xmm9" | "xmm10" | "xmm11" | "xmm12" | "xmm13" | "xmm14" | "xmm15" => true,
+            &_ => false,
+        }
+    }
+
+    pub fn is_ymm_by_name(&self, reg: &str) -> bool {
+        match reg {
+            "ymm0" | "ymm1" | "ymm2" | "ymm3" | "ymm4" | "ymm5" | "ymm6" | "ymm7" | "ymm8"
+            | "ymm9" | "ymm10" | "ymm11" | "ymm12" | "ymm13" | "ymm14" | "ymm15" => true,
             &_ => false,
         }
     }

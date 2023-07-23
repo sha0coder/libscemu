@@ -3,6 +3,8 @@ use crate::emu::constants;
 use crate::emu::endpoint;
 use crate::emu::winapi32::helper;
 
+use std::fs;
+
 /*
  * /usr/include/asm/unistd_64.h
  *
@@ -58,6 +60,14 @@ pub fn gateway(emu: &mut emu::Emu) {
                 "{}** {} syscall write() fd: {} buf: 0x{:x} sz: {} {}",
                 emu.colors.light_red, emu.pos, fd, buff, sz, emu.colors.nc
             );
+            if fd == 1 {
+                let s = emu.maps.read_string(buff);
+                println!("stdout: `{}`", s)
+            }
+            if fd == 2 {
+                let s = emu.maps.read_string(buff);
+                println!("stderr: `{}`", s)
+            }
         }
 
         constants::NR64_OPEN => {
@@ -78,6 +88,27 @@ pub fn gateway(emu: &mut emu::Emu) {
             );
             helper::socket_close(fd);
             endpoint::sock_close();
+        }
+
+        constants::NR64_BRK => {
+            match emu.regs.rdi {
+                0 => {
+                    emu.regs.rax = 0x4b6000;
+                    emu.regs.r11 = 0x346;
+                    emu.regs.rcx = 0x4679f7;
+                }
+                _ => {
+                    emu.regs.rax = emu.regs.rdi;
+                    emu.regs.rcx = 0x4679f7;
+                    emu.regs.rdx = 0x2f;
+                    emu.regs.r11 = 0x302;
+                }
+            }
+            //emu.fs.insert(0xffffffffffffffc8, 0x4b6c50);  
+
+            println!("{}** {} syscall brk({:x}) ={:x} {}", 
+                emu.colors.light_red, emu.pos, emu.regs.rdi, emu.regs.rax, emu.colors.nc
+            );
         }
 
         constants::NR64_EXECVE => {
@@ -479,6 +510,93 @@ pub fn gateway(emu: &mut emu::Emu) {
                 "{}** {} syscall socketcall sendmsg()  {}",
                 emu.colors.light_red, emu.pos, emu.colors.nc
             );
+        }
+
+        constants::NR64_ARCH_PRCTL => {
+            let mode = emu.regs.rdi;
+            let ptr = emu.regs.rsi;
+            emu.regs.rax = 0;
+            let mut op:String = "unimplemented operation".to_string();
+            
+            match mode {
+                constants::ARCH_SET_GS => {
+                    op = "set gs".to_string();
+                    emu.regs.gs = emu.maps.read_qword(ptr).expect("kernel64 cannot read ptr for set gs"); 
+                }
+                constants::ARCH_SET_FS => {
+                    op = "set fs".to_string();
+                    emu.regs.fs = emu.maps.read_qword(ptr).expect("kernel64 cannot read ptr for set fs"); 
+                }
+                constants::ARCH_GET_FS => {
+                    op = "get fs".to_string();
+                    emu.maps.write_qword(ptr, emu.regs.fs);
+                }
+                constants::ARCH_GET_GS => {
+                    op = "get gs".to_string();
+                    emu.maps.write_qword(ptr, emu.regs.gs);
+                }
+                _ => {}
+            }
+
+            println!(
+                "{}** {} syscall arch_prctl({})  {}",
+                emu.colors.light_red, emu.pos, op, emu.colors.nc
+            );
+        }
+
+        constants::NR64_UNAME => {
+            emu.regs.rax = 0;
+            let ptr = emu.regs.rdi;
+            emu.maps.write_bytes(ptr, constants::UTSNAME.to_vec());
+
+            println!(
+                "{}** {} syscall uname(0x{:x})  {}",
+                emu.colors.light_red, emu.pos, ptr, emu.colors.nc
+            );
+        }
+
+        constants::NR64_READLINK => {
+            let link_ptr = emu.regs.rdi;
+            let buff = emu.regs.rsi;
+            let buffsz = emu.regs.rdx;
+
+            let link = emu.maps.read_string(link_ptr);
+            let sym_link_dest = match fs::read_link(&link) {
+                Ok(link) => link,
+                Err(_) => {
+                    emu.regs.rax = 0xffffffffffffffff;
+                    println!(
+                        "{}** {} syscall uname({}) err! {}",
+                        emu.colors.light_red, emu.pos, link, emu.colors.nc
+                    );
+                    return;
+                }
+            };
+
+            emu.maps.write_string(buff, sym_link_dest.to_str().unwrap());
+
+            println!(
+                "{}** {} syscall uname({})  {}",
+                emu.colors.light_red, emu.pos, link, emu.colors.nc
+            );
+
+            emu.regs.rax = sym_link_dest.as_os_str().len() as u64;
+        }
+
+
+        constants::NR64_MPROTECT => {
+            let addr = emu.regs.rdx;
+
+            println!(
+                "{}** {} syscall mprotect({})  {}",
+                emu.colors.light_red, emu.pos, addr, emu.colors.nc
+            );
+           
+            if emu.maps.is_mapped(addr) {
+                emu.regs.rax = 0;
+            } else {
+                emu.regs.rax = 0xffffffff_ffffffff;
+            }
         }
 
         _ => {

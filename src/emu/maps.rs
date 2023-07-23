@@ -17,6 +17,10 @@ impl Maps {
         }
     }
 
+    pub fn clear(&mut self) {
+        self.maps.clear();
+    }
+
     // slow, better hold the object
     pub fn get_map_by_name(&self, name: &str) -> Option<&Mem64> {
         for map in self.maps.iter() {

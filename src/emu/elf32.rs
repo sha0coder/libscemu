@@ -2,6 +2,8 @@ use super::err::ScemuError;
 use crate::emu::maps::Maps;
 use super::maps::mem64::Mem64;
 use super::constants;
+use std::fs::File;
+use std::io::Read;
 
 macro_rules! read_u8 {
     ($raw:expr, $off:expr) => {
@@ -27,7 +29,9 @@ macro_rules! read_u32_le {
 
 
 pub const EI_NIDENT:usize = 16;
+pub const ELFCLASS32:u8 = 0x01;
 
+#[derive(Debug)]
 pub struct Elf32 {
     pub bin: Vec<u8>,
     pub elf_hdr: Elf32Ehdr,
@@ -54,6 +58,7 @@ impl Elf32 {
     }
 
     pub fn load(&mut self, maps: &mut Maps) {
+        maps.clear();
         let mut off = self.elf_hdr.e_phoff as usize;
 
         for _ in 0..self.elf_hdr.e_phnum {
@@ -72,7 +77,8 @@ impl Elf32 {
 
         for phdr in &self.elf_phdr {
             if phdr.p_type == constants::PT_LOAD {
-                let mem = maps.create_map(&format!("elf_{}",phdr.p_vaddr));
+                println!("loading map {}", format!("elf_{}", phdr.p_vaddr));
+                let mem = maps.create_map(&format!("elf_{}", phdr.p_vaddr));
                 mem.set_base(phdr.p_vaddr.into());
                 mem.set_size(phdr.p_memsz.into());
                 if phdr.p_filesz >phdr.p_memsz {
@@ -85,11 +91,16 @@ impl Elf32 {
 
     }
 
-    pub fn is_elf(&self) -> bool {
-        if self.elf_hdr.e_ident[0] == 0x7f &&
-            self.elf_hdr.e_ident[1] == b'E' &&
-            self.elf_hdr.e_ident[2] == b'L' && 
-            self.elf_hdr.e_ident[3] == b'F' {
+    pub fn is_elf32(filename:&str) -> bool {
+        let mut fd = File::open(filename).expect("file not found");
+        let mut raw = vec![0u8; 5];
+        fd.read_exact(&mut raw).expect("couldnt read the file");
+
+        if raw[0] == 0x7f &&
+            raw[1] == b'E' &&
+            raw[2] == b'L' && 
+            raw[3] == b'F' &&
+            raw[4] == ELFCLASS32 {
                 return true;
         }
         false 
@@ -172,6 +183,7 @@ impl Elf32Ehdr {
     }
 }
 
+#[derive(Debug)]
 pub struct Elf32Phdr {
     pub p_type: u32,
     pub p_offset: u32,
@@ -198,6 +210,7 @@ impl Elf32Phdr {
     }
 }
 
+#[derive(Debug)]
 pub struct Elf32Shdr {
     pub sh_name: u32,
     pub sh_type: u32,

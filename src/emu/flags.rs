@@ -417,33 +417,38 @@ impl Flags {
         (((rs as u64) & 0xffffffff) as u32) as i32
     }
 
-    pub fn calc_flags(&mut self, final_value: u64, bits: u8) {
+    pub fn calc_flags(&mut self, final_value: u64, bits: u32) {
         match bits {
             64 => self.f_sf = (final_value as i64) < 0,
             32 => self.f_sf = (final_value as i32) < 0,
             16 => self.f_sf = (final_value as i16) < 0,
             8 => self.f_sf = (final_value as i8) < 0,
-            _ => panic!("weird size"),
+            _ => unreachable!("weird size"),
         }
 
         self.f_zf = final_value == 0;
         self.f_tf = false;
-
-        self.calc_pf(final_value as u8);
-
-        //self.f_pf = (final_value & 0xff) % 2 == 0;
     }
 
     pub fn calc_pf(&mut self, final_value: u8) {
-        //TODO: use this everywhere and optimize in a macro.
-        let mut ones = 0;
+        let lsb = (final_value & 0xFF) as u8;
+        let mut count = 0;
         for i in 0..8 {
-            if get_bit!(final_value, i) == 1 {
-                ones += 1;
+            if (lsb & (1 << i)) != 0 {
+                count += 1;
             }
         }
-        self.f_pf = ones % 2 == 0;
+        self.f_pf = count % 2 == 0;
     }
+
+    pub fn calc_af(&mut self, value1: u64, value2: u64, result: u64, bits: u64) {
+        //let mask = bits*8-4;
+        let mask = 1<<4;
+        self.f_af = ((value1 ^ value2 ^ result) & mask) != 0;
+        //self.f_af = (value1 & 0x0f) + (value2 & 0x0f) > 0x09;
+    }
+
+
 
     pub fn add64(&mut self, value1: u64, value2: u64) -> u64 {
         let unsigned: u128 = value1 as u128 + value2 as u128;
@@ -456,6 +461,13 @@ impl Flags {
         let (_, overflow) = (value2 as i64).overflowing_add(value1 as i64);
         self.f_of = overflow;
         self.f_cf = carry;
+        self.calc_af(value1, value2, result, 64);
+        
+        /*
+        let low_nibble_value1 = value1 & 0xf;
+        let low_nibble_value2 = value2 & 0xf;
+        self.f_af = (low_nibble_value1 > 0x7) && (low_nibble_value2 > 0x7);
+        */
 
         result
     }
@@ -471,6 +483,7 @@ impl Flags {
         let (_, overflow) = (value2 as u32 as i32).overflowing_add(value1 as u32 as i32);
         self.f_of = overflow;
         self.f_cf = carry;
+        self.calc_af(value1, value2, result as u64, 32);
 
         result as u64
     }
@@ -489,6 +502,7 @@ impl Flags {
         let (_, overflow) = (value2 as u16 as i16).overflowing_add(value1 as u16 as i16);
         self.f_of = overflow;
         self.f_cf = carry;
+        self.calc_af(value1, value2, result as u64, 16);
 
         result as u64
     }
@@ -503,6 +517,7 @@ impl Flags {
         let (_, overflow) = (value2 as u8 as i8).overflowing_add(value1 as u8 as i8);
         self.f_of = overflow;
         self.f_cf = carry;
+        self.calc_af(value1, value2, result as u64, 8);
 
         result as u64
     }
@@ -521,7 +536,15 @@ impl Flags {
 
         self.f_sf = (r as i64) < 0;
         self.calc_pf(r as u64 as u8);
-        //self.f_pf = ((r as u64) & 0xff) % 2 == 0;
+        self.calc_af(value1, value2, r, 64);
+       
+        /*
+        let low_nibble_value1 = value1 & 0xf;
+        let low_nibble_value2 = value2 & 0xf;
+        self.f_af = low_nibble_value2 > low_nibble_value1;
+        */
+
+        //self.f_af = (r & 0x1000000000000000) != 0;
 
         r as u64
     }
@@ -540,7 +563,8 @@ impl Flags {
 
         self.f_sf = (r as i32) < 0;
         self.calc_pf(r as u32 as u8);
-        //self.f_pf = ((r as u32) & 0xff) % 2 == 0;
+        //self.f_af = (r & 0x10000000) != 0;
+        self.calc_af(value1, value2, r as u64, 32);
 
         r as u64
     }
@@ -562,7 +586,8 @@ impl Flags {
 
         self.f_sf = (r as i16) < 0;
         self.calc_pf(r as u8);
-        //self.f_pf = ((r as u16) & 0xff) % 2 == 0;
+        //self.f_af = (r & 0x1000) != 0;
+        self.calc_af(value1, value2, r as u64, 16);
 
         (r as u16) as u64
     }
@@ -583,7 +608,9 @@ impl Flags {
 
         self.f_sf = (r as i8) < 0;
         self.calc_pf(r as u8);
-        //self.f_pf = (r as u8) % 2 == 0;
+        //self.f_af = (r & 16) != 0;
+        self.calc_af(value1, value2, r as u64, 8);
+
         r as u64
     }
 
@@ -598,7 +625,6 @@ impl Flags {
         self.f_of = value == 0x7fffffff_ffffffff;
         self.f_sf = value > 0x7fffffff_ffffffff;
         self.calc_pf((value + 1) as u8);
-        //self.f_pf = (((value as i64) +1) & 0xff) % 2 == 0;
         self.f_zf = false;
         value + 1
     }
@@ -728,6 +754,7 @@ impl Flags {
         let res = ival as u64;
 
         self.calc_flags(res, 64);
+        self.calc_pf(res as u8);
         res
     }
 
@@ -743,6 +770,7 @@ impl Flags {
         let res = ival as u32 as u64;
 
         self.calc_flags(res, 32);
+        self.calc_pf(res as u8);
         res
     }
 
@@ -758,6 +786,7 @@ impl Flags {
         let res = ival as u16 as u64;
 
         self.calc_flags(res, 16);
+        self.calc_pf(res as u8);
         res
     }
 
@@ -773,6 +802,7 @@ impl Flags {
         let res = ival as u8 as u64;
 
         self.calc_flags(res, 8);
+        self.calc_pf(res as u8);
         res
     }
 
@@ -1460,13 +1490,13 @@ impl Flags {
         res
     }
 
-    pub fn test(&mut self, value0: u64, value1: u64, sz: u8) {
+    pub fn test(&mut self, value0: u64, value1: u64, sz: u32) {
         let result: u64 = value0 & value1;
 
         self.f_zf = result == 0;
         self.f_cf = false;
         self.f_of = false;
-        self.f_pf = (result & 0xff) % 2 == 0;
+        self.calc_pf(result as u8);
 
         match sz {
             64 => self.f_sf = (result as i64) < 0,
@@ -1475,6 +1505,7 @@ impl Flags {
             8 => self.f_sf = (result as i8) < 0,
             _ => unreachable!("weird size"),
         }
+        //undefined behavior: self.calc_af(value0, value1, result as u64, sz as u64);
     }
 
     //// imul ////
@@ -1491,6 +1522,7 @@ impl Flags {
         let res: u64 = (uresult & 0xffffffffffffffff) as u64;
 
         self.calc_flags(res, 64);
+        self.calc_pf(res as u8);
         res
     }
 
@@ -1506,6 +1538,7 @@ impl Flags {
         let res: u64 = uresult & 0xffffffff;
 
         self.calc_flags(res, 32);
+        self.calc_pf(res as u8);
         res
     }
 
@@ -1521,6 +1554,7 @@ impl Flags {
         let res = (uresult & 0xffff) as u64;
 
         self.calc_flags(res, 16);
+        self.calc_pf(res as u8);
         res
     }
 
@@ -1536,10 +1570,11 @@ impl Flags {
         let res = (uresult & 0xff) as u64;
 
         self.calc_flags(res, 8);
+        self.calc_pf(res as u8);
         res
     }
 
-    pub fn rcr_of_and_cf(&mut self, value0: u64, value1: u64, sz: u8) {
+    pub fn rcr_of_and_cf(&mut self, value0: u64, value1: u64, sz: u32) {
         let cnt = value1 % ((sz + 1) as u64);
         let mut ocf = 0;
         let cf;
@@ -1564,7 +1599,7 @@ impl Flags {
         }
     }
 
-    pub fn rcr(&mut self, value0: u64, value1: u64, sz: u8) -> u64 {
+    pub fn rcr(&mut self, value0: u64, value1: u64, sz: u32) -> u64 {
         let mut res: u64 = value0;
         let cnt = value1 % ((sz + 1) as u64);
         let mut ocf = 0;
