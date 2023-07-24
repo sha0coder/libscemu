@@ -1078,6 +1078,7 @@ impl Emu {
 
         if Elf32::is_elf32(filename) {
                 self.linux = true;
+                self.cfg.is_64bits = false;
 
                 println!("elf32 detected.");
                 let mut elf32 = Elf32::parse(filename).unwrap();
@@ -1090,6 +1091,7 @@ impl Emu {
 
         } else if Elf64::is_elf64(filename) {
                 self.linux = true;
+                self.cfg.is_64bits = true;
 
                 println!("elf64 detected.");
                 let mut elf64 = Elf64::parse(filename).unwrap();
