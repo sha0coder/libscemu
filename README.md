@@ -4,9 +4,8 @@
 
 ## Usage
 
-Download the maps32.zip or maps64.zip from:
-https://github.com/sha0coder/scemu/releases/download/maps/maps32.zip
-https://github.com/sha0coder/scemu/releases/download/maps/maps64.zip
+Download the maps32 or maps64 from:
+https://github.com/sha0coder/scemu
 
 Uncompress it somewhere, in the example it's on /tmp/ but dont use tmp.
 

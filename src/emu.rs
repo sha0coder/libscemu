@@ -3796,16 +3796,16 @@ impl Emu {
                     MemorySize::QwordOffset => 64,
                     MemorySize::DwordOffset => 32,
                     MemorySize::WordOffset => 16,
-                    MemorySize::Packed128_UInt64 => 128, // 128bits packed in 2 qwords
-                    MemorySize::Packed128_UInt32 => 128, // 128bits packed in 4 dwords
-                    MemorySize::Packed128_UInt16 => 128, // 128bits packed in 8 words
+                    MemorySize::Packed128_UInt64 => 64, // 128bits packed in 2 qwords
+                    MemorySize::Packed128_UInt32 => 32, // 128bits packed in 4 dwords
+                    MemorySize::Packed128_UInt16 => 16, // 128bits packed in 8 words
                     MemorySize::Bound32_DwordDword => 32,
                     MemorySize::Bound16_WordWord => 16,
-                    MemorySize::Packed64_Float32 => 64,
-                    MemorySize::Packed256_UInt16 => 256,
-                    MemorySize::Packed256_UInt32 => 256,
-                    MemorySize::Packed256_UInt64 => 256,
-                    MemorySize::Packed256_UInt128 => 256,
+                    MemorySize::Packed64_Float32 => 32,
+                    MemorySize::Packed256_UInt16 => 16,
+                    MemorySize::Packed256_UInt32 => 32,
+                    MemorySize::Packed256_UInt64 => 64,
+                    MemorySize::Packed256_UInt128 => 128,
                     MemorySize::SegPtr32 => 32,
                     _ => unimplemented!("memory size {:?}", mem.memory_size()),
                 };
@@ -9964,6 +9964,7 @@ impl Emu {
                     self.maps
                         .write_dword(addr + 8, ((xmm & 0xffffffff_00000000) >> (4 * 8)) as u32);
                     self.maps.write_dword(addr + 12, (xmm & 0xffffffff) as u32);
+
                 } else if sz0 == 128 && sz1 == 32 {
                     let addr = match self.get_operand_value(&ins, 1, false) {
                         Some(v) => v,
@@ -10011,6 +10012,18 @@ impl Emu {
                         0,
                         r1 << (12 * 8) | r2 << (8 * 8) | r3 << (4 * 8) | r4,
                     );
+
+                } else if sz0 == 128 && sz1 == 128 {
+                    let xmm = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                        Some(v) => v,
+                        None => {
+                            println!("error getting xmm value1");
+                            return false;
+                        }
+                    };
+
+                    self.set_operand_xmm_value_128(&ins, 0, xmm);
+
                 } else {
                     println!("sz0: {}  sz1: {}\n", sz0, sz1);
                     unimplemented!("movdqa");
@@ -10804,7 +10817,11 @@ impl Emu {
             Mnemonic::Vmovdqu => {
                 self.show_instruction(&self.colors.green, &ins);
 
-                match self.get_operand_sz(ins, 1) {
+                let sz0 = self.get_operand_sz(ins, 0);
+                let sz1 = self.get_operand_sz(ins, 1);
+                let sz_max = sz0.max(sz1);
+
+                match sz_max {
                     128 => {
                         let source = match self.get_operand_xmm_value_128(&ins, 1, true) {
                             Some(v) => v,
@@ -10828,7 +10845,7 @@ impl Emu {
                         self.set_operand_ymm_value_256(&ins, 0, source);
                     }
                     _ => {
-                        unimplemented!("unimplemented operand size for Vmovdqu {}", self.get_operand_sz(ins, 1));
+                        unimplemented!("unimplemented operand size {}", self.get_operand_sz(ins, 1));
                     }
                 }
             }
@@ -10837,7 +10854,11 @@ impl Emu {
                 //TODO: exception if memory address is unaligned to 16,32,64
                 self.show_instruction(&self.colors.green, &ins);
 
-                match self.get_operand_sz(ins, 0) {
+                let sz0 = self.get_operand_sz(ins, 0);
+                let sz1 = self.get_operand_sz(ins, 1);
+                let sz_max = sz0.max(sz1);
+
+                match sz_max {
                     128 => {
                         let source = match self.get_operand_xmm_value_128(&ins, 1, true) {
                             Some(v) => v,
@@ -10860,7 +10881,7 @@ impl Emu {
 
                         self.set_operand_ymm_value_256(&ins, 0, source);
                     }
-                    _ => unimplemented!("unimplemented operand size for Vmovdqu"),
+                    _ => unimplemented!("unimplemented operand size"),
                 }
             }
 
