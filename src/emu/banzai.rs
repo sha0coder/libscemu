@@ -3714,6 +3714,9 @@ impl<'a> Banzai<'a> {
         self.api_params.insert("SHTestTokenMembership", 2);
         self.api_params.insert("ShellAboutW", 4);
         self.api_params.insert("ShellExecuteW", 6);
+        self.api_params.insert("SetDllDirectoryW", 1);
+        self.api_params.insert("SetSearchPathMode", 1);
+        self.api_params.insert("SetProcessDEPPolicy", 1);
     }
 
     pub fn get_params(&self, unimplemented_api: &str) -> i32 {

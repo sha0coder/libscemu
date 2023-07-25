@@ -54,6 +54,7 @@ pub struct Elf64 {
     pub elf_phdr: Vec<Elf64Phdr>,
     pub elf_shdr: Vec<Elf64Shdr>,
     pub elf_strtab: Vec<u8>,
+    pub init: Option<u64>,
 }
 
 impl Elf64 {
@@ -94,6 +95,7 @@ impl Elf64 {
           elf_phdr: ephdr,
           elf_shdr: eshdr,
           elf_strtab: blob_strtab,
+          init: None,
         })
     }
 
@@ -101,6 +103,7 @@ impl Elf64 {
         for phdr in &self.elf_phdr {
             if phdr.p_type == constants::PT_LOAD {
                 if phdr.p_vaddr > 0 && (phdr.p_vaddr <= addr || addr <= (phdr.p_vaddr+phdr.p_memsz)) {
+                    //println!("vaddr 0x{:x}", phdr.p_vaddr);
                     return true;
                 }
             }
@@ -114,22 +117,26 @@ impl Elf64 {
         return s.to_string();
     }
 
-    pub fn load(&mut self, maps: &mut Maps, name:&str) {
-        maps.clear();
-
-        let hdr = maps.create_map("elf64.hdr");
-        hdr.set_base(0x400000);
-        hdr.set_size(0x200);
-        hdr.write_bytes(0x400000, &self.bin[..0x200]);
+    pub fn load(&mut self, maps: &mut Maps, name:&str, is_lib: bool) {
+        
+        if !is_lib {
+            let hdr = maps.create_map("elf64.hdr");
+            hdr.set_base(0x400000);
+            hdr.set_size(0x200);
+            hdr.write_bytes(0x400000, &self.bin[..0x200]);
+        }
 
         for shdr in &self.elf_shdr { 
             if self.is_loadable(shdr.sh_addr) {
                 let map_name:String;
                 let sname = self.get_section_name(shdr.sh_name as usize);
-                if sname == ".text" {
+                if sname == ".text" && !is_lib { //maps.exists_mapname("code") {
                     map_name = "code".to_string();
                 } else {
-                    map_name = format!("{}{}", name, self.get_section_name(shdr.sh_name as usize));
+                    map_name = format!("{}{}", name, sname);//self.get_section_name(shdr.sh_name as usize));
+                }
+                if sname == ".init" {
+                    self.init = Some(shdr.sh_addr.into());
                 }
                 println!("loading map {} 0x{:x} sz:{}", &map_name, shdr.sh_addr, shdr.sh_size);
                 let mem = maps.create_map(&map_name);
@@ -163,7 +170,12 @@ impl Elf64 {
 
                     if d_tag == DT_NULL { break }
                     if d_tag == DT_STRTAB {
-                        off_strtab = d_val;
+                        if d_val > self.bin.len() as u64 {
+                            off_strtab = d_val - self.elf_phdr[2].p_vaddr;
+                        } else {
+                            off_strtab = d_val;
+                        }
+
                         break;
                     }
                     off += 16;
@@ -182,10 +194,15 @@ impl Elf64 {
                     if d_tag == DT_NULL { break }
                     if d_tag == DT_NEEDED {
                         let off_lib = (off_strtab + d_val) as usize;
+                        if off_lib > self.bin.len() {
+                            off += 16;
+                            continue;
+                        }
                         let off_lib_end = self.bin[off_lib..].iter().position(|&c| c == 0)
                             .expect("error searching on DT_STRTAB");
                         let lib_name = std::str::from_utf8(&self.bin[off_lib..off_lib + off_lib_end])
                             .expect("libname on DT_STRTAB is not utf-8");
+                        println!("lib: {}", lib_name);
                         libs.push(lib_name.to_string());
                     }
                     off += 16;

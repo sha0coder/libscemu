@@ -1092,17 +1092,39 @@ impl Emu {
         } else if Elf64::is_elf64(filename) {
                 self.linux = true;
                 self.cfg.is_64bits = true;
+                self.maps.clear();
 
                 println!("elf64 detected.");
+
                 let mut elf64 = Elf64::parse(filename).unwrap();
-                elf64.load(&mut self.maps, "elf64");
+                elf64.load(&mut self.maps, "elf64", false);
+                self.init_linux64();
+                self.regs.rip = elf64.elf_hdr.e_entry;
+
+                /* only on dynamic linked?
+                match elf64.init {
+                    Some(addr) => {
+                        self.call64(addr, &[]);
+                    }
+                    None => {}
+                }*/
 
                 for lib in elf64.get_dynamic() {
                     println!("dynamic library {}", lib);
+                    let libspath = "/usr/lib/x86_64-linux-gnu/";
+                    let libpath = format!("{}{}", libspath, lib);
+                    let mut elflib = Elf64::parse(&libpath).unwrap();
+                    elflib.load(&mut self.maps, &lib, true);
+
+                    /*
+                    match elflib.init {
+                        Some(addr) => {
+                            self.call64(addr, &[]);
+                        }
+                        None => {}
+                    }*/
                 }
 
-                self.init_linux64();
-                self.regs.rip = elf64.elf_hdr.e_entry;
 
 
         } else if !self.cfg.is_64bits && PE32::is_pe32(filename) {

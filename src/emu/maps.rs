@@ -21,6 +21,15 @@ impl Maps {
         self.maps.clear();
     }
 
+    pub fn exists_mapname(&self, name: &str) -> bool {
+        for map in self.maps.iter() {
+            if map.get_name() == name {
+                return true;
+            }
+        }
+        return false;
+    }
+
     // slow, better hold the object
     pub fn get_map_by_name(&self, name: &str) -> Option<&Mem64> {
         for map in self.maps.iter() {
