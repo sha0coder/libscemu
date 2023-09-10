@@ -55,6 +55,7 @@ use elf64::Elf64;
 use std::sync::atomic;
 use std::sync::Arc;
 use std::collections::BTreeMap;
+use std::arch::asm;
 
 use iced_x86::{
     Decoder, DecoderOptions, Formatter, Instruction, InstructionInfoFactory, IntelFormatter,
@@ -348,22 +349,35 @@ impl Emu {
         //self.init_tests();
     }
 
-    pub fn init_linux64(&mut self) {
+    pub fn init_linux64(&mut self, dyn_link: bool) {
         self.regs.clear::<64>();
         self.flags.clear();
         self.flags.f_if = true;
 
         let orig_path = std::env::current_dir().unwrap();
         std::env::set_current_dir(self.cfg.maps_folder.clone());
-        self.maps.create_map("stack").load_at(0x7ffffffde000);
-        self.maps.create_map("dso").load_at(0x7ffff7ffd000);
+        if dyn_link {
+            self.regs.rsp = 0x7fffffffe2b0;
+            self.maps.create_map("linux_dynamic_stack").load_at(0x7ffffffde000);
+            //self.maps.create_map("dso_dyn").load_at(0x7ffff7ffd0000);
+            self.maps.create_map("dso_dyn").load_at(0x7ffff7fd0000);
+            self.maps.create_map("linker").load_at(0x7ffff7ffe000);
+        } else {
+            self.regs.rsp = 0x7fffffffe270;
+            self.maps.create_map("linux_static_stack").load_at(0x7ffffffde000);
+            self.maps.create_map("dso").load_at(0x7ffff7ffd000);
+        }
         std::env::set_current_dir(orig_path);
-        let heap = self.maps.create_map("heap");
-        heap.set_base(0x4b5000);
-        //heap.set_size(8192);
-        heap.set_size(0x4d8000-0x4b5000);
 
-        self.regs.rsp = 0x7fffffffe270;
+        if dyn_link {
+            //heap.set_base(0x555555579000);
+        } else {
+            //heap.set_base(0x4b5000);
+            let heap = self.maps.create_map("heap");
+            heap.set_base(0x4b5b00);
+            heap.set_size(0x4d8000-0x4b5000);
+        }
+
         self.regs.rbp = 0;
 
         self.fs.insert(0xffffffffffffffC8, 0); //0x4b6c50
@@ -372,6 +386,7 @@ impl Emu {
         self.fs.insert(0xffffffffffffffa0, 0x4b3980);
         self.fs.insert(0x18, 0);
         self.fs.insert(40, 0x4b27a0);
+
     }
 
     pub fn init_mem32(&mut self) {
@@ -1090,6 +1105,7 @@ impl Emu {
 
 
         } else if Elf64::is_elf64(filename) {
+
                 self.linux = true;
                 self.cfg.is_64bits = true;
                 self.maps.clear();
@@ -1097,24 +1113,36 @@ impl Emu {
                 println!("elf64 detected.");
 
                 let mut elf64 = Elf64::parse(filename).unwrap();
-                elf64.load(&mut self.maps, "elf64", false);
-                self.init_linux64();
-                self.regs.rip = elf64.elf_hdr.e_entry;
+                let dyn_link = elf64.get_dynamic().len() > 0;
+                elf64.load(&mut self.maps, "elf64", false, dyn_link);
+                self.init_linux64(dyn_link);
 
-                /* only on dynamic linked?
-                match elf64.init {
-                    Some(addr) => {
-                        self.call64(addr, &[]);
-                    }
-                    None => {}
-                }*/
 
+                if dyn_link {
+                    let mut ld = Elf64::parse("/lib64/ld-linux-x86-64.so.2").unwrap();
+                    ld.load(&mut self.maps, "ld-linux", true, dyn_link);
+                    println!("--- emulating ld-linux _start ---");
+
+                    self.regs.rip = ld.elf_hdr.e_entry + elf64::LD_BASE;
+                    self.run(None);
+                } else {
+                     self.regs.rip = elf64.elf_hdr.e_entry;
+                }
+
+
+
+
+                /*
                 for lib in elf64.get_dynamic() {
                     println!("dynamic library {}", lib);
                     let libspath = "/usr/lib/x86_64-linux-gnu/";
                     let libpath = format!("{}{}", libspath, lib);
                     let mut elflib = Elf64::parse(&libpath).unwrap();
                     elflib.load(&mut self.maps, &lib, true);
+
+                    if lib.contains("libc") {
+                        elflib.craft_libc_got(&mut self.maps, "elf64");
+                    }
 
                     /*
                     match elflib.init {
@@ -1123,7 +1151,7 @@ impl Emu {
                         }
                         None => {}
                     }*/
-                }
+                }*/
 
 
 
@@ -1211,6 +1239,8 @@ impl Emu {
         }
 
         self.regs.set_esp(self.regs.get_esp() - 4);
+
+        /*
         let stack = self.maps.get_mem("stack");
         if stack.inside(self.regs.get_esp()) {
             if !self.maps.write_dword(self.regs.get_esp(), value) {
@@ -1233,9 +1263,14 @@ impl Emu {
                 //if !mem.write_dword(self.regs.get_esp(), value) {
                 return false;
             }
-        }
+        }*/
 
-        return true;
+        if self.maps.write_dword(self.regs.get_esp(), value) {
+            return true;
+        } else {
+            println!("/!\\ pushing in non mapped mem 0x{:x}", self.regs.get_esp());
+            return false;
+        }
     }
 
     pub fn stack_push64(&mut self, value: u64) -> bool {
@@ -1253,6 +1288,7 @@ impl Emu {
         }
 
         self.regs.rsp -= 8;
+        /*
         let stack = self.maps.get_mem("stack");
         if stack.inside(self.regs.rsp) {
             stack.write_qword(self.regs.rsp, value);
@@ -1269,9 +1305,14 @@ impl Emu {
                 }
             };
             mem.write_qword(self.regs.rsp, value);
-        }
+        }*/
 
-        return true;
+        if self.maps.write_qword(self.regs.rsp, value) {
+            return true;
+        } else {
+            println!("/!\\ pushing in non mapped mem 0x{:x}", self.regs.rsp);
+            return false;
+        }
     }
 
     pub fn stack_pop32(&mut self, pop_instruction: bool) -> Option<u32> {
@@ -1280,6 +1321,7 @@ impl Emu {
             self.maps.dump_dwords(self.regs.get_esp(), 5);
         }
 
+        /*
         let stack = self.maps.get_mem("stack");
         if stack.inside(self.regs.get_esp()) {
             //let value = stack.read_dword(self.regs.get_esp());
@@ -1310,16 +1352,21 @@ impl Emu {
                 self.spawn_console();
                 return None;
             }
-        };
+        };*/
 
-        //let value = mem.read_dword(self.regs.get_esp());
         let value = match self.maps.read_dword(self.regs.get_esp()) {
             Some(v) => v,
             None => {
-                println!("esp out of stack");
+                println!("esp point to non mapped mem");
                 return None;
             }
         };
+
+        if self.cfg.verbose >= 1
+            && pop_instruction
+            && self.maps.get_mem("code").inside(value.into()) {
+                println!("/!\\ poping a code address 0x{:x}", value);
+        }
 
         if self.cfg.trace_mem {
             let name = match self.maps.get_addr_name(self.regs.get_esp()) {
@@ -1330,7 +1377,6 @@ impl Emu {
         }
 
         self.regs.set_esp(self.regs.get_esp() + 4);
-
         Some(value)
     }
 
@@ -1340,6 +1386,7 @@ impl Emu {
             self.maps.dump_qwords(self.regs.rsp, 5);
         }
 
+        /*
         let stack = self.maps.get_mem("stack");
         if stack.inside(self.regs.rsp) {
             let value = stack.read_qword(self.regs.rsp);
@@ -1363,6 +1410,15 @@ impl Emu {
         };
 
         let value = mem.read_qword(self.regs.rsp);
+        */
+
+        let value = match self.maps.read_qword(self.regs.rsp) {
+            Some(v) => v,
+            None => {
+                println!("rsp point to non mapped mem");
+                return None;
+            }
+        };
 
         if self.cfg.trace_mem {
             let name = match self.maps.get_addr_name(self.regs.rsp) {
@@ -1374,7 +1430,7 @@ impl Emu {
 
         self.regs.rsp += 8;
         Some(value)
-    }
+    } 
 
     // this is not used on the emulation
     pub fn memory_operand_to_address(&mut self, operand: &str) -> u64 {
@@ -1691,23 +1747,28 @@ impl Emu {
             self.regs.rip = addr;
             //self.force_break = true;
         } else {
-            if self.cfg.verbose >= 1 {
-                println!("/!\\ changing RIP to {} ", name);
+
+            if self.linux {
+                self.regs.rip = addr; // in linux libs are no implemented are emulated
+                        
+            } else {
+                if self.cfg.verbose >= 1 {
+                    println!("/!\\ changing RIP to {} ", name);
+                }
+
+                self.gateway_return = self.stack_pop64(false).unwrap_or(0);
+                self.regs.rip = self.gateway_return;
+
+                let handle_winapi: bool = match self.hook.hook_on_winapi_call {
+                    Some(hook_fn) => hook_fn(self, self.regs.rip, addr),
+                    None => true,
+                };
+
+                if handle_winapi {
+                    winapi64::gateway(addr, name, self);
+                }
+                self.force_break = true;
             }
-
-            self.gateway_return = self.stack_pop64(false).unwrap_or(0);
-            self.regs.rip = self.gateway_return;
-
-            let handle_winapi: bool = match self.hook.hook_on_winapi_call {
-                Some(hook_fn) => hook_fn(self, self.regs.rip, addr),
-                None => true,
-            };
-
-            if handle_winapi {
-                winapi64::gateway(addr, name, self);
-            }
-
-            self.force_break = true;
         }
     }
 
@@ -2653,6 +2714,7 @@ impl Emu {
                             continue;
                         }
                     };
+                    self.maps.show_addr_names(addr);
                     let name = match self.maps.get_addr_name(addr) {
                         Some(n) => n,
                         None => {
@@ -2932,14 +2994,12 @@ impl Emu {
                     }
                 }
                 "n" | "" => {
-                    self.exp = self.pos + 1;
-                    /*
+                    //self.exp = self.pos + 1;
                     let prev_verbose = self.cfg.verbose;
                     self.cfg.verbose = 3;
                     self.step();
                     self.cfg.verbose = prev_verbose;
-                    */
-                    return;
+                    //return;
                 }
                 "m" => self.maps.print_maps(),
                 "ms" => {
@@ -3830,6 +3890,7 @@ impl Emu {
                     MemorySize::Packed256_UInt32 => 32,
                     MemorySize::Packed256_UInt64 => 64,
                     MemorySize::Packed256_UInt128 => 128,
+                    MemorySize::Packed128_Float32 => 32,
                     MemorySize::SegPtr32 => 32,
                     _ => unimplemented!("memory size {:?}", mem.memory_size()),
                 };
@@ -4243,6 +4304,11 @@ impl Emu {
                                     self.pos,
                                     self.regs.get_eip() as u32
                                 ),
+                                "xmm1" => println!(
+                                    "\t{} xmm1: 0x{:x}",
+                                    self.pos,
+                                    self.regs.xmm1
+                                ),
                                 _ => panic!("invalid register."),
                             }
                         }
@@ -4606,6 +4672,46 @@ impl Emu {
                     return false;
                 }
                 if !self.set_operand_value(&ins, 1, value0) {
+                    return false;
+                }
+            }
+
+            Mnemonic::Aad => {
+                self.show_instruction(&self.colors.light_cyan, &ins);
+                assert!(ins.op_count() <= 1);
+
+                let mut low: u64 = self.regs.get_al();
+                let high: u64 = self.regs.get_ah();
+                let imm: u64;
+
+                if ins.op_count() == 0 {
+                    imm = 10;
+
+                } else {
+                    imm = match self.get_operand_value(&ins, 0, true) {
+                        Some(v) => v,
+                        None => return false,
+                    };
+                }
+
+                low = (low + (imm*high)) & 0xff;
+                self.regs.set_al(low);
+                self.regs.set_ah(0);
+
+                self.flags.calc_flags(low, 8);
+            }
+
+            Mnemonic::Les => {
+                self.show_instruction(&self.colors.light_cyan, &ins);
+
+                assert!(ins.op_count() == 2);
+
+                let value1 = match self.get_operand_value(&ins, 1, true) {
+                    Some(v) => v,
+                    None => return false,
+                };
+
+                if !self.set_operand_value(&ins, 0, value1) {
                     return false;
                 }
             }
@@ -5974,10 +6080,10 @@ impl Emu {
                         println!("/!\\ undefined behavior on BSF with src == 0");
                     }
                 } else {
-                    let (result, new_flags) = inline::bsf(value0, value1, sz, self.flags.dump());
-                    self.flags.load(new_flags);
 
-                    if !self.set_operand_value(&ins, 0, result) {
+                    self.flags.f_zf = false;
+
+                    if !self.set_operand_value(&ins, 0, value1.trailing_zeros() as u64) {
                         return false;
                     }
                 }
@@ -7313,7 +7419,10 @@ impl Emu {
 
                 let value0: u64 = match self.maps.read_byte(self.regs.rdi) {
                     Some(value) => value.into(),
-                    None => return false,
+                    None => {
+                        println!("/!\\ error reading byte on rdi 0x{:x}", self.regs.rdi);
+                        return false;
+                    }
                 };
 
                 self.flags.sub8(self.regs.get_al(), value0);
@@ -8793,12 +8902,30 @@ impl Emu {
 
             Mnemonic::Rdtsc => {
                 self.show_instruction(&self.colors.red, &ins);
-                // TODO: actually mock a timestamp?
-                self.regs.rdx = 0x1BC2B;
-                self.regs.rax = 0xE6668424;
-                // TODO: actually calculate flags correctly?
-                self.flags.f_pf = true;
-                self.flags.f_af = false;
+
+                if self.cfg.is_64bits {
+                    let rax:u64;
+                    let rdx:u64;
+                    unsafe {
+                        asm!(
+                            "rdtsc",
+                            "mov {}, rax",
+                            "mov {}, rdx",
+                            out(reg) rax,
+                            out(reg) rdx
+                        );
+                    }
+                    self.regs.rax = rax;
+                    self.regs.rdx = rdx;
+                } else {
+                    // TODO: actually mock a timestamp?
+                    self.regs.rdx = 0x1BC2B;
+                    self.regs.rax = 0xE6668424;
+                    // TODO: actually calculate flags correctly?
+                    self.flags.f_pf = true;
+                    self.flags.f_af = false;
+                }
+
             }
 
             Mnemonic::Loop => {
@@ -9222,6 +9349,18 @@ impl Emu {
                 }
 
                 self.fpu.set_ip(self.regs.rip);
+            }
+
+            Mnemonic::Fbld => {
+                self.show_instruction(&self.colors.green, &ins);
+
+                let value = match self.get_operand_value(&ins, 0, false) {
+                    Some(v) => v as u16,
+                    None => return false,
+                };
+
+                //println!("{} {}", value, value as f32);
+                self.fpu.set_st(0, value as f32);
             }
 
             Mnemonic::Fldcw => {
@@ -9785,6 +9924,35 @@ impl Emu {
             // scalar double: only 54b less significative part.
             // packed: compute all parts.
             // packed double
+
+
+            Mnemonic::Por => {
+                self.show_instruction(&self.colors.green, &ins);
+
+                assert!(ins.op_count() == 2);
+
+                let value0 = match self.get_operand_xmm_value_128(&ins, 0, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting xmm value0");
+                        return false;
+                    }
+                };
+                let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting xmm value1");
+                        return false;
+                    }
+                };
+
+                let result: u128 = value0 | value1;
+                self.flags.calc_flags(result as u64, 32);
+
+                self.set_operand_xmm_value_128(&ins, 0, result);
+            }
+
+
             Mnemonic::Pxor => {
                 self.show_instruction(&self.colors.green, &ins);
 
@@ -9809,6 +9977,83 @@ impl Emu {
                 self.flags.calc_flags(result as u64, 32);
 
                 self.set_operand_xmm_value_128(&ins, 0, result);
+            }
+
+            Mnemonic::Punpcklbw => {
+                self.show_instruction(&self.colors.green, &ins);
+
+                assert!(ins.op_count() == 2);
+                let sz0 = self.get_operand_sz(&ins, 0);
+                if sz0 == 128 {
+
+                    let value0 = match self.get_operand_xmm_value_128(&ins, 0, true) {
+                        Some(v) => v,
+                        None => {
+                            println!("error getting xmm value0");
+                            return false;
+                        }
+                    };
+                    let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                        Some(v) => v,
+                        None => {
+                            println!("error getting xmm value1");
+                            return false;
+                        }
+                    };
+
+                    let mut result: u128 = 0;
+                    let mask_byte = 0xff;
+
+                    for i in 0..8 {
+                        let byte_value0 = (value0 >> (8 * i)) & mask_byte;
+                        let byte_value1 = (value1 >> (8 * i)) & mask_byte;
+
+                        result |= byte_value0 << (16 * i);
+                        result |= byte_value1 << (16 * i + 8);
+                    }
+
+                    self.set_operand_xmm_value_128(&ins, 0, result);
+
+                } else {
+                    unimplemented!("unimplemented size");
+                }
+            }
+
+            Mnemonic::Punpcklwd => {
+                self.show_instruction(&self.colors.green, &ins);
+
+                assert!(ins.op_count() == 2);
+                let sz0 = self.get_operand_sz(&ins, 0);
+                if sz0 == 128 {
+
+                    let value0 = match self.get_operand_xmm_value_128(&ins, 0, true) {
+                        Some(v) => v,
+                        None => {
+                            println!("error getting xmm value0");
+                            return false;
+                        }
+                    };
+                    let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                        Some(v) => v,
+                        None => {
+                            println!("error getting xmm value1");
+                            return false;
+                        }
+                    };
+
+                    let mut result = 0u128;
+                    for i in 0..2 {
+                        let word_value0 = (value0 >> (i * 16)) & 0xFFFF;
+                        let word_value1 = (value1 >> (i * 16)) & 0xFFFF;
+                        result |= word_value0 << (i * 32);
+                        result |= word_value1 << (i * 32 + 16);
+                    }
+
+                    self.set_operand_xmm_value_128(&ins, 0, result);
+
+                } else {
+                    unimplemented!("unimplemented size");
+                }
             }
 
             Mnemonic::Xorps => {
@@ -9867,13 +10112,524 @@ impl Emu {
                 self.set_operand_xmm_value_128(&ins, 0, result);
             }
 
+/*            Mnemonic::Psubb 
+            | Mnemonic::Psubw 
+            | Mnemonic::Psubd
+            | Mnemonic::Psubq
+            | Mnemonic::Psubsb
+            | Mnemonic::Psubsw
+            | Mnemonic::Psubusb
+            | Mnemonic::Psubusw => {*/
+
+            Mnemonic::Psubb => {
+                self.show_instruction(&self.colors.cyan, &ins);
+
+                let sz0 = self.get_operand_sz(&ins, 0);
+                let sz1 = self.get_operand_sz(&ins, 1);
+
+                if sz0 == 128 && sz1 == 128 {
+                    let value0 = match self.get_operand_xmm_value_128(&ins, 0, true) {
+                        Some(v) => v,
+                        None => {
+                            println!("error getting xmm value1");
+                            return false;
+                        }
+                    };
+                    let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                        Some(v) => v,
+                        None => {
+                            println!("error getting xmm value1");
+                            return false;
+                        }
+                    };
+
+                    let mut result = 0u128;
+                    for i in 0..16 {
+                        let byte0 = (value0 >> (8 * i)) & 0xFF;
+                        let byte1 = (value1 >> (8 * i)) & 0xFF;
+                        let res_byte = byte0.wrapping_sub(byte1);
+                        result |= res_byte << (8 * i);
+                    }
+
+                    self.set_operand_xmm_value_128(&ins, 0, result);
+                } else {
+                    unimplemented!();
+                }
+            
+            }
+
+            Mnemonic::Psubw => {
+                self.show_instruction(&self.colors.cyan, &ins);
+
+                let sz0 = self.get_operand_sz(&ins, 0);
+                let sz1 = self.get_operand_sz(&ins, 1);
+
+                if sz0 == 128 && sz1 == 128 {
+                    let value0 = match self.get_operand_xmm_value_128(&ins, 0, true) {
+                        Some(v) => v,
+                        None => {
+                            println!("error getting xmm value1");
+                            return false;
+                        }
+                    };
+                    let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                        Some(v) => v,
+                        None => {
+                            println!("error getting xmm value1");
+                            return false;
+                        }
+                    };
+
+                    let mut result = 0u128;
+                    for i in 0..8 {
+                        let word0 = (value0 >> (16 * i)) & 0xFFFF;
+                        let word1 = (value1 >> (16 * i)) & 0xFFFF;
+                        let res_word = word0.wrapping_sub(word1);
+                        result |= res_word << (16 * i);
+                    }
+
+                    self.set_operand_xmm_value_128(&ins, 0, result);
+                } else {
+                    unimplemented!();
+                }
+            
+            }
+
+            Mnemonic::Psubd => {
+                self.show_instruction(&self.colors.cyan, &ins);
+
+                let sz0 = self.get_operand_sz(&ins, 0);
+                let sz1 = self.get_operand_sz(&ins, 1);
+
+                if sz0 == 128 && sz1 == 128 {
+                    let value0 = match self.get_operand_xmm_value_128(&ins, 0, true) {
+                        Some(v) => v,
+                        None => {
+                            println!("error getting xmm value1");
+                            return false;
+                        }
+                    };
+                    let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                        Some(v) => v,
+                        None => {
+                            println!("error getting xmm value1");
+                            return false;
+                        }
+                    };
+
+                    let mut result = 0u128;
+                    for i in 0..4 {
+                        let dword0 = (value0 >> (32 * i)) & 0xFFFFFFFF;
+                        let dword1 = (value1 >> (32 * i)) & 0xFFFFFFFF;
+                        let res_dword = dword0.wrapping_sub(dword1);
+                        result |= res_dword << (32 * i);
+                    }
+
+                    self.set_operand_xmm_value_128(&ins, 0, result);
+                } else {
+                    unimplemented!();
+                }
+            
+            }
+
+            Mnemonic::Psubq => {
+                self.show_instruction(&self.colors.cyan, &ins);
+
+                let sz0 = self.get_operand_sz(&ins, 0);
+                let sz1 = self.get_operand_sz(&ins, 1);
+
+                if sz0 == 128 && sz1 == 128 {
+                    let value0 = match self.get_operand_xmm_value_128(&ins, 0, true) {
+                        Some(v) => v,
+                        None => {
+                            println!("error getting xmm value1");
+                            return false;
+                        }
+                    };
+                    let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                        Some(v) => v,
+                        None => {
+                            println!("error getting xmm value1");
+                            return false;
+                        }
+                    };
+
+                    let mut result = 0u128;
+                    for i in 0..2 {
+                        let qword0 = (value0 >> (64 * i)) & 0xFFFFFFFFFFFFFFFF;
+                        let qword1 = (value1 >> (64 * i)) & 0xFFFFFFFFFFFFFFFF;
+                        let res_qword = qword0.wrapping_sub(qword1);
+                        result |= res_qword << (64 * i);
+                    }
+
+                    self.set_operand_xmm_value_128(&ins, 0, result);
+                } else {
+                    unimplemented!();
+                }
+            }
+
+
             // movlpd: packed double, movlps: packed simple, cvtsi2sd: int to scalar double 32b to 64b,
             // cvtsi2ss: int to scalar single copy 32b to 32b, movd: doubleword move
+            
+            
+            Mnemonic::Movhpd => {
+                // we keep the high part of xmm destination
+
+                self.show_instruction(&self.colors.cyan, &ins);
+
+                let sz0 = self.get_operand_sz(&ins, 0);
+                let sz1 = self.get_operand_sz(&ins, 1);
+
+                if sz0 == 128 && sz1 == 128 {
+                    let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                        Some(v) => v,
+                        None => {
+                            println!("error getting xmm value1");
+                            return false;
+                        }
+                    };
+                    self.set_operand_xmm_value_128(&ins, 0, value1);
+
+                } else if sz0 == 128 && sz1 == 32 {
+                    let value1 = match self.get_operand_value(&ins, 1, true) {
+                        Some(v) => v,
+                        None => {
+                            println!("error getting xmm value1");
+                            return false;
+                        }
+                    };
+                    unimplemented!("mov 32bits to the 64bits highest part of the xmm1 u128");
+                    //self.set_operand_xmm_value_128(&ins, 0, value1 as u128);
+                    
+                } else if sz0 == 32 && sz1 == 128 {
+                    let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                        Some(v) => v,
+                        None => {
+                            println!("error getting xmm value1");
+                            return false;
+                        }
+                    };
+                    unimplemented!("mov 32bits to the 64bits highest part of the xmm1 u128");
+                    //self.set_operand_value(&ins, 0, value1 as u64);
+
+                } else if sz0 == 128 && sz1 == 64 {
+                    let value0 = match self.get_operand_xmm_value_128(&ins, 0, false) {
+                        Some(v) => v,
+                        None => {
+                            println!("error getting xmm address value1");
+                            return false;
+                        }
+                    };
+                    let addr = match self.get_operand_value(&ins, 1, false) {
+                        Some(v) => v,
+                        None => {
+                            println!("error getting xmm address value1");
+                            return false;
+                        }
+                    };
+                    let value1 = match self.maps.read_qword(addr) {
+                        Some(v) => v,
+                        None => {
+                            println!("error getting xmm qword value1");
+                            return false;
+                        }
+                    };
+
+                    let result :u128 = (value1 as u128) << 64 | value0 & 0xffffffffffffffff;
+                    
+                    self.set_operand_xmm_value_128(&ins, 0, result);
+
+
+                } else if sz0 == 64 && sz1 == 128 {
+                    let mut value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                        Some(v) => v,
+                        None => {
+                            println!("error getting xmm value1");
+                            return false;
+                        }
+                    };
+                    value1 = value1 >> 64;
+
+                    self.set_operand_value(&ins, 0, value1 as u64);
+                } else {
+                    println!("SSE with other size combinations sz0:{} sz1:{}", sz0, sz1);
+                    return false;
+                }
+            }
+
+
             Mnemonic::Movlpd
             | Mnemonic::Movlps
             | Mnemonic::Cvtsi2sd
-            | Mnemonic::Cvtsi2ss
-            | Mnemonic::Movd => {
+            | Mnemonic::Cvtsi2ss => {
+                // we keep the high part of xmm destination
+
+                self.show_instruction(&self.colors.cyan, &ins);
+
+                let sz0 = self.get_operand_sz(&ins, 0);
+                let sz1 = self.get_operand_sz(&ins, 1);
+
+                if sz0 == 128 && sz1 == 128 {
+                    let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                        Some(v) => v,
+                        None => {
+                            println!("error getting xmm value1");
+                            return false;
+                        }
+                    };
+                    self.set_operand_xmm_value_128(&ins, 0, value1);
+                } else if sz0 == 128 && sz1 == 32 {
+                    let value1 = match self.get_operand_value(&ins, 1, true) {
+                        Some(v) => v,
+                        None => {
+                            println!("error getting xmm value1");
+                            return false;
+                        }
+                    };
+                    self.set_operand_xmm_value_128(&ins, 0, value1 as u128);
+                } else if sz0 == 32 && sz1 == 128 {
+                    let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                        Some(v) => v,
+                        None => {
+                            println!("error getting xmm value1");
+                            return false;
+                        }
+                    };
+                    self.set_operand_value(&ins, 0, value1 as u64);
+                } else if sz0 == 128 && sz1 == 64 {
+                    let value0 = match self.get_operand_xmm_value_128(&ins, 0, false) {
+                        Some(v) => v,
+                        None => {
+                            println!("error getting xmm address value1");
+                            return false;
+                        }
+                    };
+                    let addr = match self.get_operand_value(&ins, 1, false) {
+                        Some(v) => v,
+                        None => {
+                            println!("error getting xmm address value1");
+                            return false;
+                        }
+                    };
+                    let value1 = match self.maps.read_qword(addr) {
+                        Some(v) => v,
+                        None => {
+                            println!("error getting xmm qword value1");
+                            return false;
+                        }
+                    };
+
+                    let mask: u128 = 0xFFFFFFFFFFFFFFFF_0000000000000000;
+                    let result :u128 = (value0 & mask) | (value1 as u128);
+                    
+                    self.set_operand_xmm_value_128(&ins, 0, result);
+
+
+                } else if sz0 == 64 && sz1 == 128 {
+                    let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                        Some(v) => v,
+                        None => {
+                            println!("error getting xmm value1");
+                            return false;
+                        }
+                    };
+                    self.set_operand_value(&ins, 0, value1 as u64);
+                } else {
+                    println!("SSE with other size combinations sz0:{} sz1:{}", sz0, sz1);
+                    return false;
+                }
+            }
+            
+            Mnemonic::Movhps => {
+                self.show_instruction(&self.colors.green, &ins);
+                assert!(ins.op_count() == 2);
+
+                let sz0 = self.get_operand_sz(&ins, 0);
+                let sz1 = self.get_operand_sz(&ins, 1);
+
+                if sz0 == 128 && sz1 == 64 {
+                    
+                    let value0 = match self.get_operand_xmm_value_128(&ins, 0, true) {
+                        Some(v) => v,
+                        None => {
+                            println!("error getting xmm value0");
+                            return false;
+                        }
+                    };
+
+                    let value1 = match self.get_operand_value(&ins, 0, true) {
+                        Some(v) => v,
+                        None => {
+                            println!("error getting value1");
+                            return false;
+                        }
+                    };
+
+                    let lower_value0 = value0 & 0x00000000_FFFFFFFF_00000000_FFFFFFFF;
+                    let upper_value1 = (value1 as u128) << 64;
+                    let result = lower_value0 | upper_value1;
+
+                    self.set_operand_xmm_value_128(&ins, 0, result);
+
+
+                } else if sz0 == 64 && sz1 == 128 {
+
+                    let value1 = match self.get_operand_xmm_value_128(&ins, 0, true) {
+                        Some(v) => v,
+                        None => {
+                            println!("error getting xmm value1");
+                            return false;
+                        }
+                    };
+
+                    let result = (value1 >> 64) as u64;   
+                    
+                    self.set_operand_value(&ins, 0, result);
+
+
+                } else if sz0 == 128 && sz1 == 32 {
+
+                    let value0 = match self.get_operand_xmm_value_128(&ins, 0, true) {
+                        Some(v) => v,
+                        None => {
+                            println!("error getting xmm value0");
+                            return false;
+                        }
+                    };
+
+                    let value1 = match self.get_operand_value(&ins, 1, true) {
+                        Some(v) => (v & 0xffffffff) as u32,
+                        None => {
+                            println!("error getting value1");
+                            return false;
+                        }
+                    };
+
+                    let lower_value0 = value0 & 0x00000000_FFFFFFFF_FFFFFFFF_FFFFFFFF;
+                    let upper_value1 = (value1 as u128) << 96;
+                    let result = lower_value0 | upper_value1;
+
+
+                    self.set_operand_xmm_value_128(&ins, 0, result);
+
+                } else {
+                    unimplemented!("case of movhps unimplemented {} {}", sz0, sz1);
+                }
+
+            }
+
+            Mnemonic::Punpcklqdq => {
+                self.show_instruction(&self.colors.green, &ins);
+                let sz0 = self.get_operand_sz(&ins, 0);
+                let sz1 = self.get_operand_sz(&ins, 1);
+
+                if sz0 == 128 && sz1 == 128 {
+                    let value0 = match self.get_operand_xmm_value_128(&ins, 0, true) {
+                        Some(v) => v,
+                        None => {
+                            println!("error getting xmm value0");
+                            return false;
+                        }
+                    };
+
+                    let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                        Some(v) => (v & 0xffffffff) as u32,
+                        None => {
+                            println!("error getting xmm value1");
+                            return false;
+                        }
+                    };
+                    let value0_low_qword = value0 as u64;
+                    let value1_low_qword = value1 as u64;
+                    let result = ((value0_low_qword as u128) << 64) | (value1_low_qword as u128);
+
+                    self.set_operand_xmm_value_128(&ins, 0, result);
+
+                } else {
+                    println!("unimplemented case punpcklqdq {} {}", sz0, sz1);
+                    return false;
+                }
+                
+            }
+
+            Mnemonic::Movq => {
+                self.show_instruction(&self.colors.green, &ins);
+                assert!(ins.op_count() == 2);
+
+                let sz0 = self.get_operand_sz(&ins, 0);
+                let sz1 = self.get_operand_sz(&ins, 1);
+                let value1:u128;
+
+
+                if sz1 == 128 {
+                    value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                        Some(v) => v,
+                        None => {
+                            println!("error getting xmm value1");
+                            return false;
+                        }
+                    };
+                } else if sz1 < 128 {
+                    value1 = match self.get_operand_value(&ins, 1, true) {
+                        Some(v) => v as u128,
+                        None => {
+                            println!("error getting xmm value1");
+                            return false;
+                        }
+                    };
+                } else {
+                    unimplemented!("ymm zmm unimplemented on movq");
+                }
+
+
+                if sz0 == 128 {
+                    self.set_operand_xmm_value_128(&ins, 0, value1);
+
+                } else if sz0 < 128 {
+                    self.set_operand_value(&ins, 0, value1 as u64);
+                } else {
+                    unimplemented!("ymm zmm unimplemented on movq");
+                }
+
+            }
+
+            Mnemonic::Punpckldq => {
+                self.show_instruction(&self.colors.cyan, &ins);
+
+                let value0 = match self.get_operand_xmm_value_128(&ins, 0, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting xmm value1");
+                        return false;
+                    }
+                };
+
+                let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting xmm value1");
+                        return false;
+                    }
+                };
+
+                let dword0_0 = (value0 >> 96) as u32;
+                let dword0_1 = (value0 >> 64) as u32;
+                let dword1_0 = (value1 >> 96) as u32;
+                let dword1_1 = (value1 >> 64) as u32;
+
+                let result: u128 = ((dword0_0 as u128) << 96) 
+                     | ((dword1_0 as u128) << 64) 
+                     | ((dword0_1 as u128) << 32)
+                     |  (dword1_1 as u128);
+
+                self.set_operand_xmm_value_128(&ins, 0, result);
+            }
+
+
+            Mnemonic::Movd => {
+                // the high part is cleared to zero
+                
                 self.show_instruction(&self.colors.cyan, &ins);
 
                 let sz0 = self.get_operand_sz(&ins, 0);
@@ -9921,7 +10677,10 @@ impl Emu {
                             return false;
                         }
                     };
+
+                    
                     self.set_operand_xmm_value_128(&ins, 0, value1 as u128);
+
                 } else if sz0 == 64 && sz1 == 128 {
                     let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
                         Some(v) => v,
@@ -9935,22 +10694,6 @@ impl Emu {
                     println!("SSE with other size combinations sz0:{} sz1:{}", sz0, sz1);
                     return false;
                 }
-            }
-
-            Mnemonic::Movq => {
-                self.show_instruction(&self.colors.green, &ins);
-
-                assert!(ins.op_count() == 2);
-
-                let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
-                    Some(v) => v,
-                    None => {
-                        println!("error getting xmm value1");
-                        return false;
-                    }
-                };
-
-                self.set_operand_xmm_value_128(&ins, 0, value1);
             }
 
             Mnemonic::Movdqa => {
@@ -9997,44 +10740,22 @@ impl Emu {
                             return false;
                         }
                     };
-                    let b1 = match self.maps.read_dword(addr) {
-                        Some(v) => v,
-                        None => {
-                            println!("error reading b1 in movdqa");
-                            return false;
-                        }
-                    };
-                    let b2 = match self.maps.read_dword(addr + 4) {
-                        Some(v) => v,
-                        None => {
-                            println!("error reading b2 in movdqa");
-                            return false;
-                        }
-                    };
-                    let b3 = match self.maps.read_dword(addr + 8) {
-                        Some(v) => v,
-                        None => {
-                            println!("error reading b3 in movdqa");
-                            return false;
-                        }
-                    };
-                    let b4 = match self.maps.read_dword(addr + 12) {
-                        Some(v) => v,
-                        None => {
-                            println!("error reading b4 in movdqa");
-                            return false;
-                        }
-                    };
 
-                    let r1: u128 = b1 as u128;
-                    let r2: u128 = b2 as u128;
-                    let r3: u128 = b3 as u128;
-                    let r4: u128 = b4 as u128;
+                    let bytes = self.maps.read_bytes(addr, 16); 
+                    if bytes.len() != 16 {
+                        println!("error reading 16 bytes");
+                        return false;
+                    }
+
+                    let result = u128::from_le_bytes([
+                        bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], 
+                        bytes[5], bytes[6], bytes[7], bytes[8], bytes[9], 
+                        bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15], ]);
 
                     self.set_operand_xmm_value_128(
                         &ins,
                         0,
-                        r1 << (12 * 8) | r2 << (8 * 8) | r3 << (4 * 8) | r4,
+                        result
                     );
 
                 } else if sz0 == 128 && sz1 == 128 {
@@ -10508,6 +11229,85 @@ impl Emu {
                 self.set_operand_xmm_value_128(&ins, 0, result);
             }
 
+            Mnemonic::Psrldq => {
+                self.show_instruction(&self.colors.green, &ins);
+
+                if ins.op_count() == 2 {
+                    let sz0 = self.get_operand_sz(&ins, 0);
+
+                    if sz0 == 128 {
+                        
+                        let value0 = match self.get_operand_xmm_value_128(&ins, 0, true) {
+                            Some(v) => v,
+                            None => {
+                                println!("error getting value0");
+                                return false;
+                            }
+                        };
+                        let mut value1 = match self.get_operand_value(&ins, 1, true) {
+                            Some(v) => v,
+                            None => {
+                                println!("error getting value1");
+                                return false;
+                            }
+                        };
+
+                        let result: u128;
+                        if value1 > 15 {
+                            value1 = 16;
+                        }
+
+                        result = value0 >> (value1 * 8);
+
+                        self.set_operand_xmm_value_128(&ins, 0, result);
+
+
+                    } else {
+                        unimplemented!("size unimplemented");
+                    }
+                    
+
+                } else if ins.op_count() == 3 {
+                    let sz0 = self.get_operand_sz(&ins, 0);
+
+                    if sz0 == 128 {
+                        
+                        let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                            Some(v) => v,
+                            None => {
+                                println!("error getting value0");
+                                return false;
+                            }
+                        };
+                        let mut value2 = match self.get_operand_value(&ins, 2, true) {
+                            Some(v) => v,
+                            None => {
+                                println!("error getting value1");
+                                return false;
+                            }
+                        };
+
+                        let result: u128;
+                        if value2 > 15 {
+                            value2 = 16;
+                        }
+
+                        result = value1 >> (value2 * 8);
+
+                        self.set_operand_xmm_value_128(&ins, 0, result);
+
+
+                    } else {
+                        unimplemented!("size unimplemented");
+                    }
+                    
+
+                } else {
+                    unreachable!();
+                }
+
+            }
+
             Mnemonic::Psllw => {
                 self.show_instruction(&self.colors.green, &ins);
 
@@ -10909,6 +11709,29 @@ impl Emu {
                 }
             }
 
+            Mnemonic::Movaps => {
+                self.show_instruction(&self.colors.green, &ins);
+                assert!(ins.op_count() == 2);
+                let sz0 = self.get_operand_sz(&ins, 0);
+                let sz1 = self.get_operand_sz(&ins, 1);
+
+                if sz0 == 32 && sz1 == 128 {
+                        let source = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                            Some(v) => v,
+                            None => {
+                                println!("error reading memory xmm 1 source operand");
+                                return false;
+                            }
+                        };
+
+                        self.set_operand_xmm_value_128(&ins, 0, source);
+                    
+                } else {
+                    unimplemented!("case unimplemented");
+                }
+
+            }
+
             Mnemonic::Vmovd => {
                 self.show_instruction(&self.colors.green, &ins);
 
@@ -11112,6 +11935,123 @@ impl Emu {
 
             }
 
+
+            Mnemonic::Pcmpeqb => {
+                self.show_instruction(&self.colors.green, &ins);
+
+                match self.get_operand_sz(ins, 0) {
+                    128 => {
+                        let source1 = match self.get_operand_xmm_value_128(&ins, 0, true) {
+                            Some(v) => v,
+                            None => {
+                                println!("error reading memory xmm 1 source operand");
+                                return false;
+                            }
+                        };
+
+                        let source2 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                            Some(v) => v,
+                            None => {
+                                println!("error reading memory xmm 2 source operand");
+                                return false;
+                            }
+                        };
+
+                        let a_bytes = source1.to_le_bytes();
+                        let b_bytes = source2.to_le_bytes();
+
+                        let mut result = [0u8; 16];
+
+                        for i in 0..16 {
+                            if a_bytes[i] == b_bytes[i] {
+                                result[i] = 0xFF;
+                            } else {
+                                result[i] = 0;
+                            }
+                        }
+
+                        let result = u128::from_le_bytes(result);
+                
+                        self.set_operand_xmm_value_128(&ins, 0, result);
+                    }
+                    256 => {
+                        let source1 = match self.get_operand_ymm_value_256(&ins, 0, true) {
+                            Some(v) => v,
+                            None => {
+                                println!("error reading memory ymm 1 source operand");
+                                return false;
+                            }
+                        };
+
+                        let source2 = match self.get_operand_ymm_value_256(&ins, 1, true) {
+                            Some(v) => v,
+                            None => {
+                                println!("error reading memory ymm 2 source operand");
+                                return false;
+                            }
+                        };
+
+
+                        let mut bytes1:Vec<u8> = vec![0;32];
+                        source1.to_little_endian(&mut bytes1);
+                        let mut bytes2:Vec<u8> = vec![0;32];
+                        source2.to_little_endian(&mut bytes2);
+
+                        let mut result = [0u8; 32];
+
+                        for i in 0..32 {
+                            if bytes1[i] == bytes2[i] {
+                                result[i] = 0xFF;
+                            } else {
+                                result[i] = 0;
+                            }
+                        }
+
+                        let result256: regs64::U256 = regs64::U256::from_little_endian(&result);
+
+                        self.set_operand_ymm_value_256(&ins, 0, result256);
+                    }
+                    _ => unreachable!(""),
+                }
+            }
+
+            Mnemonic::Pslldq => {
+                self.show_instruction(&self.colors.green, &ins);
+
+                match self.get_operand_sz(ins, 0) {
+                    128 => {
+                        let value0 = match self.get_operand_xmm_value_128(&ins, 0, true) {
+                            Some(v) => v,
+                            None => {
+                                println!("error reading memory xmm 1 source operand");
+                                return false;
+                            }
+                        };
+
+                        let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                            Some(v) => v,
+                            None => {
+                                println!("error reading memory xmm 2 source operand");
+                                return false;
+                            }
+                        };
+    
+                        let result:u128;
+
+                        if value1 >= 16 {
+                            result = 0;
+                        } else {
+                            result = value0 << (value1 * 8);
+                        }
+
+                        self.set_operand_xmm_value_128(&ins, 0, result);
+                    }
+                    _ => {
+                        unimplemented!("size not implemented");
+                    }
+                }
+            }
+
             Mnemonic::Vpcmpeqb => {
                 self.show_instruction(&self.colors.green, &ins);
 
@@ -11189,6 +12129,57 @@ impl Emu {
                     }
                     _ => unreachable!(""),
                 }
+            }
+
+
+            Mnemonic::Pmovmskb => {
+                self.show_instruction(&self.colors.green, &ins);
+
+                match self.get_operand_sz(ins, 1) {
+                    128 => {
+                        let source1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                            Some(v) => v,
+                            None => {
+                                println!("error reading memory xmm 1 source operand");
+                                return false;
+                            }
+                        };
+
+                        let mut result: u16 = 0;
+
+                        for i in 0..16 {
+                            let byte = ((source1 >> (i * 8)) & 0xff) as u16;
+                            let msb = (byte & 0x80) >> 7;
+                            result |= msb << i;
+                        }
+
+                
+                        self.set_operand_value(&ins, 0, result as u64);
+                    }
+                    256 => {
+                        let source1 = match self.get_operand_ymm_value_256(&ins, 1, true) {
+                            Some(v) => v,
+                            None => {
+                                println!("error reading memory ymm 1 source operand");
+                                return false;
+                            }
+                        };
+
+                        let mut result: u32 = 0;
+                        let mut input_bytes = [0u8; 32];
+                        source1.to_little_endian(&mut input_bytes);
+
+                        for i in 0..32 {
+                            let byte = input_bytes[i];
+                            let msb = (byte & 0x80) >> 7;
+                            result |= (msb as u32) << i;
+                        }
+
+                        self.set_operand_value(&ins, 0, result as u64);
+                    }
+                    _ => unreachable!(""),
+                }
+
             }
 
             Mnemonic::Vpmovmskb => {

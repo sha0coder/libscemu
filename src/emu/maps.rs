@@ -403,6 +403,14 @@ impl Maps {
         false
     }
 
+    pub fn show_addr_names(&self, addr: u64) {  
+        for mem in self.maps.iter() {
+            if mem.inside(addr) { 
+                println!("{}", mem.get_name());                                                                  
+            }
+        }  
+    }
+
     pub fn get_addr_name(&self, addr: u64) -> Option<String> {
         for mem in self.maps.iter() {
             if mem.inside(addr) {
@@ -890,6 +898,33 @@ impl Maps {
         }
         if remove {
             self.maps.remove(id_to_delete);
+        }
+    }
+
+
+    pub fn lib64_alloc(&self, sz: u64) -> Option<u64> {
+        // super simple memory allocator
+
+        let mut addr: u64 = 0x7ffffff00000;
+
+        loop {
+            addr += sz;
+
+            if addr >= 0xf0000000_00000000 {
+                return None;
+            }
+
+            for mem in self.maps.iter() {
+                if addr >= mem.get_base() && addr <= mem.get_bottom() {
+                    continue
+                }
+            }
+
+            return Some(addr);
+
+            /*if !self.overlapps(addr, sz) {
+                return Some(addr);
+            }*/
         }
     }
 

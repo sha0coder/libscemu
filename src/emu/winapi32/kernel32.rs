@@ -95,6 +95,7 @@ pub fn gateway(addr: u32, emu: &mut emu::Emu) -> String {
         0x75e76ba9 => GetComputerNameA(emu),
         0x75e93589 => CreateMutexA(emu),
         0x75e8bf00 => GetLastError(emu),
+        0x75e897e9 => CreateFileMappingA(emu),
         0x75e80a7f => CreateFileMappingW(emu),
         0x75e8ced8 => GetSystemTime(emu),
         0x75e8a19f => lstrcat(emu),
@@ -116,6 +117,7 @@ pub fn gateway(addr: u32, emu: &mut emu::Emu) -> String {
         0x75e93728 => GetSystemInfo(emu),
         0x75e8bbd0 => HeapFree(emu),
         0x75ea88e6 => SetThreadLocale(emu),
+        0x75e998ff => GetCommandLineA(emu),
         0x75e9679e => GetCommandLineW(emu),
         0x75e939aa => GetAcp(emu),
         0x75e93c26 => GetModuleFileNameW(emu),
@@ -138,6 +140,17 @@ pub fn gateway(addr: u32, emu: &mut emu::Emu) -> String {
         0x75e80e91 => VerifyVersionInfoW(emu),
         0x75e78a3b => GetTimeZoneInformation(emu),
         0x75e74e42 => VirtualQueryEx(emu),
+        0x75e8bbc0 => InterlockedIncrement(emu),
+        0x75e91dbc => GetEnvironmentStringsW(emu),
+        0x75e92f99 => GetEnvironmentStrings(emu),
+        0x75e91e46 => GetStdHandle(emu),
+        0x75e975a5 => GetFileType(emu),
+        0x75e99911 => SetHandleCount(emu),
+        0x75e9c1c0 => IsValidCodePage(emu),
+        0x75e91e2e => GetCPInfo(emu),
+        0x75e967c8 => GetStringTypeW(emu),
+        0x75e913d0 => LCMapStringW(emu),
+        0x75e9450e => WideCharToMultiByte(emu),
 
         _ => {
             let apiname = guess_api_name(emu, addr);
@@ -1825,8 +1838,11 @@ fn MapViewOfFile(emu: &mut emu::Emu) {
 
     let off: u64 = (off_high << 32) + off_low;
 
-    if size > 1024 * 4 {
+    /*if size > 1024 * 4 {
         size = 1024
+    }*/
+    if size < 1024 {
+        size = 1024;
     }
     let addr = emu
         .maps
@@ -2419,6 +2435,56 @@ fn GetLastError(emu: &mut emu::Emu) {
     );
 }
 
+fn CreateFileMappingA(emu: &mut emu::Emu) {
+    let hFile = emu
+        .maps
+        .read_dword(emu.regs.get_esp())
+        .expect("kernel32!CreateFileMappingW cannot read hFile param");
+    let attr = emu
+        .maps
+        .read_dword(emu.regs.get_esp() + 4)
+        .expect("kernel32!CreateFileMappingW cannot read attr param");
+    let protect = emu
+        .maps
+        .read_dword(emu.regs.get_esp() + 8)
+        .expect("kernel32!CreateFileMappingW cannot read protect");
+    let maxsz_high = emu
+        .maps
+        .read_dword(emu.regs.get_esp() + 12)
+        .expect("kernel32!CreateFileMappingW cannot read max size high");
+    let maxsz_low = emu
+        .maps
+        .read_dword(emu.regs.get_esp() + 16)
+        .expect("kernel32!CreateFileMappingW cannot read max size low");
+    let name_ptr = emu
+        .maps
+        .read_dword(emu.regs.get_esp() + 20)
+        .expect("kernel32!CreateFileMappingW cannot read name ptr") as u64;
+
+    let mut name: String = String::new();
+
+    if name_ptr > 0 {
+        name = emu.maps.read_string(name_ptr);
+    }
+
+    emu.regs.rax = helper::handler_create(&name);
+
+    println!(
+        "{}** {} kernel32!CreateFileMappingA {} '{}' ={} {}",
+        emu.colors.light_red,
+        emu.pos,
+        name_ptr,
+        name,
+        emu.regs.get_eax(),
+        emu.colors.nc
+    );
+
+    for _ in 0..6 {
+        emu.stack_pop32(false);
+    }
+
+}
+
 fn CreateFileMappingW(emu: &mut emu::Emu) {
     let hFile = emu
         .maps
@@ -2870,11 +2936,14 @@ fn MultiByteToWideChar(emu: &mut emu::Emu) {
     }
 
     println!(
-        "{}** {} kernel32!MultiByteToWideChar '{}' {}",
-        emu.colors.light_red, emu.pos, utf8, emu.colors.nc
+        "{}** {} kernel32!MultiByteToWideChar '{}' dst:0x{:x} {}",
+        emu.colors.light_red, emu.pos, utf8, wide_ptr, emu.colors.nc
     );
 
-    emu.maps.write_string(wide_ptr, &wide);
+
+    if cchWideChar > 0 {
+        emu.maps.write_string(wide_ptr, &wide);
+    }
     emu.regs.rax = wide.len() as u64;
 }
 
@@ -2934,6 +3003,14 @@ fn SetThreadLocale(emu: &mut emu::Emu) {
 
     emu.stack_pop32(false);
     emu.regs.rax = 1;
+}
+
+fn GetCommandLineA(emu: &mut emu::Emu) {
+    println!(
+        "{}** {} kernel32!GetCommandlineA {}",
+        emu.colors.light_red, emu.pos, emu.colors.nc
+    );
+    emu.regs.rax = 0;
 }
 
 fn GetCommandLineW(emu: &mut emu::Emu) {
@@ -3029,10 +3106,11 @@ fn EnterCriticalSection(emu: &mut emu::Emu) {
         .expect("kernel32!EnterCriticalSection cannot read crit_sect");
 
     println!(
-        "{}** {} kernel32!EnterCriticalSection {}",
-        emu.colors.light_red, emu.pos, emu.colors.nc
+        "{}** {} kernel32!EnterCriticalSection 0x{:x} {}",
+        emu.colors.light_red, emu.pos, crit_sect, emu.colors.nc
     );
-    emu.regs.rax = 1;
+    emu.regs.rax = crit_sect as u64;
+    emu.stack_pop32(false);
 }
 
 fn LeaveCriticalSection(emu: &mut emu::Emu) {
@@ -3046,6 +3124,7 @@ fn LeaveCriticalSection(emu: &mut emu::Emu) {
         emu.colors.light_red, emu.pos, emu.colors.nc
     );
     emu.regs.rax = 1;
+    emu.stack_pop32(false);
 }
 
 fn IsValidLocale(emu: &mut emu::Emu) {
@@ -3064,6 +3143,8 @@ fn IsValidLocale(emu: &mut emu::Emu) {
     );
 
     emu.regs.rax = 1;
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
 }
 
 fn GetThreadUILanguage(emu: &mut emu::Emu) {
@@ -3438,3 +3519,213 @@ fn VirtualQueryEx(emu: &mut emu::Emu) {
     emu.stack_pop32(false);
     emu.stack_pop32(false);
 }
+
+fn InterlockedIncrement(emu: &mut emu::Emu) {
+    let addend = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("kernel32!InterlockedIncrement cannot read addend");
+
+    let prev = emu.maps.read_dword(addend as u64)
+        .expect("kernel32!InterlockedIncrement  error derreferencing addend");
+
+    emu.maps.write_dword(addend as u64, prev+1);
+
+    println!(
+        "{}** {} kernel32!InterlockedIncrement 0x{:x} {}->{} {}",
+        emu.colors.light_red, emu.pos, addend, prev, prev+1, emu.colors.nc
+    );
+
+    emu.stack_pop32(false);
+}
+
+fn GetEnvironmentStrings(emu: &mut emu::Emu) {
+    println!(
+        "{}** {} kernel32!GetEnvironmentStrings {}",
+        emu.colors.light_red, emu.pos, emu.colors.nc
+    );
+    emu.regs.rax = 0;
+}
+
+fn GetEnvironmentStringsW(emu: &mut emu::Emu) {
+    println!(
+        "{}** {} kernel32!GetEnvironmentStringsW {}",
+        emu.colors.light_red, emu.pos, emu.colors.nc
+    );
+    emu.regs.rax = 0;
+}
+
+fn GetStdHandle(emu: &mut emu::Emu) {
+    let nstd = emu.maps.read_dword(emu.regs.rsp)
+        .expect("kernel32!GetStdHandle error reading nstd param");
+
+    println!(
+        "{}** {} kernel32!GetStdHandle {} {}",
+        emu.colors.light_red, emu.pos, nstd, emu.colors.nc
+    );
+
+    emu.stack_pop32(false);
+    emu.regs.rax = nstd as u64;
+}
+
+fn GetFileType(emu: &mut emu::Emu) {
+    let hndl = emu.maps.read_dword(emu.regs.rsp)
+        .expect("kernel32!GetFileType error getting hndl param");
+
+    println!(
+        "{}** {} kernel32!GetFileType 0x{:x} {}",
+        emu.colors.light_red, emu.pos, hndl, emu.colors.nc
+    );
+
+    emu.stack_pop32(false);
+    emu.regs.rax = 1;
+
+    /*
+     * FILE_TYPE_CHAR 0x0002
+     * FILE_TYPE_DISK 0x0001
+     * FILE_TYPE_PIPE 0x0003
+     * FILE_TYPE_REMOTE 0x8000
+     * FILE_TYPE_UNKNOWN 0x0000
+     */
+}
+
+fn SetHandleCount(emu: &mut emu::Emu) {
+    let num =  emu.maps.read_dword(emu.regs.rsp)
+        .expect("kernel32!SetHandleCount error getting num param");
+
+    println!(
+        "{}** {} kernel32!SetHandleCount {} {}",
+        emu.colors.light_red, emu.pos, num, emu.colors.nc
+    );
+
+    emu.stack_pop32(false);
+    emu.regs.rax = num as u64;
+}
+
+fn IsValidCodePage(emu: &mut emu::Emu) {
+    let codepage = emu.maps.read_dword(emu.regs.rsp)
+        .expect("kernel32!IsValidCodePage error geting codepage param");
+
+    println!(
+        "{}** {} kernel32!IsValidCodePage {} {}",
+        emu.colors.light_red, emu.pos, codepage, emu.colors.nc
+    );
+
+    emu.stack_pop32(false);
+    emu.regs.rax = 1;
+}
+
+
+fn GetCPInfo(emu: &mut emu::Emu) {
+    let codepage = emu.maps.read_dword(emu.regs.rsp)
+        .expect("kernel32!GetCPInfo error reading codepage param");
+    let info_ptr = emu.maps.read_dword(emu.regs.rsp+4)
+        .expect("kernel32!GetCPInfo error reading inmfo_ptr param");
+
+    println!(
+        "{}** {} kernel32!GetCPInfo {} 0x{} {}",
+        emu.colors.light_red, emu.pos, codepage, info_ptr, emu.colors.nc
+    );
+
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+    emu.regs.rax = 1;
+
+    // https://learn.microsoft.com/en-us/windows/win32/api/winnls/ns-winnls-cpinfo
+}
+
+
+fn GetStringTypeW(emu: &mut emu::Emu) {
+    let info_type = emu.maps.read_dword(emu.regs.rsp)
+        .expect("kernel32!GetStringTypeW error reading info_type param");
+    let str_ptr = emu.maps.read_dword(emu.regs.rsp+4)
+        .expect("kernel32!GetStringTypeW error reading str_ptr param") as u64;
+    let sz = emu.maps.read_dword(emu.regs.rsp+8)
+        .expect("kernel32!GetStringTypeW error reading sz param");
+    let char_type = emu.maps.read_dword(emu.regs.rsp+12)
+        .expect("kernel32!GetStringTypeW error reading char_type param");
+
+    let ustr = emu.maps.read_wide_string(str_ptr);
+
+    println!(
+        "{}** {} kernel32!GetStringTypeW `{}` 0x{} {}",
+        emu.colors.light_red, emu.pos, ustr, sz, emu.colors.nc
+    );
+
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+    emu.regs.rax = 1;
+}
+
+fn LCMapStringW(emu: &mut emu::Emu) {
+    let locale = emu.maps.read_dword(emu.regs.rsp)
+        .expect("kernel32!LCMapStringW error reading param");
+    let flags = emu.maps.read_dword(emu.regs.rsp+4)
+        .expect("kernel32!LCMapStringW error reading param");
+    let src_ptr = emu.maps.read_dword(emu.regs.rsp+8)
+        .expect("kernel32!LCMapStringW error reading param") as u64;
+    let src_sz = emu.maps.read_dword(emu.regs.rsp+12)
+        .expect("kernel32!LCMapStringW error reading param");
+    let dest_ptr = emu.maps.read_dword(emu.regs.rsp+16)
+        .expect("kernel32!LCMapStringW error reading param") as u64;
+    let dest_sz = emu.maps.read_dword(emu.regs.rsp+20)
+        .expect("kernel32!LCMapStringW error reading param");
+
+    let s = emu.maps.read_wide_string(src_ptr);
+    emu.maps.write_wide_string(dest_ptr, &s);
+
+
+    println!(
+        "{}** {} kernel32!LCMapStringW `{}` sz:{}->{} {}",
+        emu.colors.light_red, emu.pos, s, src_sz, dest_sz, emu.colors.nc
+    );
+    
+    for _ in 0..6 {
+        emu.stack_pop32(false);
+    }
+    emu.regs.rax = 1;
+}
+
+fn WideCharToMultiByte(emu: &mut emu::Emu) {
+    let codepage = emu.maps.read_dword(emu.regs.rsp)
+        .expect("kernel32!WideCharToMultiByte error reading param");
+    let flags = emu.maps.read_dword(emu.regs.rsp+4)
+        .expect("kernel32!WideCharToMultiByte error reading param");
+    let wstr_ptr = emu.maps.read_dword(emu.regs.rsp+8)
+        .expect("kernel32!WideCharToMultiByte error reading param") as u64;
+    let wstr_sz = emu.maps.read_dword(emu.regs.rsp+12)
+        .expect("kernel32!WideCharToMultiByte error reading param");
+    let mbytestr_ptr = emu.maps.read_dword(emu.regs.rsp+16)
+        .expect("kernel32!WideCharToMultiByte error reading param") as u64;
+    let mbytestr_sz = emu.maps.read_dword(emu.regs.rsp+20)
+        .expect("kernel32!WideCharToMultiByte error reading param");
+    let in_default_char = emu.maps.read_dword(emu.regs.rsp+24)
+        .expect("kernel32!WideCharToMultiByte error reading param") as u64;
+    let out_default_char = emu.maps.read_dword(emu.regs.rsp+28)
+        .expect("kernel32!WideCharToMultiByte error reading param") as u64;
+
+   
+    //println!("default_char_ptr 0x{:x}", in_default_char);
+    //let default_char = emu.maps.read_byte(in_default_char)
+    //    .expect("kernel32!WideCharToMultiByte error reading default char"); 
+    
+    //emu.maps.write_byte(out_default_char, 0);
+
+    println!("dest ptr: 0x{:x}", mbytestr_ptr);
+    let s = emu.maps.read_wide_string(wstr_ptr);
+    emu.maps.write_string(mbytestr_ptr, &s);
+
+
+    println!(
+        "{}** {} kernel32!WideCharToMultiByte `{}` sz:{}->{} {}",
+        emu.colors.light_red, emu.pos, s, wstr_sz, mbytestr_sz, emu.colors.nc
+    );
+    
+    for _ in 0..8 {
+        emu.stack_pop32(false);
+    }
+    emu.regs.rax = s.len() as u64;
+}
+
+
+

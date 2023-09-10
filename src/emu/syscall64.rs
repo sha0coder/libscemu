@@ -1,9 +1,14 @@
 use crate::emu;
+use crate::emu::structures;
 use crate::emu::constants;
 use crate::emu::endpoint;
 use crate::emu::winapi32::helper;
 
 use std::fs;
+use std::fs::File;
+use std::io::{BufReader, Read, Seek, SeekFrom};
+use std::path::Path;
+
 
 /*
  * /usr/include/asm/unistd_64.h
@@ -44,10 +49,52 @@ pub fn gateway(emu: &mut emu::Emu) {
             let fd = emu.regs.rdi;
             let buff = emu.regs.rsi;
             let sz = emu.regs.rdx;
-            emu.regs.rax = buff;
+
+            if helper::handler_exist(fd) {
+                let filepath = helper::handler_get_uri(fd);
+                if filepath.contains(".so") {
+                    // linker needs to read libraries
+                    
+                    let mut lib_buff: Vec<u8> = Vec::new();
+                    
+                    match File::open(&filepath) {
+                        Ok(f) => {
+                            let len = f.metadata().unwrap().len();
+                            let mut reader = BufReader::new(&f);
+                            reader
+                                .read_to_end(&mut lib_buff)
+                                .expect("kernel64 cannot load dynamic library");
+                            f.sync_all();
+
+                            //println!("readed a lib with sz: {} buff:0x{:x}", lib_buff.len(), buff);
+                            
+                            let map = emu.maps.get_mem_by_addr(buff)
+                                 .expect("buffer send to read syscall point to no map");
+
+                            // does the file data bypasses mem end?
+                            let mem_end = map.get_base() + map.size() as u64 -1;
+                            let buff_end = buff + lib_buff.len() as u64 -1;
+                            if buff_end > mem_end {
+                                let overflow = buff_end - mem_end;
+                                lib_buff = lib_buff[0..lib_buff.len()-overflow as usize].to_vec();
+                            }
+
+                            emu.maps.write_bytes(buff, lib_buff);
+                            emu.regs.rax = sz;
+                        },
+                        Err(_) => {
+                            println!("file not found");
+                            emu.regs.rax = 0;
+                        }
+                    };
+                }
+            } else {
+                emu.regs.rax = sz;
+            }
+
             println!(
-                "{}** {} syscall read() fd: {} buf: 0x{:x} sz: {} {}",
-                emu.colors.light_red, emu.pos, fd, buff, sz, emu.colors.nc
+                "{}** {} syscall read(fd:{} buf:0x{:x} sz:{}) ={} {}",
+                emu.colors.light_red, emu.pos, fd, buff, sz, emu.regs.rax, emu.colors.nc
             );
         }
 
@@ -72,22 +119,52 @@ pub fn gateway(emu: &mut emu::Emu) {
 
         constants::NR64_OPEN => {
             let file_path = emu.maps.read_string(emu.regs.rdi);
-            let fd = helper::socket_create();
+            let fd = helper::handler_create(&file_path);
+
             emu.regs.rax = fd;
             println!(
-                "{}** {} syscall open() file: {} fd:{} {}",
+                "{}** {} syscall open({}) ={} {}",
                 emu.colors.light_red, emu.pos, file_path, fd, emu.colors.nc
             );
         }
 
+        constants::NR64_OPENAT => {
+            let dirfd = emu.regs.rdi;
+            let file_path = emu.maps.read_string(emu.regs.rsi);
+            let mut fd:u64 = 0xffffffff_ffffffff;
+
+            let path = Path::new(&file_path);
+            if path.exists() {
+               fd = helper::handler_create(&file_path);
+            }
+
+            println!(
+                "{}** {} syscall openat({} '{}') ={} {}",
+                emu.colors.light_red, emu.pos, dirfd, file_path, fd as i64, emu.colors.nc
+            );
+
+            emu.regs.rax = fd;
+        }
+
         constants::NR64_CLOSE => {
             let fd = emu.regs.rdi;
+           
+            if helper::handler_exist(fd) {
+                helper::handler_close(fd);
+                emu.regs.rax = 0;
+            } else {
+                helper::socket_close(fd);
+                emu.regs.rax = 0xffffffff_ffffffff;
+            }
+           
+            if emu.cfg.endpoint {
+                endpoint::sock_close();
+            }
+
             println!(
-                "{}** {} syscall close() fd: {}  {}",
-                emu.colors.light_red, emu.pos, fd, emu.colors.nc
+                "{}** {} syscall close(fd:{}) ={} {}",
+                emu.colors.light_red, emu.pos, fd, emu.regs.rax, emu.colors.nc
             );
-            helper::socket_close(fd);
-            endpoint::sock_close();
         }
 
         constants::NR64_BRK => {
@@ -555,6 +632,142 @@ pub fn gateway(emu: &mut emu::Emu) {
             );
         }
 
+        constants::NR64_ACCESS => {
+            let filename = emu.maps.read_string(emu.regs.rdi);
+
+            println!(
+                "{}** {} syscall access({})  {}",
+                emu.colors.light_red, emu.pos, filename, emu.colors.nc
+            );
+
+            if filename == "/etc/ld.so.preload" {
+                emu.regs.rax = constants::ENOENT as u64;
+            } else {
+                emu.regs.rax = 0;
+            }
+        }
+
+        constants::NR64_MUNMAP => {
+            let addr = emu.regs.rdi;
+            let sz = emu.regs.rsi;
+
+            emu.maps.free(&format!("mmap_{:x}",addr));
+
+            println!(
+                "{}** {} syscall munmap(0x{:x} sz:{})  {}",
+                emu.colors.light_red, emu.pos, addr,  sz, emu.colors.nc
+            );
+
+            emu.regs.rax = 0;
+        }
+
+        constants::NR64_MMAP => {
+            let mut addr = emu.regs.rdi;
+            let sz = emu.regs.rsi;
+            let prot = emu.regs.rdx;
+            let flags = emu.regs.r10;
+            let fd = emu.regs.r8;
+            let off = emu.regs.r9;
+
+            if addr == 0 {
+                addr = emu.maps.lib64_alloc(sz).expect("syscall64 mmap cannot alloc");
+            }
+
+            let map = emu.maps.create_map(&format!("mmap_{:x}",addr));
+            map.set_base(addr);
+            map.set_size(sz);
+
+            if helper::handler_exist(fd) {
+                let filepath = helper::handler_get_uri(fd);
+                if filepath.contains(".so") {
+                    let mut lib_buff: Vec<u8> = Vec::new();
+                    
+                    match File::open(&filepath) {
+                        Ok(f) => {
+                            let len = f.metadata().unwrap().len();
+                            let mut reader = BufReader::new(&f);
+                            reader.seek(SeekFrom::Start(off)).expect("mmap offset out of file");
+                            reader
+                                .read_to_end(&mut lib_buff)
+                                .expect("kernel64 cannot load dynamic library");
+                            f.sync_all();
+
+                            //println!("readed a lib with sz: {} buff:0x{:x}", lib_buff.len(), addr);
+                            
+                            let map = emu.maps.get_mem_by_addr(addr)
+                                 .expect("buffer send to read syscall point to no map");
+
+                            // does the file data bypasses mem end?
+                            let mem_end = map.get_base() + map.size() as u64 -1;
+                            let buff_end = addr + lib_buff.len() as u64 -1;
+                            if buff_end > mem_end {
+                                let overflow = buff_end - mem_end;
+                                lib_buff = lib_buff[0..lib_buff.len()-overflow as usize].to_vec();
+                            }
+
+                            emu.maps.write_bytes(addr, lib_buff);
+                            emu.regs.rax = sz;
+                        },
+                        Err(_) => {
+                            println!("file not found");
+                            emu.regs.rax = 0;
+                        }
+                    };
+                }
+            }
+
+            println!(
+                "{}** {} syscall mmap(fd:{} sz:{} off:{}) =0x{:x}  {}",
+                emu.colors.light_red, emu.pos, fd as i32, sz, off, addr, emu.colors.nc
+            );
+
+            emu.regs.rax = addr;
+        }
+
+        constants::NR64_FSTAT => {
+            let fd = emu.regs.rdi;
+            let stat_ptr = emu.regs.rsi;
+            let mut stat = structures::Stat::fake();
+
+            if helper::handler_exist(fd) {
+                let filepath = helper::handler_get_uri(fd);
+                let path = Path::new(&filepath);
+                let metadata = fs::metadata(&path).expect("this file should exist because was opened by kernel64");
+                let file_size = metadata.len();
+                stat.size = file_size as i64;
+            }
+
+            stat.save(stat_ptr, &mut emu.maps);
+                                                        
+            println!(
+                "{}** {} syscall ftat(0x{:x})  =0 {}",
+                emu.colors.light_red, emu.pos, emu.regs.rdi, emu.colors.nc
+            );
+
+            emu.regs.rax = 0;
+        }
+
+        constants::NR64_STAT => {
+            let filename_ptr = emu.regs.rdi;
+            let stat_ptr = emu.regs.rsi;
+            let filename = emu.maps.read_string(filename_ptr);
+
+
+            let mut stat = structures::Stat::fake();
+            let path = Path::new(&filename);
+            let metadata = fs::metadata(&path).expect("this file should exist because was opened by kernel64");
+            let file_size = metadata.len();
+            stat.size = file_size as i64;
+            stat.save(stat_ptr, &mut emu.maps);
+                                                        
+            println!(
+                "{}** {} syscall stat({})  =0 {}",
+                emu.colors.light_red, emu.pos, filename, emu.colors.nc
+            );
+
+            emu.regs.rax = 0;
+        }
+
         constants::NR64_READLINK => {
             let link_ptr = emu.regs.rdi;
             let buff = emu.regs.rsi;
@@ -587,16 +800,17 @@ pub fn gateway(emu: &mut emu::Emu) {
         constants::NR64_MPROTECT => {
             let addr = emu.regs.rdx;
 
-            println!(
-                "{}** {} syscall mprotect({})  {}",
-                emu.colors.light_red, emu.pos, addr, emu.colors.nc
-            );
            
             if emu.maps.is_mapped(addr) {
                 emu.regs.rax = 0;
             } else {
                 emu.regs.rax = 0xffffffff_ffffffff;
             }
+
+            println!(
+                "{}** {} syscall mprotect(0x{:x}) ={:x} {}",
+                emu.colors.light_red, emu.pos, addr, emu.regs.rax, emu.colors.nc
+            );
         }
 
         _ => {
