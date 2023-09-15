@@ -2238,7 +2238,8 @@ fn UnhandledExceptionFilter(emu: &mut emu::Emu) {
     );
 
     emu.stack_pop32(false);
-    emu.regs.rax = constants::EXCEPTION_EXECUTE_HANDLER; // a debugger would had answered EXCEPTION_CONTINUE_SEARCH
+    emu.regs.rax = constants::EXCEPTION_EXECUTE_HANDLER; 
+    // a debugger would had answered EXCEPTION_CONTINUE_SEARCH
 }
 
 fn GetCurrentProcess(emu: &mut emu::Emu) {
@@ -3672,13 +3673,14 @@ fn LCMapStringW(emu: &mut emu::Emu) {
         .expect("kernel32!LCMapStringW error reading param");
 
     let s = emu.maps.read_wide_string(src_ptr);
-    emu.maps.write_wide_string(dest_ptr, &s);
 
 
     println!(
-        "{}** {} kernel32!LCMapStringW `{}` sz:{}->{} {}",
-        emu.colors.light_red, emu.pos, s, src_sz, dest_sz, emu.colors.nc
-    );
+        "{}** {} kernel32!LCMapStringW `{}` dst:0x{:x} sz:{}->{} {}",
+        emu.colors.light_red, emu.pos, s, dest_ptr, src_sz, dest_sz, emu.colors.nc
+    ); 
+
+    emu.maps.write_wide_string(dest_ptr, &s);
     
     for _ in 0..6 {
         emu.stack_pop32(false);
@@ -3715,10 +3717,10 @@ fn WideCharToMultiByte(emu: &mut emu::Emu) {
     let s = emu.maps.read_wide_string(wstr_ptr);
     emu.maps.write_string(mbytestr_ptr, &s);
 
-
     println!(
-        "{}** {} kernel32!WideCharToMultiByte `{}` sz:{}->{} {}",
-        emu.colors.light_red, emu.pos, s, wstr_sz, mbytestr_sz, emu.colors.nc
+        "{}** {} kernel32!WideCharToMultiByte `{}` sz:{}->{} ={} {}",
+        emu.colors.light_red, emu.pos, s, wstr_sz, mbytestr_sz, s.len(), 
+        emu.colors.nc,
     );
     
     for _ in 0..8 {
@@ -3726,6 +3728,5 @@ fn WideCharToMultiByte(emu: &mut emu::Emu) {
     }
     emu.regs.rax = s.len() as u64;
 }
-
 
 

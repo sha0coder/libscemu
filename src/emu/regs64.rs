@@ -1600,6 +1600,20 @@ impl Regs64 {
         };
     }
 
+    pub fn is_fpu(&self, reg: Register) -> bool {
+        match reg {
+            Register::ST0 => true,
+            Register::ST1 => true,
+            Register::ST2 => true,
+            Register::ST3 => true,
+            Register::ST4 => true,
+            Register::ST5 => true,
+            Register::ST6 => true,
+            Register::ST7 => true,
+            _ => false,
+        }
+    }
+
     pub fn get_size(&self, reg: Register) -> u32 {
         let sz: u32 = match reg {
             Register::RAX => 64,

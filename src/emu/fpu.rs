@@ -1,3 +1,5 @@
+use iced_x86::Register;
+
 #[derive(Clone)]
 pub struct FPU {
     st: Vec<f32>,
@@ -176,4 +178,18 @@ impl FPU {
     }
 
     pub fn check_pending_exceptions(self) {}
+
+    pub fn set_streg(&mut self, reg: Register, value: f32) {
+        match reg {
+            Register::ST0 => self.st[0] = value,
+            Register::ST1 => self.st[1] = value,
+            Register::ST2 => self.st[2] = value,
+            Register::ST3 => self.st[3] = value,
+            Register::ST4 => self.st[4] = value,
+            Register::ST5 => self.st[5] = value,
+            Register::ST6 => self.st[6] = value,
+            Register::ST7 => self.st[7] = value,
+            _ => unreachable!(),
+        }
+    }
 }

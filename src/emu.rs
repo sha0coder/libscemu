@@ -34,7 +34,6 @@ pub mod syscall64;
 mod winapi32;
 mod winapi64;
 
-
 use err::ScemuError;
 use crate::config::Config;
 use atty::Stream;
@@ -52,10 +51,11 @@ use pe64::PE64;
 use regs64::Regs64;
 use elf32::Elf32;
 use elf64::Elf64;
+use std::time::Instant;
 use std::sync::atomic;
 use std::sync::Arc;
 use std::collections::BTreeMap;
-use std::arch::asm;
+//use std::arch::asm;
 
 use iced_x86::{
     Decoder, DecoderOptions, Formatter, Instruction, InstructionInfoFactory, IntelFormatter,
@@ -140,6 +140,7 @@ pub struct Emu {
     dbg: bool,
     linux: bool,
     fs: BTreeMap<u64, u64>,
+    now: Instant,
 }
 
 impl Emu {
@@ -185,6 +186,7 @@ impl Emu {
             dbg: false,
             linux: false,
             fs: BTreeMap::new(),
+            now: Instant::now(),
         }
     }
 
@@ -3534,7 +3536,14 @@ impl Emu {
         assert!(ins.op_count() > noperand);
 
         match ins.op_kind(noperand) {
-            OpKind::Register => self.regs.set_reg(ins.op_register(noperand), value),
+            OpKind::Register => {
+                if self.regs.is_fpu(ins.op_register(noperand)) {
+                    self.fpu.set_streg(ins.op_register(noperand), value as f32);
+                } else {
+                    self.regs.set_reg(ins.op_register(noperand), value); 
+                }
+            }
+
             OpKind::Memory => {
                 let mut write = true;
                 let mem_addr = ins
@@ -8903,7 +8912,13 @@ impl Emu {
             Mnemonic::Rdtsc => {
                 self.show_instruction(&self.colors.red, &ins);
 
+                let elapsed = self.now.elapsed();
+                let cycles: u64 = elapsed.as_nanos() as u64;
+                self.regs.rax = (cycles & 0xffffffff) as u64;
+                self.regs.rdx = (cycles >> 32) as u64;
+
                 if self.cfg.is_64bits {
+                    /*
                     let rax:u64;
                     let rdx:u64;
                     unsafe {
@@ -8917,15 +8932,17 @@ impl Emu {
                     }
                     self.regs.rax = rax;
                     self.regs.rdx = rdx;
-                } else {
+                    */
+                } else { // 32bits
+
+                    /*
                     // TODO: actually mock a timestamp?
                     self.regs.rdx = 0x1BC2B;
                     self.regs.rax = 0xE6668424;
-                    // TODO: actually calculate flags correctly?
                     self.flags.f_pf = true;
                     self.flags.f_af = false;
+                    */
                 }
-
             }
 
             Mnemonic::Loop => {

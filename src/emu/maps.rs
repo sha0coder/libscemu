@@ -298,9 +298,10 @@ impl Maps {
     }
 
     pub fn write_wide_string(&mut self, to: u64, from: &str) {
+        println!("to: {:x}", to);
         let bs: Vec<u8> = from.bytes().collect();
         let mut off = 0;
-        for (i, bsi) in bs.iter().enumerate() {
+        for bsi in bs.iter() {
             self.write_byte(to + off as u64, *bsi);
             self.write_byte(to + off + 1 as u64, 0x00);
             off += 2;
