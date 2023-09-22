@@ -121,6 +121,114 @@ pub const PF_ARM_V81_ATOMIC_INSTRUCTIONS_AVAILABLE: u32 = 34;
 
 pub const EN_US_LOCALE: u32 = 0x0409;
 
+// Crypto Algorithms
+pub const CALG_3DES: u32 = 0x00006603;
+pub const CALG_3DES_112: u32 = 0x00006609;
+pub const CALG_AES: u32 = 0x00006611;
+pub const CALG_AES_128: u32 = 0x0000660e;
+pub const CALG_AES_192: u32 = 0x0000660f;
+pub const CALG_AES_256: u32 = 0x00006610;
+pub const CALG_AGREEDKEY_ANY: u32 = 0x0000aa03;
+pub const CALG_CYLINK_MEK: u32 = 0x0000660c;
+pub const CALG_DES: u32 = 0x00006601;
+pub const CALG_DESX: u32 = 0x00006604;
+pub const CALG_DH_EPHEM: u32 = 0x0000aa02;
+pub const CALG_DH_SF: u32 = 0x0000aa01;
+pub const CALG_DSS_SIGN: u32 = 0x00002200;
+pub const CALG_ECDH: u32 = 0x0000aa05;
+pub const CALG_ECDH_EPHEM: u32 = 0x0000ae06;
+pub const CALG_ECDSA: u32 = 0x00002203;
+pub const CALG_ECMQV: u32 = 0x0000a001;
+pub const CALG_HASH_REPLACE_OWF: u32 = 0x0000800b;
+pub const CALG_HUGHES_MD5: u32 = 0x0000a003;
+pub const CALG_HMAC: u32 = 0x00008009;
+pub const CALG_KEA_KEYX: u32 = 0x0000aa04;
+pub const CALG_MAC: u32 = 0x00008005;
+pub const CALG_MD2: u32 = 0x00008001;
+pub const CALG_MD4: u32 = 0x00008002;
+pub const CALG_MD5: u32 = 0x00008003;
+pub const CALG_NO_SIGN: u32 = 0x00002000;
+pub const CALG_OID_INFO_CNG_ONLY: u32 = 0xffffffff;
+pub const CALG_OID_INFO_PARAMETERS: u32 = 0xfffffffe;
+pub const CALG_PCT1_MASTER: u32 = 0x00004c04;
+pub const CALG_RC2: u32 = 0x00006602;
+pub const CALG_RC4: u32 = 0x00006801;
+pub const CALG_RC5: u32 = 0x0000660d;
+pub const CALG_RSA_KEYX: u32 = 0x0000a400;
+pub const CALG_RSA_SIGN: u32 = 0x00002400;
+pub const CALG_SCHANNEL_ENC_KEY: u32 = 0x00004c07;
+pub const CALG_SCHANNEL_MAC_KEY: u32 = 0x00004c03;
+pub const CALG_SCHANNEL_MASTER_HASH: u32 = 0x00004c02;
+pub const CALG_SEAL: u32 = 0x00006802;
+pub const CALG_SHA: u32 = 0x00008004;
+pub const CALG_SHA1: u32 = 0x00008004;
+pub const CALG_SHA_256: u32 = 0x0000800c;
+pub const CALG_SHA_384: u32 = 0x0000800d;
+pub const CALG_SHA_512: u32 = 0x0000800e;
+pub const CALG_SKIPJACK: u32 = 0x0000660a;
+pub const CALG_SSL2_MASTER: u32 = 0x00004c05;
+pub const CALG_SSL3_MASTER: u32 = 0x00004c01;
+pub const CALG_SSL3_SHAMD5: u32 = 0x00008008;
+pub const CALG_TEK: u32 = 0x0000660b;
+pub const CALG_TLS1_MASTER: u32 = 0x00004c06;
+pub const CALG_TLS1PRF: u32 = 0x0000800a;
+
+pub fn get_cryptoalgorithm_name(value: u32) -> &'static str {
+    match value {
+        0x00006603 => "CALG_3DES",
+        0x00006609 => "CALG_3DES_112",
+        0x00006611 => "CALG_AES",
+        0x0000660e => "CALG_AES_128",
+        0x0000660f => "CALG_AES_192",
+        0x00006610 => "CALG_AES_256",
+        0x0000aa03 => "CALG_AGREEDKEY_ANY",
+        0x0000660c => "CALG_CYLINK_MEK",
+        0x00006601 => "CALG_DES",
+        0x00006604 => "CALG_DESX",
+        0x0000aa02 => "CALG_DH_EPHEM",
+        0x0000aa01 => "CALG_DH_SF",
+        0x00002200 => "CALG_DSS_SIGN",
+        0x0000aa05 => "CALG_ECDH",
+        0x0000ae06 => "CALG_ECDH_EPHEM",
+        0x00002203 => "CALG_ECDSA",
+        0x0000a001 => "CALG_ECMQV",
+        0x0000800b => "CALG_HASH_REPLACE_OWF",
+        0x0000a003 => "CALG_HUGHES_MD5",
+        0x00008009 => "CALG_HMAC",
+        0x0000aa04 => "CALG_KEA_KEYX",
+        0x00008005 => "CALG_MAC",
+        0x00008001 => "CALG_MD2",
+        0x00008002 => "CALG_MD4",
+        0x00008003 => "CALG_MD5",
+        0x00002000 => "CALG_NO_SIGN",
+        0xffffffff => "CALG_OID_INFO_CNG_ONLY",
+        0xfffffffe => "CALG_OID_INFO_PARAMETERS",
+        0x00004c04 => "CALG_PCT1_MASTER",
+        0x00006602 => "CALG_RC2",
+        0x00006801 => "CALG_RC4",
+        0x0000660d => "CALG_RC5",
+        0x0000a400 => "CALG_RSA_KEYX",
+        0x00002400 => "CALG_RSA_SIGN",
+        0x00004c07 => "CALG_SCHANNEL_ENC_KEY",
+        0x00004c03 => "CALG_SCHANNEL_MAC_KEY",
+        0x00004c02 => "CALG_SCHANNEL_MASTER_HASH",
+        0x00006802 => "CALG_SEAL",
+        0x00008004 => "CALG_SHA",
+        0x0000800c => "CALG_SHA_256",
+        0x0000800d => "CALG_SHA_384",
+        0x0000800e => "CALG_SHA_512",
+        0x0000660a => "CALG_SKIPJACK",
+        0x00004c05 => "CALG_SSL2_MASTER",
+        0x00004c01 => "CALG_SSL3_MASTER",
+        0x00008008 => "CALG_SSL3_SHAMD5",
+        0x0000660b => "CALG_TEK",
+        0x00004c06 => "CALG_TLS1_MASTER",
+        0x0000800a => "CALG_TLS1PRF",
+        _ => "Unknown Algorithm",
+    }
+}
+
+
 //// LINUX ////
 
 // elf

@@ -3018,7 +3018,7 @@ impl Emu {
                             continue;
                         }
                     };
-                    self.disassemble(addr, 10);
+                    println!("{}", self.disassemble(addr, 10));
                 }
                 "ldr" => {
                     if self.cfg.is_64bits {
@@ -3238,7 +3238,8 @@ impl Emu {
         }
     }
 
-    pub fn disassemble(&mut self, addr: u64, amount: u32) {
+    pub fn disassemble(&mut self, addr: u64, amount: u32) -> String {
+        let mut out = String::new();
         let map_name = self.maps.get_addr_name(addr).expect("address not mapped");
         let code = self.maps.get_mem(map_name.as_str());
         let block = code.read_from(addr);
@@ -3260,15 +3261,18 @@ impl Emu {
             output.clear();
             formatter.format(&instruction, &mut output);
             if self.cfg.is_64bits {
-                println!("0x{:x}: {}", instruction.ip(), output);
+                out.push_str(&format!("0x{:x}: {}\n", instruction.ip(), output));
+                //println!("0x{:x}: {}", instruction.ip(), output);
             } else {
-                println!("0x{:x}: {}", instruction.ip32(), output);
+                out.push_str(&format!("0x{:x}: {}\n", instruction.ip32(), output));
+                //println!("0x{:x}: {}", instruction.ip32(), output);
             }
             count += 1;
             if count == amount {
                 break;
             }
         }
+        return out;
     }
 
     pub fn get_operand_value(
@@ -4467,6 +4471,10 @@ impl Emu {
                         return false;
                     }
                     self.set_eip(addr, false);
+                }
+
+                if self.regs.rip != addr {
+                    return false;
                 }
                 return true;
             }
