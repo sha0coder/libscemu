@@ -1724,7 +1724,7 @@ impl Emu {
         panic!("weird size: {}", operand);
     }
 
-    pub fn set_rip(&mut self, addr: u64, is_branch: bool) {
+    pub fn set_rip(&mut self, addr: u64, is_branch: bool) -> bool {
         self.force_reload = true;
 
         if addr == constants::RETURN_THREAD.into() {
@@ -1732,7 +1732,7 @@ impl Emu {
             self.regs.rip = self.main_thread_cont;
             self.spawn_console();
             self.force_break = true;
-            return;
+            return true;
         }
 
         let name = match self.maps.get_addr_name(addr) {
@@ -1740,7 +1740,7 @@ impl Emu {
             None => {
                 eprintln!("/!\\ setting rip to non mapped addr 0x{:x}", addr);
                 self.exception();
-                return;
+                return false;
             }
         };
 
@@ -1772,9 +1772,11 @@ impl Emu {
                 self.force_break = true;
             }
         }
+
+        return true;
     }
 
-    pub fn set_eip(&mut self, addr: u64, is_branch: bool) {
+    pub fn set_eip(&mut self, addr: u64, is_branch: bool) -> bool {
         self.force_reload = true;
 
         if addr == constants::RETURN_THREAD.into() {
@@ -1782,7 +1784,7 @@ impl Emu {
             self.regs.rip = self.main_thread_cont;
             self.spawn_console();
             self.force_break = true;
-            return;
+            return true;
         }
 
         let name = match self.maps.get_addr_name(addr) {
@@ -1790,7 +1792,7 @@ impl Emu {
             None => {
                 eprintln!("/!\\ setting eip to non mapped addr 0x{:x}", addr);
                 self.exception();
-                return;
+                return false;
             }
         };
 
@@ -1821,6 +1823,7 @@ impl Emu {
 
             self.force_break = true;
         }
+        return true;
     }
 
     fn rol(&mut self, val: u64, rot2: u64, bits: u32) -> u64 {
@@ -4442,11 +4445,10 @@ impl Emu {
                 };
 
                 if self.cfg.is_64bits {
-                    self.set_rip(addr, false);
+                    return self.set_rip(addr, false);
                 } else {
-                    self.set_eip(addr, false);
+                    return self.set_eip(addr, false);
                 }
-                return true;
             }
 
             Mnemonic::Call => {
@@ -4465,18 +4467,13 @@ impl Emu {
                     if !self.stack_push64(self.regs.rip + instruction_sz as u64) {
                         return false;
                     }
-                    self.set_rip(addr, false);
+                    return self.set_rip(addr, false);
                 } else {
                     if !self.stack_push32(self.regs.get_eip() as u32 + instruction_sz as u32) {
                         return false;
                     }
-                    self.set_eip(addr, false);
+                    return self.set_eip(addr, false);
                 }
-
-                if self.regs.rip != addr {
-                    return false;
-                }
-                return true;
             }
 
             Mnemonic::Push => {
@@ -4662,12 +4659,10 @@ impl Emu {
                 }
 
                 if self.cfg.is_64bits {
-                    self.set_rip(ret_addr, false);
+                    return self.set_rip(ret_addr, false);
                 } else {
-                    self.set_eip(ret_addr, false);
+                    return self.set_eip(ret_addr, false);
                 }
-
-                return true;
             }
 
             Mnemonic::Xchg => {
@@ -8371,11 +8366,10 @@ impl Emu {
                     };
 
                     if self.cfg.is_64bits {
-                        self.set_rip(addr, true);
+                        return self.set_rip(addr, true);
                     } else {
-                        self.set_eip(addr, true);
+                        return self.set_eip(addr, true);
                     }
-                    return true;
                 } else {
                     self.show_instruction_not_taken(&self.colors.orange, &ins);
                 }
@@ -8393,11 +8387,10 @@ impl Emu {
                     };
 
                     if self.cfg.is_64bits {
-                        self.set_rip(addr, true);
+                        return self.set_rip(addr, true);
                     } else {
-                        self.set_eip(addr, true);
+                        return self.set_eip(addr, true);
                     }
-                    return true;
                 } else {
                     self.show_instruction_not_taken(&self.colors.orange, &ins);
                 }
@@ -8414,11 +8407,10 @@ impl Emu {
                     };
 
                     if self.cfg.is_64bits {
-                        self.set_rip(addr, true);
+                        return self.set_rip(addr, true);
                     } else {
-                        self.set_eip(addr, true);
+                        return self.set_eip(addr, true);
                     }
-                    return true;
                 } else {
                     self.show_instruction_not_taken(&self.colors.orange, &ins);
                 }
@@ -8435,11 +8427,10 @@ impl Emu {
                     };
 
                     if self.cfg.is_64bits {
-                        self.set_rip(addr, true);
+                        return self.set_rip(addr, true);
                     } else {
-                        self.set_eip(addr, true);
+                        return self.set_eip(addr, true);
                     }
-                    return true;
                 } else {
                     self.show_instruction_not_taken(&self.colors.orange, &ins);
                 }
@@ -8456,11 +8447,10 @@ impl Emu {
                     };
 
                     if self.cfg.is_64bits {
-                        self.set_rip(addr, true);
+                        return self.set_rip(addr, true);
                     } else {
-                        self.set_eip(addr, true);
+                        return self.set_eip(addr, true);
                     }
-                    return true;
                 } else {
                     self.show_instruction_not_taken(&self.colors.orange, &ins);
                 }
@@ -8477,11 +8467,10 @@ impl Emu {
                     };
 
                     if self.cfg.is_64bits {
-                        self.set_rip(addr, true);
+                        return self.set_rip(addr, true);
                     } else {
-                        self.set_eip(addr, true);
+                        return self.set_eip(addr, true);
                     }
-                    return true;
                 } else {
                     self.show_instruction_not_taken(&self.colors.orange, &ins);
                 }
@@ -8498,11 +8487,10 @@ impl Emu {
                     };
 
                     if self.cfg.is_64bits {
-                        self.set_rip(addr, true);
+                        return self.set_rip(addr, true);
                     } else {
-                        self.set_eip(addr, true);
+                        return self.set_eip(addr, true);
                     }
-                    return true;
                 } else {
                     self.show_instruction_not_taken(&self.colors.orange, &ins);
                 }
@@ -8519,11 +8507,10 @@ impl Emu {
                     };
 
                     if self.cfg.is_64bits {
-                        self.set_rip(addr, true);
+                        return self.set_rip(addr, true);
                     } else {
-                        self.set_eip(addr, true);
+                        return self.set_eip(addr, true);
                     }
-                    return true;
                 } else {
                     self.show_instruction_not_taken(&self.colors.orange, &ins);
                 }
@@ -8540,11 +8527,10 @@ impl Emu {
                     };
 
                     if self.cfg.is_64bits {
-                        self.set_rip(addr, true);
+                        return self.set_rip(addr, true);
                     } else {
-                        self.set_eip(addr, true);
+                        return self.set_eip(addr, true);
                     }
-                    return true;
                 } else {
                     self.show_instruction_not_taken(&self.colors.orange, &ins);
                 }
@@ -8561,11 +8547,10 @@ impl Emu {
                     };
 
                     if self.cfg.is_64bits {
-                        self.set_rip(addr, true);
+                        return self.set_rip(addr, true);
                     } else {
-                        self.set_eip(addr, true);
+                        return self.set_eip(addr, true);
                     }
-                    return true;
                 } else {
                     self.show_instruction_not_taken(&self.colors.orange, &ins);
                 }
@@ -8582,11 +8567,10 @@ impl Emu {
                     };
 
                     if self.cfg.is_64bits {
-                        self.set_rip(addr, true);
+                        return self.set_rip(addr, true);
                     } else {
-                        self.set_eip(addr, true);
+                        return self.set_eip(addr, true);
                     }
-                    return true;
                 } else {
                     self.show_instruction_not_taken(&self.colors.orange, &ins);
                 }
@@ -8603,11 +8587,10 @@ impl Emu {
                     };
 
                     if self.cfg.is_64bits {
-                        self.set_rip(addr, true);
+                        return self.set_rip(addr, true);
                     } else {
-                        self.set_eip(addr, true);
+                        return self.set_eip(addr, true);
                     }
-                    return true;
                 } else {
                     self.show_instruction_not_taken(&self.colors.orange, &ins);
                 }
@@ -8624,11 +8607,10 @@ impl Emu {
                     };
 
                     if self.cfg.is_64bits {
-                        self.set_rip(addr, true);
+                        return self.set_rip(addr, true);
                     } else {
-                        self.set_eip(addr, true);
+                        return self.set_eip(addr, true);
                     }
-                    return true;
                 } else {
                     self.show_instruction_not_taken(&self.colors.orange, &ins);
                 }
@@ -8645,11 +8627,10 @@ impl Emu {
                     };
 
                     if self.cfg.is_64bits {
-                        self.set_rip(addr, true);
+                        return self.set_rip(addr, true);
                     } else {
-                        self.set_eip(addr, true);
+                        return self.set_eip(addr, true);
                     }
-                    return true;
                 } else {
                     self.show_instruction_not_taken(&self.colors.orange, &ins);
                 }
@@ -8666,11 +8647,10 @@ impl Emu {
                     };
 
                     if self.cfg.is_64bits {
-                        self.set_rip(addr, true);
+                        return self.set_rip(addr, true);
                     } else {
-                        self.set_eip(addr, true);
+                        return self.set_eip(addr, true);
                     }
-                    return true;
                 } else {
                     self.show_instruction_not_taken(&self.colors.orange, &ins);
                 }
@@ -8687,11 +8667,10 @@ impl Emu {
                     };
 
                     if self.cfg.is_64bits {
-                        self.set_rip(addr, true);
+                        return self.set_rip(addr, true);
                     } else {
-                        self.set_eip(addr, true);
+                        return self.set_eip(addr, true);
                     }
-                    return true;
                 } else {
                     self.show_instruction_not_taken(&self.colors.orange, &ins);
                 }
@@ -8708,11 +8687,10 @@ impl Emu {
                     };
 
                     if self.cfg.is_64bits {
-                        self.set_rip(addr, true);
+                        return self.set_rip(addr, true);
                     } else {
-                        self.set_eip(addr, true);
+                        return self.set_eip(addr, true);
                     }
-                    return true;
                 } else {
                     self.show_instruction_not_taken(&self.colors.orange, &ins);
                 }
@@ -8729,11 +8707,10 @@ impl Emu {
                     };
 
                     if self.cfg.is_64bits {
-                        self.set_rip(addr, true);
+                        return self.set_rip(addr, true);
                     } else {
-                        self.set_eip(addr, true);
+                        return self.set_eip(addr, true);
                     }
-                    return true;
                 } else {
                     self.show_instruction_not_taken(&self.colors.orange, &ins);
                 }
@@ -8748,11 +8725,10 @@ impl Emu {
                     };
 
                     if self.cfg.is_64bits {
-                        self.set_rip(addr, true);
+                        return self.set_rip(addr, true);
                     } else {
-                        self.set_eip(addr, true);
+                        return self.set_eip(addr, true);
                     }
-                    return true;
                 } else {
                     self.show_instruction_not_taken(&self.colors.orange, &ins);
                 }
@@ -8971,8 +8947,7 @@ impl Emu {
                     }
 
                     if self.regs.rcx > 0 {
-                        self.set_rip(addr, false);
-                        return true;
+                        return self.set_rip(addr, false);
                     }
                 } else if addr > 0xffff {
                     if self.regs.get_ecx() == 0 {
@@ -8983,11 +8958,10 @@ impl Emu {
 
                     if self.regs.get_ecx() > 0 {
                         if self.cfg.is_64bits {
-                            self.set_rip(addr, false);
+                            return self.set_rip(addr, false);
                         } else {
-                            self.set_eip(addr, false);
+                            return self.set_eip(addr, false);
                         }
-                        return true;
                     }
                 } else {
                     if self.regs.get_cx() == 0 {
@@ -8998,11 +8972,10 @@ impl Emu {
 
                     if self.regs.get_cx() > 0 {
                         if self.cfg.is_64bits {
-                            self.set_rip(addr, false);
+                            return self.set_rip(addr, false);
                         } else {
-                            self.set_eip(addr, false);
+                            return self.set_eip(addr, false);
                         }
-                        return true;
                     }
                 }
             }
@@ -9025,8 +8998,7 @@ impl Emu {
                     }
 
                     if self.regs.rcx > 0 && self.flags.f_zf {
-                        self.set_rip(addr, false);
-                        return true;
+                        return self.set_rip(addr, false);
                     }
                 } else if addr > 0xffff {
                     if self.regs.get_ecx() == 0 {
@@ -9037,11 +9009,10 @@ impl Emu {
 
                     if self.regs.get_ecx() > 0 && self.flags.f_zf {
                         if self.cfg.is_64bits {
-                            self.set_rip(addr, false);
+                            return self.set_rip(addr, false);
                         } else {
-                            self.set_eip(addr, false);
+                            return self.set_eip(addr, false);
                         }
-                        return true;
                     }
                 } else {
                     if self.regs.get_cx() == 0 {
@@ -9052,11 +9023,10 @@ impl Emu {
 
                     if self.regs.get_cx() > 0 && self.flags.f_zf {
                         if self.cfg.is_64bits {
-                            self.set_rip(addr, false);
+                            return self.set_rip(addr, false);
                         } else {
-                            self.set_eip(addr, false);
+                            return self.set_eip(addr, false);
                         }
-                        return true;
                     }
                 }
             }
@@ -9079,8 +9049,7 @@ impl Emu {
                     }
 
                     if self.regs.rcx > 0 && !self.flags.f_zf {
-                        self.set_rip(addr, false);
-                        return true;
+                        return self.set_rip(addr, false);
                     }
                 } else if addr > 0xffff {
                     if self.regs.get_ecx() == 0 {
@@ -9091,11 +9060,10 @@ impl Emu {
 
                     if self.regs.get_ecx() > 0 && !self.flags.f_zf {
                         if self.cfg.is_64bits {
-                            self.set_rip(addr, false);
+                            return self.set_rip(addr, false);
                         } else {
-                            self.set_eip(addr, false);
+                            return self.set_eip(addr, false);
                         }
-                        return true;
                     }
                 } else {
                     if self.regs.get_cx() == 0 {
@@ -9106,11 +9074,10 @@ impl Emu {
 
                     if self.regs.get_cx() > 0 && !self.flags.f_zf {
                         if self.cfg.is_64bits {
-                            self.set_rip(addr, false);
+                            return self.set_rip(addr, false);
                         } else {
-                            self.set_eip(addr, false);
+                            return self.set_eip(addr, false);
                         }
-                        return true;
                     }
                 }
             }
