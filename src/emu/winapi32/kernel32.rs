@@ -143,6 +143,7 @@ pub fn gateway(addr: u32, emu: &mut emu::Emu) -> String {
         0x75e8bbc0 => InterlockedIncrement(emu),
         0x75e91dbc => GetEnvironmentStringsW(emu),
         0x75e92f99 => GetEnvironmentStrings(emu),
+        0x75e91dc3 => FreeEnvironmentStringsW(emu),
         0x75e91e46 => GetStdHandle(emu),
         0x75e975a5 => GetFileType(emu),
         0x75e99911 => SetHandleCount(emu),
@@ -152,6 +153,7 @@ pub fn gateway(addr: u32, emu: &mut emu::Emu) -> String {
         0x75e913d0 => LCMapStringW(emu),
         0x75e9450e => WideCharToMultiByte(emu),
         0x776fdf4e => CryptCreateHash(emu),
+        0x75e94157 => HeapSetInformation(emu),
 
         _ => {
             let apiname = guess_api_name(emu, addr);
@@ -3552,7 +3554,9 @@ fn GetEnvironmentStringsW(emu: &mut emu::Emu) {
         "{}** {} kernel32!GetEnvironmentStringsW {}",
         emu.colors.light_red, emu.pos, emu.colors.nc
     );
-    emu.regs.rax = 0;
+    let addr = emu.alloc("environment", 1024);
+    emu.maps.write_string(addr, "PATH=c:\\Windows\\System32");
+    emu.regs.rax = addr;
 }
 
 fn GetStdHandle(emu: &mut emu::Emu) {
@@ -3681,7 +3685,9 @@ fn LCMapStringW(emu: &mut emu::Emu) {
         emu.colors.light_red, emu.pos, s, dest_ptr, src_sz, dest_sz, emu.colors.nc
     ); 
 
-    emu.maps.write_wide_string(dest_ptr, &s);
+    if dest_ptr > 0 {
+        emu.maps.write_wide_string(dest_ptr, &s);
+    }
     
     for _ in 0..6 {
         emu.stack_pop32(false);
@@ -3713,6 +3719,7 @@ fn WideCharToMultiByte(emu: &mut emu::Emu) {
     //    .expect("kernel32!WideCharToMultiByte error reading default char"); 
     
     //emu.maps.write_byte(out_default_char, 0);
+
 
     println!("dest ptr: 0x{:x}", mbytestr_ptr);
     let s = emu.maps.read_wide_string(wstr_ptr);
@@ -3757,4 +3764,39 @@ fn CryptCreateHash(emu: &mut emu::Emu) {
     emu.maps.write_dword(ptr_hash, helper::handler_create(&format!("alg://{}", alg_name)) as u32);
     emu.regs.rax = 1;
 }
+
+fn HeapSetInformation(emu: &mut emu::Emu) {
+    let hndl = emu.maps.read_dword(emu.regs.rsp) 
+        .expect("kernel32!HeapSetInformation error reading param");
+    let hinfocls = emu.maps.read_dword(emu.regs.rsp+4) 
+        .expect("kernel32!HeapSetInformation error reading param");
+    let hinfo = emu.maps.read_dword(emu.regs.rsp+8) 
+        .expect("kernel32!HeapSetInformation error reading param");
+    let hinfo_sz = emu.maps.read_dword(emu.regs.rsp+12) 
+        .expect("kernel32!HeapSetInformation error reading param");
+
+
+    println!(
+        "{}** {} kernel32!HeapSetInformation {}",
+        emu.colors.light_red, emu.pos, emu.colors.nc,
+    );
+
+    for _ in 0..4 {
+        emu.stack_pop32(false);
+    }
+    emu.regs.rax = 1;
+}
+
+fn FreeEnvironmentStringsW(emu: &mut emu::Emu) {
+    let env = emu.maps.read_dword(emu.regs.rsp) 
+        .expect("kernel32!FreeEnvironmentStringsW error reading param");
+
+    println!(
+        "{}** {} kernel32!FreeEnvironmentStringsW 0x{:x} {}",
+        emu.colors.light_red, emu.pos, env, emu.colors.nc,
+    );
+    emu.stack_pop32(false);
+    emu.regs.rax = 1;
+}
+
 

@@ -12,6 +12,9 @@ pub fn gateway(addr: u32, emu: &mut emu::Emu) -> String {
         0x761f76ac => fwrite(emu),
         0x761f4142 => fflush(emu),
         0x761f3d79 => fclose(emu),
+        0x76233ab4 => __p___argv(emu),
+        0x76233aa9 => __p___argc(emu),
+        0x761e9cee => malloc(emu),
         _ => {
             let apiname = kernel32::guess_api_name(emu, addr);
             println!("calling unimplemented msvcrt API 0x{:x} {}", addr, apiname);
@@ -180,3 +183,27 @@ fn fclose(emu: &mut emu::Emu) {
 
     emu.regs.rax = 1;
 }
+
+fn __p___argv(emu: &mut emu::Emu) {
+    emu.regs.rax = 0;
+}
+
+fn __p___argc(emu: &mut emu::Emu) {
+    emu.regs.rax = 0;
+}
+
+fn malloc(emu: &mut emu::Emu) {
+    let size = emu
+        .maps
+        .read_dword(emu.regs.get_esp())
+        .expect("msvcrt!malloc error reading size") as u64;
+
+    println!(
+        "{}** {} msvcrt!malloc {} {}",
+        emu.colors.light_red, emu.pos, size, emu.colors.nc
+    );
+
+    emu.stack_pop32(false);
+    emu.regs.rax = emu.alloc("alloc_malloc", size);
+}
+

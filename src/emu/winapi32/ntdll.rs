@@ -37,6 +37,7 @@ pub fn gateway(addr: u32, emu: &mut emu::Emu) -> String {
         0x775d7de2 => RtlSetUnhandledExceptionFilter(emu),
         0x775a55c0 => strlen(emu),
         0x77593030 => VerSetConditionMask(emu),
+        0x775a53d0 => strcat(emu),
 
         _ => {
             let apiname = kernel32::guess_api_name(emu, addr);
@@ -1034,4 +1035,31 @@ fn VerSetConditionMask(emu: &mut emu::Emu) {
     emu.stack_pop32(false);
     emu.stack_pop32(false);
     emu.regs.rax = 0xffff;
+}
+
+
+fn strcat(emu: &mut emu::Emu) {
+    let dst_ptr = emu
+        .maps
+        .read_dword(emu.regs.get_esp())
+        .expect("ntdll!strcat error reading dst") as u64;
+    let src_ptr = emu
+        .maps
+        .read_dword(emu.regs.get_esp())
+        .expect("ntdll!strcat error reading src") as u64;
+
+    let dst = emu.maps.read_string(dst_ptr);
+    let src = emu.maps.read_string(src_ptr);
+
+    println!(
+        "{}** {} ntdll!strcat: `{}`+`{}` {}",
+        emu.colors.light_red, emu.pos, src, dst, emu.colors.nc
+    );
+
+    let dst_cont_ptr = dst_ptr + dst.len() as u64;
+    emu.maps.write_string(dst_cont_ptr, &src);
+
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+    emu.regs.rax = dst_cont_ptr;
 }
