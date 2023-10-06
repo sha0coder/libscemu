@@ -1,6 +1,6 @@
 use crate::emu;
 use crate::emu::constants;
-use crate::emu::endpoint;
+//use crate::emu::endpoint;
 use crate::emu::winapi32::helper;
 use crate::emu::winapi32::kernel32;
 
@@ -82,12 +82,13 @@ pub fn InternetOpenA(emu: &mut emu::Emu) {
         emu.stack_pop32(false);
     }
 
+    /* 
     if emu.cfg.endpoint {
         // endpoint mode
         if uagent_ptr != 0 && uagent != "" {
             endpoint::http_set_headers("User-Agent", &uagent);
         }
-    }
+    }*/
 
     let uri = format!("uagent://{}", uagent);
     emu.regs.rax = helper::handler_create(&uri);
@@ -140,9 +141,10 @@ pub fn InternetOpenW(emu: &mut emu::Emu) {
 
     if emu.cfg.endpoint {
         // endpoint mode
+        /*
         if uagent_ptr != 0 && uagent != "" {
             endpoint::http_set_headers("User-Agent", &uagent.replace("\x00", ""));
-        }
+        }*/
     }
 
     emu.regs.rax = helper::handler_create("InternetOpenW"); // internet handle
@@ -205,9 +207,10 @@ pub fn InternetConnectA(emu: &mut emu::Emu) {
         println!("\tinvalid handle.");
     }
 
+    /*
     if emu.cfg.endpoint {
         endpoint::http_set_serverport(&server, port as u16);
-    }
+    }*/
 
     for _ in 0..8 {
         emu.stack_pop32(false);
@@ -274,9 +277,10 @@ pub fn InternetConnectW(emu: &mut emu::Emu) {
         println!("\tinvalid handle.");
     }
 
+    /*
     if emu.cfg.endpoint {
         endpoint::http_set_serverport(&server.replace("\x00", ""), port as u16);
-    }
+    }*/
 
     for _ in 0..8 {
         emu.stack_pop32(false);
@@ -355,6 +359,7 @@ fn HttpOpenRequestA(emu: &mut emu::Emu) {
         println!("\tssl communication.");
     }
 
+    /*
     if emu.cfg.endpoint {
         endpoint::http_set_path(&path);
         if flags & constants::INTERNET_FLAG_SECURE == 1 {
@@ -370,7 +375,7 @@ fn HttpOpenRequestA(emu: &mut emu::Emu) {
         } else {
             endpoint::http_set_method("get");
         }
-    }
+    }*/
 
     for _ in 0..8 {
         emu.stack_pop32(false);
@@ -444,6 +449,7 @@ fn HttpOpenRequestW(emu: &mut emu::Emu) {
         println!("\tinvalid handle.");
     }
 
+    /*
     if emu.cfg.endpoint {
         endpoint::http_set_path(&path);
         if flags & constants::INTERNET_FLAG_SECURE == 1 {
@@ -459,7 +465,7 @@ fn HttpOpenRequestW(emu: &mut emu::Emu) {
         } else {
             endpoint::http_set_method("get");
         }
-    }
+    }*/
 
     for _ in 0..8 {
         emu.stack_pop32(false);
@@ -583,10 +589,11 @@ fn HttpSendRequestA(emu: &mut emu::Emu) {
         println!("\tinvalid handle.");
     }
 
+    /*
     if emu.cfg.endpoint {
         endpoint::http_set_headers_str(&hdrs);
         endpoint::http_send_request();
-    }
+    }*/
 
     for _ in 0..5 {
         emu.stack_pop32(false);
@@ -629,10 +636,11 @@ fn HttpSendRequestW(emu: &mut emu::Emu) {
         println!("\tinvalid handle.");
     }
 
+    /*
     if emu.cfg.endpoint {
         endpoint::http_set_headers_str(&hdrs.replace("\x00", ""));
         endpoint::http_send_request();
-    }
+    }*/
 
     for _ in 0..5 {
         emu.stack_pop32(false);
@@ -686,9 +694,11 @@ fn InternetReadFile(emu: &mut emu::Emu) {
     }
 
     if emu.cfg.endpoint {
+        /*
         let buff = endpoint::http_read_data();
         emu.maps.write_buffer(buff_ptr, &buff);
         emu.maps.write_dword(bytes_read_ptr, buff.len() as u32);
+        */
     } else {
         let mut count = COUNT_RECEIVE.lock().unwrap();
         *count += 1;

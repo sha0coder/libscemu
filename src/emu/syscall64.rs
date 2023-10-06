@@ -1,7 +1,7 @@
 use crate::emu;
 use crate::emu::structures;
 use crate::emu::constants;
-use crate::emu::endpoint;
+//use crate::emu::endpoint;
 use crate::emu::winapi32::helper;
 
 use std::fs;
@@ -156,10 +156,11 @@ pub fn gateway(emu: &mut emu::Emu) {
                 helper::socket_close(fd);
                 emu.regs.rax = 0xffffffff_ffffffff;
             }
-           
+          
+            /*
             if emu.cfg.endpoint {
                 endpoint::sock_close();
-            }
+            }*/
 
             println!(
                 "{}** {} syscall close(fd:{}) ={} {}",
@@ -331,13 +332,14 @@ pub fn gateway(emu: &mut emu::Emu) {
                 return;
             }
 
+            /*
             if emu.cfg.endpoint {
                 if endpoint::sock_connect(sip.as_str(), port) {
                     println!("\tconnected to the endpoint.");
                 } else {
                     println!("\tcannot connect. dont use -e");
                 }
-            }
+            }*/
 
             emu.regs.rax = 0;
         }
@@ -537,7 +539,7 @@ pub fn gateway(emu: &mut emu::Emu) {
                 "{}** {} syscall socketcall shutdown()  {}",
                 emu.colors.light_red, emu.pos, emu.colors.nc
             );
-            endpoint::sock_close();
+            //endpoint::sock_close();
         }
 
         constants::NR64_SETSOCKOPT => {

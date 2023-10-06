@@ -13,7 +13,7 @@ pub mod constants;
 pub mod context32;
 pub mod context64;
 pub mod eflags;
-pub mod endpoint;
+//pub mod endpoint;
 mod exception;
 pub mod flags;
 pub mod fpu;

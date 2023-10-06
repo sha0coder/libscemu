@@ -1,6 +1,6 @@
 use crate::emu;
 use crate::emu::constants;
-use crate::emu::endpoint;
+//use crate::emu::endpoint;
 use crate::emu::winapi32::helper;
 
 //  /usr/include/asm/unistd_32.h
@@ -73,7 +73,7 @@ pub fn gateway(emu: &mut emu::Emu) {
                 emu.colors.light_red, emu.pos, fd, emu.colors.nc
             );
             helper::socket_close(fd);
-            endpoint::sock_close();
+            //endpoint::sock_close();
         }
 
         7 => {
@@ -867,13 +867,14 @@ pub fn gateway(emu: &mut emu::Emu) {
                         return;
                     }
 
+                    /*
                     if emu.cfg.endpoint {
                         if endpoint::sock_connect(sip.as_str(), port) {
                             println!("\tconnected to the endpoint.");
                         } else {
                             println!("\tcannot connect. dont use -e");
                         }
-                    }
+                    }*/
 
                     emu.regs.rax = 0;
                 }
@@ -991,6 +992,7 @@ pub fn gateway(emu: &mut emu::Emu) {
                         return;
                     }
 
+                    /*
                     if emu.cfg.endpoint {
                         let buffer = emu.maps.read_buffer(buf as u64, len as usize);
                         let n = endpoint::sock_send(&buffer);
@@ -998,7 +1000,9 @@ pub fn gateway(emu: &mut emu::Emu) {
                         emu.regs.rax = n as u64;
                     } else {
                         emu.regs.rax = len as u64;
-                    }
+                    }*/
+
+                    emu.regs.rax = len as u64;
                 }
 
                 constants::SYS_RECV => {
@@ -1030,6 +1034,7 @@ pub fn gateway(emu: &mut emu::Emu) {
                         return;
                     }
 
+                    /*
                     if emu.cfg.endpoint {
                         let mut rbuff: Vec<u8> = vec![0; len as usize];
                         let n = endpoint::sock_recv(&mut rbuff);
@@ -1038,7 +1043,9 @@ pub fn gateway(emu: &mut emu::Emu) {
                         emu.regs.rax = n as u64;
                     } else {
                         emu.regs.rax = len as u64; //TODO: avoid loops
-                    }
+                    }*/
+
+                    emu.regs.rax = len as u64; //TODO: avoid loops
                 }
 
                 constants::SYS_SENDTO => {
@@ -1158,7 +1165,7 @@ pub fn gateway(emu: &mut emu::Emu) {
                         "{}** {} syscall socketcall shutdown()  {}",
                         emu.colors.light_red, emu.pos, emu.colors.nc
                     );
-                    endpoint::sock_close();
+                    //endpoint::sock_close();
                 }
 
                 constants::SYS_SETSOCKOPT => {

@@ -1,5 +1,5 @@
 use crate::emu;
-use crate::emu::endpoint;
+//use crate::emu::endpoint;
 use crate::emu::winapi32::helper;
 
 use lazy_static::lazy_static;
@@ -148,11 +148,12 @@ fn connect(emu: &mut emu::Emu) {
     );
 
     if emu.cfg.endpoint {
+        /*
         if endpoint::sock_connect(sip.as_str(), port) {
             println!("\tconnected to the endpoint.");
         } else {
             println!("\tcannot connect. dont use -e");
-        }
+        }*/
         emu.regs.rax = 0;
     } else {
         // offline mode
@@ -184,6 +185,7 @@ fn recv(emu: &mut emu::Emu) {
     }
 
     if emu.cfg.endpoint {
+        /*
         let mut rbuff: Vec<u8> = vec![0; len as usize];
         let n = endpoint::sock_recv(&mut rbuff);
 
@@ -191,6 +193,7 @@ fn recv(emu: &mut emu::Emu) {
 
         println!("\nreceived {} bytes from the endpoint.", n);
         emu.regs.rax = n as u64;
+        */
     } else {
         let mut count_recv = COUNT_RECV.lock().unwrap();
         *count_recv += 1;
@@ -231,10 +234,12 @@ fn send(emu: &mut emu::Emu) {
     }
 
     if emu.cfg.endpoint {
+        /*
         let buffer = emu.maps.read_buffer(buff, len as usize);
         let n = endpoint::sock_send(&buffer);
         println!("\tsent {} bytes.", n);
         emu.regs.rax = n as u64;
+        */
     } else {
         let mut count_send = COUNT_SEND.lock().unwrap();
         *count_send += 1;
@@ -338,9 +343,10 @@ fn closesocket(emu: &mut emu::Emu) {
 
     helper::socket_close(sock);
 
+    /*
     if emu.cfg.endpoint {
         endpoint::sock_close();
-    }
+    }*/
 
     emu.regs.rax = 0;
 }

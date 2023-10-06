@@ -1,6 +1,6 @@
 [package]
 name = "libscemu"
-version = "0.13.2"
+version = "0.13.3"
 edition = "2018"
 authors = ["sha0coder"]
 license = "MIT"
@@ -16,7 +16,7 @@ iced-x86 = "1.19.0"
 uint = "0.9.5"
 md5 = "0.7.0"
 lazy_static = "1.4.0"
-attohttpc = "0.18.0"
+#attohttpc = "0.18.0"
 rand = "0.8.4"
 ctrlc = "3.2.2"
 scan_fmt = "0.2.6"
