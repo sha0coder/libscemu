@@ -9,6 +9,7 @@ pub fn gateway(addr: u32, emu: &mut emu::Emu) -> String {
         0x773d426d => wsprintfW(emu),
         0x773bdfdc => GetProcessWindowStation(emu),
         0x773be355 => GetUserObjectInformationW(emu),
+        0x773bba8a => CharLowerW(emu),
         _ => {
             let apiname = kernel32::guess_api_name(emu, addr);
             println!("calling unimplemented user32 API 0x{:x} {}", addr, apiname);
@@ -119,4 +120,25 @@ fn GetUserObjectInformationW(emu: &mut emu::Emu) {
     }
         
     emu.regs.rax = 1;  // get handler
-}            
+}
+
+fn CharLowerW(emu: &mut emu::Emu) {
+    let ptr_str = emu
+        .maps
+        .read_dword(emu.regs.get_esp())
+        .expect("user32!CharLowerW: error reading param") as u64;
+
+    let s = emu.maps.read_wide_string(ptr_str);
+
+    println!(                                         
+        "{}** {} user32!CharLowerW(`{}`) {}",  
+        emu.colors.light_red, emu.pos, s, emu.colors.nc
+    );
+    
+    emu.maps.write_wide_string(ptr_str, &s.to_lowercase());
+
+    emu.stack_pop32(false);
+    emu.regs.rax = ptr_str;
+}
+
+

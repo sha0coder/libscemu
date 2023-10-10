@@ -8,6 +8,7 @@ pub fn gateway(addr: u32, emu: &mut emu::Emu) -> String {
         0x77733553 => StartServiceCtrlDispatcherA(emu),
         0x776fa965 => StartServiceCtrlDispatcherW(emu),
         0x776f91dd => CryptAcquireContextA(emu),
+        0x777041b3 => LookupPrivilegeValueW(emu),
 
         _ => {
             let apiname = kernel32::guess_api_name(emu, addr);
@@ -113,3 +114,34 @@ fn CryptAcquireContextA(emu: &mut emu::Emu) {
     }
     emu.regs.rax = 1;
 }
+
+fn LookupPrivilegeValueW(emu: &mut emu::Emu) {
+    let ptr_sysname =
+        emu.maps
+            .read_dword(emu.regs.get_esp())
+            .expect("advapi32!LookupPrivilegeValueW error reading param") as u64;
+    let ptr_name =
+        emu.maps
+            .read_dword(emu.regs.get_esp()+4)
+            .expect("advapi32!LookupPrivilegeValueW error reading param") as u64;
+    let ptr_uid =
+        emu.maps
+            .read_dword(emu.regs.get_esp()+8)
+            .expect("advapi32!LookupPrivilegeValueW error reading param") as u64;
+
+    let sysname = emu.maps.read_wide_string(ptr_sysname);
+    let name = emu.maps.read_wide_string(ptr_name);
+    emu.maps.write_dword(ptr_uid, 123);
+
+    println!(
+        "{}** {} advapi321!LookupPrivilegeValueW `{}` `{}` {}",
+        emu.colors.light_red, emu.pos, sysname, name, emu.colors.nc
+    );
+
+    for _ in 0..3 {
+        emu.stack_pop32(false);
+    }
+    emu.regs.rax = 1;
+}
+
+
