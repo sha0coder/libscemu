@@ -25,6 +25,7 @@ pub struct Config {
     pub test_mode: bool,
     pub console_enabled: bool,
     pub skip_unimplemented: bool,
+    pub stack_addr: u64,
 }
 
 impl Config {
@@ -55,6 +56,7 @@ impl Config {
             test_mode: false,
             console_enabled: true,
             skip_unimplemented: false,
+            stack_addr: 0,
         }
     }
 }

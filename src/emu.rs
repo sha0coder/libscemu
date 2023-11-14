@@ -198,6 +198,11 @@ impl Emu {
         self.dbg = false;
     }
 
+    // configure the base address of stack map
+    pub fn set_stack_address(&mut self, addr: u64) { 
+        self.cfg.stack_addr = addr;
+    }
+
     // select the folder with maps32 or maps64 depending the arch, make sure to do init after this.
     pub fn set_maps_folder(&mut self, folder: &str) {
         let mut f = folder.to_string();
@@ -246,11 +251,14 @@ impl Emu {
     pub fn init_stack32(&mut self) {
         let stack = self.maps.get_mem("stack");
 
-        stack.set_base(0x212000); //22d000
+        if self.cfg.stack_addr == 0 {
+            self.cfg.stack_addr = 0x212000; 
+        }
+
+        stack.set_base(self.cfg.stack_addr); 
         stack.set_size(0x030000);
-        //self.regs.set_esp(0x22e000);
-        self.regs.set_esp(0x22e000 + 4);
-        self.regs.set_ebp(0x22f000);
+        self.regs.set_esp(self.cfg.stack_addr + 0x1c000 + 4);
+        self.regs.set_ebp(self.cfg.stack_addr + 0x1c000 + 4 + 0x1000);
 
         assert!(self.regs.get_esp() < self.regs.get_ebp());
         assert!(self.regs.get_esp() > stack.get_base());
@@ -264,9 +272,13 @@ impl Emu {
     pub fn init_stack64(&mut self) {
         let stack = self.maps.get_mem("stack");
 
-        self.regs.rsp = 0x22e000;
-        self.regs.rbp = 0x22f000;
-        stack.set_base(0x22a000);
+        if self.cfg.stack_addr == 0 {
+            self.cfg.stack_addr = 0x22a000;
+        }
+
+        self.regs.rsp = self.cfg.stack_addr+0x4000;
+        self.regs.rbp = self.cfg.stack_addr+0x4000+0x1000;
+        stack.set_base(self.cfg.stack_addr);
         stack.set_size(0x6000);
 
         assert!(self.regs.rsp < self.regs.rbp);
