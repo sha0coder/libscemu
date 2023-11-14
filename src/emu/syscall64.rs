@@ -21,6 +21,7 @@ use std::path::Path;
 //TODO: check if buff is mapped
 
 pub fn gateway(emu: &mut emu::Emu) {
+
     match emu.regs.rax {
         constants::NR64_RESTART_SYSCALL => {
             println!(
@@ -665,13 +666,17 @@ pub fn gateway(emu: &mut emu::Emu) {
 
         constants::NR64_MMAP => {
             let mut addr = emu.regs.rdi;
-            let sz = emu.regs.rsi;
+            let mut sz = emu.regs.rsi;
             let prot = emu.regs.rdx;
             let flags = emu.regs.r10;
             let fd = emu.regs.r8;
             let off = emu.regs.r9;
 
             if addr == 0 {
+                if sz > 0xffffff {
+                    println!("/!\\ Warning trying to allocate {} bytes", sz);
+                    sz = 0xffffff;
+                }
                 addr = emu.maps.lib64_alloc(sz).expect("syscall64 mmap cannot alloc");
             }
 

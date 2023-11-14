@@ -833,7 +833,10 @@ impl PE32 {
             }
 
             if emu::winapi32::kernel32::load_library(emu, &iim.name) == 0 {
-                panic!("cannot found the library {} on maps32/", &iim.name);
+                if iim.name == "" { 
+                    continue
+                }
+                panic!("cannot found the library `{}` on maps32/", &iim.name);
             }
 
             // Walking function names.
