@@ -135,7 +135,7 @@ pub struct Emu {
     enabled_ctrlc: bool,
     run_until_ret: bool,
     running_script: bool,
-    banzai: Banzai<'static>,
+    banzai: Banzai,
     mnemonic: String,
     dbg: bool,
     linux: bool,
@@ -246,6 +246,10 @@ impl Emu {
 
     pub fn disable_banzai(&mut self) {
         self.cfg.skip_unimplemented = false;
+    }
+
+    pub fn banzai_add(&mut self, name: &str, nparams: i32) {
+        self.banzai.add(name, nparams);
     }
 
     pub fn init_stack32(&mut self) {

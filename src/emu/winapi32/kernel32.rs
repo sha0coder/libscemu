@@ -155,6 +155,8 @@ pub fn gateway(addr: u32, emu: &mut emu::Emu) -> String {
         0x776fdf4e => CryptCreateHash(emu),
         0x75e94157 => HeapSetInformation(emu),
         0x75eff395 => OpenProcessToken(emu),
+        0x75e80ef7 => CreateEventA(emu),
+
 
         _ => {
             let apiname = guess_api_name(emu, addr);
@@ -3820,4 +3822,32 @@ fn OpenProcessToken(emu: &mut emu::Emu) {
     emu.stack_pop32(false);
     emu.regs.rax = 1;
 }
+
+fn CreateEventA(emu: &mut emu::Emu) {
+    let ev_attr_ptr = emu.maps.read_dword(emu.regs.rsp)
+        .expect("kernel32!CreateEventA error reading param") as u64;
+    let bManualReset = emu.maps.read_dword(emu.regs.rsp)
+        .expect("kernel32!CreateEventA error reading param");
+    let bInitialState = emu.maps.read_dword(emu.regs.rsp)
+        .expect("kernel32!CreateEventA error reading param");
+    let name_ptr = emu.maps.read_dword(emu.regs.rsp)
+        .expect("kernel32!CreateEventA error reading param") as u64;
+
+    let name = emu.maps.read_string(name_ptr);
+
+
+    println!(
+        "{}** {} kernel32!CreateEventA `{}` {}",
+        emu.colors.light_red, emu.pos, name, emu.colors.nc,
+    );
+
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+    emu.regs.rax = 1;
+}
+
+
+
 
