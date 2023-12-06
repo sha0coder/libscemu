@@ -1,6 +1,7 @@
 use crate::emu;
 use iced_x86::Instruction;
 
+
 // return: false will ignore interrupt handling like 0x80 -> linux
 type TypeHookOnInterrupt = fn(emu: &mut emu::Emu, ip_addr: u64, interrupt: u64) -> bool;
 // return: allow handle exception?
@@ -93,4 +94,5 @@ impl Hook {
     pub fn disable_winapi_call(&mut self) {
         self.hook_on_winapi_call = None;
     }
+
 }

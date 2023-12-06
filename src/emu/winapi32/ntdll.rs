@@ -38,6 +38,7 @@ pub fn gateway(addr: u32, emu: &mut emu::Emu) -> String {
         0x775a55c0 => strlen(emu),
         0x77593030 => VerSetConditionMask(emu),
         0x775a53d0 => strcat(emu),
+        // TODO: 0x775a4cc0 => memcpy(emu), 
 
         _ => {
             let apiname = kernel32::guess_api_name(emu, addr);

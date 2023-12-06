@@ -141,6 +141,8 @@ pub struct Emu {
     linux: bool,
     fs: BTreeMap<u64, u64>,
     now: Instant,
+    pub skip_apicall: bool,
+    pub its_apicall: Option<u64>,
 }
 
 impl Emu {
@@ -187,6 +189,8 @@ impl Emu {
             linux: false,
             fs: BTreeMap::new(),
             now: Instant::now(),
+            skip_apicall: false,
+            its_apicall: None,
         }
     }
 
@@ -1774,6 +1778,11 @@ impl Emu {
                     println!("/!\\ changing RIP to {} ", name);
                 }
 
+                if self.skip_apicall {
+                    self.its_apicall = Some(addr);
+                    return false;
+                }
+
                 self.gateway_return = self.stack_pop64(false).unwrap_or(0);
                 self.regs.rip = self.gateway_return;
 
@@ -1823,6 +1832,11 @@ impl Emu {
         } else {
             if self.cfg.verbose >= 1 {
                 println!("/!\\ changing EIP to {} 0x{:x}", name, addr);
+            }
+
+            if self.skip_apicall {
+                self.its_apicall = Some(addr);
+                return false;
             }
 
             self.gateway_return = self.stack_pop32(false).unwrap_or(0).into();
