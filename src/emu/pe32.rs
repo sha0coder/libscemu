@@ -846,9 +846,9 @@ impl PE32 {
 
             loop {
                 let hint = HintNameItem::load(&self.raw, off_name);
-                if hint.func_name_addr == 0 {
+                /*if hint.func_name_addr == 0 {
                     break;
-                }
+                }*/
                 let addr = read_u32_le!(self.raw, off_addr); // & 0b01111111_11111111_11111111_11111111;
                 let off2 = PE32::vaddr_to_off(&self.sect_hdr, hint.func_name_addr) as usize;
                 if off2 == 0 {
@@ -863,6 +863,9 @@ impl PE32 {
                 }
 
                 let real_addr = emu::winapi32::kernel32::resolve_api_name(emu, &func_name);
+                if real_addr == 0 {
+                    break;
+                }
                 if dbg {
                     println!("real addr: 0x{:x}", real_addr);
                 }

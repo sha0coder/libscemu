@@ -260,7 +260,7 @@ pub fn dynamic_link_module(base: u64, pe_off: u32, libname: &str, emu: &mut emu:
     /*
      * LoadLibary* family triggers this.
      */
-
+    println!("************ dynamic_link_module {}", libname);
     let mut last_flink: u64;
     let mut flink = Flink::new(emu);
     flink.load(emu);
@@ -276,13 +276,19 @@ pub fn dynamic_link_module(base: u64, pe_off: u32, libname: &str, emu: &mut emu:
     }
     let next_flink: u64 = flink.get_ptr();
 
+    println!("last: {} {:x}", flink.mod_name, next_flink);
+
+    //let space_addr = create_ldr_entry(emu, base, pe_off, libname, last_flink, first_flink);
     let space_addr = create_ldr_entry(emu, base, pe_off, libname, last_flink, first_flink);
 
     // point previous flink to this ldr
-    emu.maps.write_qword(last_flink, space_addr);
+    //let repl1 = emu.maps.read_qword(next_flink).unwrap();
+    emu.maps.write_qword(next_flink, space_addr);
 
-    // point next blink to this ldr
-    emu.maps.write_qword(next_flink + 8, space_addr);
+    // blink of first flink will point to last created
+    emu.maps.write_qword(first_flink + 8, space_addr);
+
+    //show_linked_modules(emu);
 }
 
 pub fn create_ldr_entry(
@@ -326,6 +332,7 @@ pub fn create_ldr_entry(
                                                        //mem.write_dword(space_addr+0x40, image_size);
     mem.write_qword(space_addr + 0x48, space_addr + 0x68);
     mem.write_qword(space_addr + 0x58, space_addr + 0x68);
+    mem.write_qword(space_addr + 0x60, space_addr + 0x68);
     mem.write_wide_string(space_addr + 0x68, &(libname.to_string() + "\x00"));
 
     //mem.write_dword(space_addr+0x10, next_flink as u32); // in_memory_order_linked_list

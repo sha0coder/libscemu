@@ -194,6 +194,10 @@ impl Emu {
         }
     }
 
+    pub fn set_base_address(&mut self, addr: u64) {
+        self.cfg.code_base_addr = addr;
+    }
+
     pub fn enable_debug_mode(&mut self) {
         self.dbg = true;
     }
@@ -379,7 +383,8 @@ impl Emu {
         let orig_path = std::env::current_dir().unwrap();
         std::env::set_current_dir(self.cfg.maps_folder.clone());
         if dyn_link {
-            self.regs.rsp = 0x7fffffffe2b0;
+            //self.regs.rsp = 0x7fffffffe2b0;
+            self.regs.rsp = 0x7fffffffe790; 
             self.maps.create_map("linux_dynamic_stack").load_at(0x7ffffffde000);
             //self.maps.create_map("dso_dyn").load_at(0x7ffff7ffd0000);
             self.maps.create_map("dso_dyn").load_at(0x7ffff7fd0000);
@@ -879,18 +884,26 @@ impl Emu {
         self.maps.create_map("shlwapi_pe").load_at(0x7feff260000);
         self.maps.create_map("shlwapi_text").load_at(0x7feff261000);
         self.maps.create_map("shlwapi_rdata").load_at(0x7feff2a5000);
+
+        // load from dll not from maps
         self.maps.create_map("winhttp_pe").load_at(0x7fef9760000);
         self.maps.create_map("winhttp_text").load_at(0x7fef9761000);
+
         self.maps.create_map("dnsapi_pe").load_at(0x7fefc5f0000);
         self.maps.create_map("dnsapi_text").load_at(0x7fefc5f1000);
-        self.maps.create_map("iphlpapi_pe").load_at(0x7fefc1b0000);
-        self.maps.create_map("iphlpapi_text").load_at(0x7fefc1b1000);
+
+        /*self.maps.create_map("iphlpapi_pe").load_at(0x7fefc1b0000);
+        self.maps.create_map("iphlpapi_text").load_at(0x7fefc1b1000);*/
 
         // peb64 patch for being_debugged
         let peb = self.maps.get_mem("peb");
         peb.write_byte(peb.get_base() + 2, 0);
 
         std::env::set_current_dir(orig_path);
+
+        winapi64::kernel32::load_library(self, "iphlpapi.dll");
+        winapi64::kernel32::load_library(self, "winhttp.dll");
+        winapi64::kernel32::load_library(self, "dnsapi.dll");
     }
 
     pub fn filename_to_mapname(&self, filename: &str) -> String {
@@ -1003,14 +1016,25 @@ impl Emu {
         return (base, pe_hdr_off);
     }
 
-    pub fn load_pe64(&mut self, filename: &str, set_entry: bool, force_base: u64) -> (u64, u32) {
+    pub fn peb64_link(&mut self, libname: &str, base: u64) {
+        peb64::dynamic_link_module(base, 0x3c, libname, self);
+    }
+
+    pub fn load_pe64(&mut self, filename:&str, set_entry:bool, force_base:u64) -> (u64, u32) {
         let mut pe64 = PE64::load(filename);
         let mut base: u64;
 
         if force_base > 0 {
             base = force_base;
         } else {
-            base = pe64.opt.image_base;
+            if pe64.is_dll() {
+                base = self.maps.lib64_alloc(0xfff).expect("out of memory");
+            } else {
+                base = match self.maps.get_mem_by_addr(pe64.opt.image_base + 0x1000) {
+                    Some(_) => self.maps.alloc(0xfff).expect("out of memory"),
+                    None => pe64.opt.image_base,
+                };
+            }
         }
 
         if self.cfg.code_base_addr != 0x3c0000 {
@@ -1020,7 +1044,6 @@ impl Emu {
         let map_name = self.filename_to_mapname(filename);
 
         if set_entry {
-            //TODO: update the peb64 with latest changes on peb32
             pe64.iat_binding(self);
         }
 
@@ -1038,12 +1061,12 @@ impl Emu {
         );
 
         for i in 0..pe64.num_of_sections() {
-            let base;
+            /*let base;
             if force_base > 0 {
                 base = force_base;
             } else {
                 base = pe64.opt.image_base;
-            }
+            }*/
             let ptr = pe64.get_section_ptr(i);
             let sect = pe64.get_section(i);
             let map = self.maps.create_map(&format!(
@@ -1109,6 +1132,7 @@ impl Emu {
 
     pub fn load_code(&mut self, filename: &str) {
         self.filename = filename.to_string();
+        self.cfg.filename = self.filename.clone();
 
         //let map_name = self.filename_to_mapname(filename);
         //self.cfg.filename = map_name;
@@ -1123,8 +1147,6 @@ impl Emu {
                 self.regs.rip = elf32.elf_hdr.e_entry.into();
                 let stack = self.alloc("stack", 0x30000); 
                 unimplemented!("elf32 is not supported for now");
-
-
 
         } else if Elf64::is_elf64(filename) {
 
@@ -1766,6 +1788,7 @@ impl Emu {
 
         let map_name = self.filename_to_mapname(&self.cfg.filename);
         if addr < constants::LIBS_BARRIER64 || name == "code" || name.starts_with(&map_name) {
+            //println!("ha pasado el if {} < {} {} starts_with:{} {}", addr, constants::LIBS_BARRIER64, name, map_name, self.cfg.filename);
             self.regs.rip = addr;
             //self.force_break = true;
         } else {
@@ -4022,6 +4045,9 @@ impl Emu {
     }
 
     pub fn call32(&mut self, addr: u64, args: &[u64]) -> Result<u32, ScemuError> {
+        if addr == self.regs.get_eip() {
+            return Err(ScemuError::new("return address reached after starting, change eip."));
+        }
         let orig_stack = self.regs.get_esp();
         for arg in args.iter().rev() {
             self.stack_push32(*arg as u32);
@@ -4035,10 +4061,30 @@ impl Emu {
     }
 
     pub fn call64(&mut self, addr: u64, args: &[u64]) -> Result<u64, ScemuError> {
-        let orig_stack = self.regs.rsp;
-        for arg in args.iter().rev() {
-            self.stack_push64(*arg);
+        if addr == self.regs.rip {
+            return Err(ScemuError::new("return address reached after starting, change rip."));
         }
+
+        let n = args.len();
+        if n >= 1 {
+            self.regs.rcx = args[0];
+        }
+        if n >= 2 {
+            self.regs.rdx = args[1];
+        }
+        if n >= 3 {
+            self.regs.r8 = args[2];
+        }
+        if n >= 4 {
+            self.regs.r9 = args[3];
+        }
+        let orig_stack = self.regs.rsp;
+        if n > 4 {
+            for arg in args.iter().skip(4).rev() {
+                self.stack_push64(*arg);
+            }
+        }
+    
         let ret_addr = self.regs.rip;
         self.stack_push64(ret_addr);
         self.regs.rip = addr;
@@ -7418,9 +7464,12 @@ impl Emu {
                         if first_iteration || self.cfg.verbose >= 3 {
                             self.show_instruction(&self.colors.light_cyan, &ins);
                         }
-                        /*if !first_iteration {
-                            println!("\t{} rip: 0x{:x}", self.pos, self.regs.rip);
-                        }*/
+                        if !first_iteration { // this is for the diff2.py diffing with gdb that
+                                              // unrolls the reps
+                            if self.cfg.verbose > 2 {
+                                println!("\t{} rip: 0x{:x}", self.pos, self.regs.rip);
+                            }
+                        }
 
                         self.maps.write_qword(self.regs.rdi, self.regs.rax);
 
@@ -12465,6 +12514,10 @@ impl Emu {
                 } else {
                     self.regs.set_al(0);
                 }
+            }
+
+            Mnemonic::Prefetchw => {
+                self.show_instruction(&self.colors.red, &ins);
             }
 
             Mnemonic::Pause => {

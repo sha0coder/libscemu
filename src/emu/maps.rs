@@ -905,8 +905,7 @@ impl Maps {
 
     pub fn lib64_alloc(&self, sz: u64) -> Option<u64> {
         // super simple memory allocator
-
-        let mut addr: u64 = 0x7ffffff00000;
+        let mut addr: u64 = 0x07fefff00000; //  0x7ffffff00000;
 
         loop {
             addr += sz;
@@ -921,11 +920,11 @@ impl Maps {
                 }
             }
 
-            return Some(addr);
+            //return Some(addr);
 
-            /*if !self.overlapps(addr, sz) {
+            if !self.overlapps(addr, sz) {
                 return Some(addr);
-            }*/
+            }
         }
     }
 

@@ -87,6 +87,8 @@ impl ImageDataDirectory64 {
     }
 }*/
 
+const IMAGE_FILE_DLL: u16 = 0x2000;
+
 #[derive(Debug)]
 pub struct ImageOptionalHeader64 {
     pub magic: u16,
@@ -293,6 +295,10 @@ impl PE64 {
         }
     }
 
+    pub fn is_dll(&self) -> bool {
+        self.fh.characteristics & IMAGE_FILE_DLL != 0
+    }
+
     pub fn get_raw(&self) -> &[u8] {
         return &self.raw[0..self.raw.len()];
     }
@@ -391,7 +397,7 @@ impl PE64 {
         println!("IAT binding started ...");
         for i in 0..self.image_import_descriptor.len() {
             let iim = &self.image_import_descriptor[i];
-            //println!("import: {}", iim.name);
+            //println!("IAT: import: {}", iim.name);
 
             if emu::winapi64::kernel32::load_library(emu, &iim.name) == 0 {
                 panic!("cannot found the library {} on maps64/", &iim.name);
@@ -404,9 +410,6 @@ impl PE64 {
 
             loop {
                 let hint = pe32::HintNameItem::load(&self.raw, off_name);
-                if hint.func_name_addr == 0 {
-                    break;
-                }
                 let addr = read_u32_le!(self.raw, off_addr); // & 0b01111111_11111111_11111111_11111111;
                 let off2 = PE32::vaddr_to_off(&self.sect_hdr, hint.func_name_addr) as usize;
                 if off2 == 0 {
@@ -416,10 +419,13 @@ impl PE64 {
                     continue;
                 }
                 let func_name = PE32::read_string(&self.raw, off2 + 2);
-                //println!("0x{:x} {}!{}", addr, iim.name, func_name);
+                //println!("IAT: 0x{:x} {}!{}", addr, iim.name, func_name);
 
                 let real_addr = emu::winapi64::kernel32::resolve_api_name(emu, &func_name);
-                //println!("real addr: 0x{:x}", real_addr);
+                if real_addr == 0 {
+                    break;
+                }
+                //println!("IAT: real addr: 0x{:x}", real_addr);
                 if emu.cfg.verbose >= 1 {
                     println!("binded 0x{:x} {}", real_addr, func_name);
                 }

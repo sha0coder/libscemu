@@ -36,6 +36,7 @@ pub fn gateway(addr: u64, emu: &mut emu::Emu) -> String {
         0x7700b3f0 => RtlInitializeCriticalSectionEx(emu),
         0x77022ed0 => memset(emu),
         0x77011950 => RtlSetUnhandledExceptionFilter(emu),
+        0x7701e6d0 => RtlCopyMemory(emu),
 
         _ => {
             let apiname = kernel32::guess_api_name(emu, addr);
@@ -757,4 +758,19 @@ fn RtlSetUnhandledExceptionFilter(emu: &mut emu::Emu) {
 
     emu.feh = filter;
     emu.regs.rax = 1;
+}
+
+fn RtlCopyMemory(emu: &mut emu::Emu) {
+    let dst = emu.regs.rcx;
+    let src = emu.regs.rdx;
+    let sz = emu.regs.r8 as usize;
+
+    emu.maps.memcpy(dst, src, sz);
+    let s = emu.maps.read_string(src);
+
+    println!(
+        "{}** {} ntdll!RtlCopyMemory {} {}",
+        emu.colors.light_red, emu.pos, s, emu.colors.nc
+    );
+
 }

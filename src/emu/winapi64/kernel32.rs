@@ -8,7 +8,7 @@ use crate::emu::context64;
 use lazy_static::lazy_static;
 use std::sync::Mutex;
 
-// a in RCX, b in RDX, c in R8, d in R9, f then e pushed on stack
+// a in RCX, b in RDX, c in R8, d in R9, then e pushed on stack
 
 pub fn gateway(addr: u64, emu: &mut emu::Emu) -> String {
     match addr {
@@ -19,6 +19,7 @@ pub fn gateway(addr: u64, emu: &mut emu::Emu) -> String {
         0x76dd3690 => GetProcAddress(emu),
         0x76e48d80 => WinExec(emu),
         0x76ff9380 => GetVersion(emu),
+        0x76dc01d0 => GetVersion(emu),
         0x76dc70c0 => GetVersionExA(emu),
         0x76dbd910 => GetVersionExW(emu),
         0x76e48840 => CreateProcessA(emu),
@@ -40,6 +41,7 @@ pub fn gateway(addr: u64, emu: &mut emu::Emu) -> String {
         0x76dc5a50 => GetCurrentProcessId(emu),
         0x76dc6500 => QueryPerformanceCounter(emu),
         0x76dd3050 => GetProcessHeap(emu),
+        0x76dc70e0 => HeapCreate(emu),
         0x76e5a504 => HeapAlloc(emu),
         0x76dc1120 => CreateEventA(emu),
         0x76dc6580 => CreateThread(emu),
@@ -122,6 +124,8 @@ pub fn gateway(addr: u64, emu: &mut emu::Emu) -> String {
         0x76dd3070 => HeapFree(emu),
         0x76e5a3b2 => EncodePointer(emu),
         0x76e5a2dc => DecodePointer(emu),
+        0x76dfbac0 => lstrcpyn(emu),
+        0x76dc64a0 => GetModuleFileNameA(emu),
 
         _ => {
             let api = guess_api_name(emu, addr);
@@ -2145,3 +2149,58 @@ fn DecodePointer(emu: &mut emu::Emu) {
 
     emu.regs.rax = ptr;
 }
+
+fn HeapCreate(emu: &mut emu::Emu) {
+    let opts = emu.regs.rcx;
+    let initSZ = emu.regs.rdx;
+    let maxSZ = emu.regs.r8;
+
+    println!(
+        "{}** {} kernel32!HeapCreate maxSZ:{} {}",
+        emu.colors.light_red, emu.pos, maxSZ, emu.colors.nc
+    );
+
+
+    let uri = format!("HeapCreate://{}", maxSZ);
+    emu.regs.rax = helper::handler_create(&uri);
+}
+
+fn lstrcpyn(emu: &mut emu::Emu) {
+    let out_str1 = emu.regs.rcx;
+    let in_str2 = emu.regs.rdx;
+    let len = emu.regs.r8 as usize;
+ 
+    let mut s = emu.maps.read_string(in_str2);
+    if s.len()-1 > len {
+        s = s.chars().take(len).collect();
+    } 
+    emu.maps.memset(out_str1, 0, len);
+    emu.maps.write_string(out_str1, &s);
+
+    println!(
+        "{}** {} kernel32!lstrcpyn {} {}",
+        emu.colors.light_red, emu.pos, s, emu.colors.nc
+    );
+
+    emu.regs.rax = out_str1;
+}
+
+fn GetModuleFileNameA(emu: &mut emu::Emu) {
+    let hndl = emu.regs.rcx;
+    let out_filename = emu.regs.rdx;
+    let sz = emu.regs.r8;
+
+    if sz >= 11 {
+        emu.maps.write_string(out_filename, "jowei3r.exe");
+        emu.regs.rax = 11;
+    } else {
+        emu.regs.rax = 0;
+    }
+
+    println!(
+        "{}** {} kernel32!GetModuleFileNameA hndl:{:x} {}",
+        emu.colors.light_red, emu.pos, hndl, emu.colors.nc
+    );
+}
+
+
