@@ -260,7 +260,7 @@ pub fn dynamic_link_module(base: u64, pe_off: u32, libname: &str, emu: &mut emu:
     /*
      * LoadLibary* family triggers this.
      */
-    println!("************ dynamic_link_module {}", libname);
+    //println!("************ dynamic_link_module {}", libname);
     let mut last_flink: u64;
     let mut flink = Flink::new(emu);
     flink.load(emu);
@@ -276,7 +276,7 @@ pub fn dynamic_link_module(base: u64, pe_off: u32, libname: &str, emu: &mut emu:
     }
     let next_flink: u64 = flink.get_ptr();
 
-    println!("last: {} {:x}", flink.mod_name, next_flink);
+    //println!("last: {} {:x}", flink.mod_name, next_flink);
 
     //let space_addr = create_ldr_entry(emu, base, pe_off, libname, last_flink, first_flink);
     let space_addr = create_ldr_entry(emu, base, pe_off, libname, last_flink, first_flink);
