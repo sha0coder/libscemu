@@ -409,6 +409,10 @@ impl PE64 {
             let mut off_addr = PE32::vaddr_to_off(&self.sect_hdr, iim.first_thunk) as usize;
 
             loop {
+                if self.raw.len() <= off_name+4 || self.raw.len() <= off_addr+4 {
+                    break;
+                }
+
                 let hint = pe32::HintNameItem::load(&self.raw, off_name);
                 let addr = read_u32_le!(self.raw, off_addr); // & 0b01111111_11111111_11111111_11111111;
                 let off2 = PE32::vaddr_to_off(&self.sect_hdr, hint.func_name_addr) as usize;

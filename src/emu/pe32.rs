@@ -527,11 +527,18 @@ pub struct HintNameItem {
 
 impl HintNameItem {
     pub fn load(raw: &Vec<u8>, off: usize) -> HintNameItem {
-        let func_name_addr = read_u32_le!(raw, off); // & 0b01111111_11111111_11111111_11111111;
+        let func_name_addr:u32;
 
-        HintNameItem {
-            is_ordinal: raw[off] & 0b10000000 == 0b10000000,
-            func_name_addr: func_name_addr,
+        if raw.len() <= off+4 {
+            return HintNameItem {
+                is_ordinal: false,
+                func_name_addr: 0,
+            }
+        } else {
+            return HintNameItem {
+                is_ordinal: raw[off] & 0b10000000 == 0b10000000,
+                func_name_addr: read_u32_le!(raw, off),    // & 0b01111111_11111111_11111111_11111111;
+            }
         }
     }
 
@@ -687,7 +694,7 @@ impl PE32 {
         }
 
         if last == 0 {
-            panic!("cannot found end of string");
+            return String::new();
         }
 
         let s = match str::from_utf8(raw.get(off..last).unwrap()) {
@@ -738,6 +745,11 @@ impl PE32 {
                     }
 
                     let libname = PE32::read_string(&raw, off);
+                    if libname.len() == 0 {
+                        import_off += ImageImportDescriptor::size();
+                        continue;
+                        //break;
+                    }
                     iid.name = libname.to_string();
 
                     image_import_descriptor.push(iid);
@@ -845,10 +857,10 @@ impl PE32 {
             let mut off_addr = PE32::vaddr_to_off(&self.sect_hdr, iim.first_thunk) as usize;
 
             loop {
-                let hint = HintNameItem::load(&self.raw, off_name);
-                /*if hint.func_name_addr == 0 {
+                if self.raw.len() <= off_name+4 || self.raw.len() <= off_addr+4 {
                     break;
-                }*/
+                }
+                let hint = HintNameItem::load(&self.raw, off_name);
                 let addr = read_u32_le!(self.raw, off_addr); // & 0b01111111_11111111_11111111_11111111;
                 let off2 = PE32::vaddr_to_off(&self.sect_hdr, hint.func_name_addr) as usize;
                 if off2 == 0 {
