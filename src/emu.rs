@@ -1248,6 +1248,11 @@ impl Emu {
         if self.cfg.verbose >= 1 {
             println!("Loading shellcode from bytes");
         }
+        if self.cfg.code_base_addr != 0x3c0000 {
+            let code = self.maps.get_mem("code");
+            code.update_base(self.cfg.code_base_addr);
+            code.update_bottom(self.cfg.code_base_addr + code.size() as u64);
+        }
         let code = self.maps.get_mem("code");
         let base = code.get_base();
         code.set_size(bytes.len() as u64);
