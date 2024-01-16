@@ -399,6 +399,10 @@ impl PE64 {
             let iim = &self.image_import_descriptor[i];
             //println!("IAT: import: {}", iim.name);
 
+            if iim.name.len() == 0 {
+                continue;
+            }
+
             if emu::winapi64::kernel32::load_library(emu, &iim.name) == 0 {
                 panic!("cannot found the library {} on maps64/", &iim.name);
             }

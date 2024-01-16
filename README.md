@@ -53,7 +53,7 @@ emu.stack_push32(ret_addr);
 emu.run(Some(ret_addr)).unwrap();   // emulate until arrive to ret_addr
 
 // or simpler way:
-let eax = emu.call32(crypto_key_gen, [param1, param2_out_buff]).unwrap();
+let eax = emu.call32(crypto_key_gen, &[param1, param2_out_buff]).unwrap();
 
 // this would be slower but more control
 while emu.step() {

@@ -3,6 +3,7 @@ mod crypt32;
 mod dnsapi;
 pub mod helper;
 pub mod kernel32;
+mod kernelbase;
 mod mscoree;
 mod msvcrt;
 mod ntdll;
@@ -30,6 +31,7 @@ pub fn gateway(addr: u32, name: String, emu: &mut emu::Emu) {
         "msvcrt_text" => msvcrt::gateway(addr, emu),
         "shlwapi_text" => msvcrt::gateway(addr, emu),
         "oleaut32_text" => oleaut32::gateway(addr, emu),
+        "kernelbase_text" => kernelbase::gateway(addr, emu),
         _ => panic!("/!\\ trying to execute on {} at 0x{:x}", name, addr),
     };
 

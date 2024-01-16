@@ -325,6 +325,17 @@ impl ImageSectionHeader {
         s.to_string().replace("\x00", "")
     }
 
+    pub fn set_name(&mut self, newname: &str) {
+        if newname.len()+1 > IMAGE_SIZEOF_SHORT_NAME {
+            panic!("fixing a name bigger than IMAGE_SIZEOF_SHORT_NAME");
+        }
+        let mut vname: Vec<u8> = newname.as_bytes().to_vec();    
+        vname.push(0);
+        for (i, &item) in vname.iter().enumerate() {
+            self.name[i] = item;
+        }
+    }
+
     pub fn print(&self) {
         println!("{:#x?}", self);
     }

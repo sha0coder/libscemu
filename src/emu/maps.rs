@@ -40,6 +40,15 @@ impl Maps {
         return None;
     }
 
+    pub fn get_map_by_name_mut(&mut self, name: &str) -> Option<&mut Mem64> {
+        for map in self.maps.iter_mut() {
+            if map.get_name() == name {
+                return Some(map);
+            }
+        }
+        return None;
+    }
+
     pub fn create_map(&mut self, name: &str) -> &mut Mem64 {
         let mut mem = Mem64::new();
         mem.set_name(name);

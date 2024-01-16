@@ -481,7 +481,7 @@ impl Emu {
         let orig_path = std::env::current_dir().unwrap();
         std::env::set_current_dir(self.cfg.maps_folder.clone());
 
-        self.maps.get_mem("code").set_base(self.cfg.code_base_addr);
+        //self.maps.get_mem("code").set_base(self.cfg.code_base_addr);
         let kernel32 = self.maps.get_mem("kernel32");
         kernel32.set_base(0x75e40000);
         if !kernel32.load("kernel32.bin") {
@@ -913,6 +913,7 @@ impl Emu {
     }
 
     pub fn load_pe32(&mut self, filename: &str, set_entry: bool, force_base: u32) -> (u32, u32) {
+        let is_maps = filename.contains("maps32/");
         let mut pe32 = PE32::load(filename);
         let mut base;
 
@@ -922,7 +923,7 @@ impl Emu {
             base = pe32.opt.image_base;
         }
 
-        if self.cfg.code_base_addr != 0x3c0000 {
+        if !is_maps && self.cfg.code_base_addr != 0x3c0000 {
             base = self.cfg.code_base_addr as u32;
         }
 
@@ -945,7 +946,6 @@ impl Emu {
 
         //TODO: query if this vaddr is already used
         let pemap = self.maps.create_map(&format!("{}.pe", map_name));
-
         pemap.set_base(base.into());
         pemap.set_size(pe32.opt.size_of_headers.into());
         pemap.memcpy(pe32.get_headers(), pe32.opt.size_of_headers as usize);
@@ -957,31 +957,47 @@ impl Emu {
             base
         );
 
+
         for i in 0..pe32.num_of_sections() {
             let base: u32;
             if force_base > 0 {
                 base = force_base;
             } else {
-                base = pe32.opt.image_base;
+                if self.cfg.code_base_addr == 0x3c0000 || is_maps {
+                    base = pe32.opt.image_base;
+                } else {
+                    base = self.cfg.code_base_addr as u32;
+                }
             }
             let ptr = pe32.get_section_ptr(i);
             let sect = pe32.get_section(i);
-            let map = self.maps.create_map(&format!(
-                "{}{}",
-                map_name,
-                sect.get_name()
-                    .replace(" ", "")
-                    .replace("\t", "")
-                    .replace("\x0a", "")
-                    .replace("\x0d", "")
-            ));
+            let map;
 
+            if force_base == 0 && sect.get_name() == ".text" && !is_maps {
+                map = self.maps.get_map_by_name_mut("code").unwrap();
+            } else {
+                map = self.maps.create_map(&format!(
+                    "{}{}",
+                    map_name,
+                    sect.get_name()
+                        .replace(" ", "")
+                        .replace("\t", "")
+                        .replace("\x0a", "")
+                        .replace("\x0d", "")
+                ));
+            }
+
+            //println!("-x-> {} {:x}+{:x} = {:x}", sect.get_name(), base, sect.virtual_address, base as u64 + sect.virtual_address as u64);
             map.set_base(base as u64 + sect.virtual_address as u64);
             if sect.virtual_size > sect.size_of_raw_data {
                 map.set_size(sect.virtual_size as u64);
             } else {
                 map.set_size(sect.size_of_raw_data as u64);
             }
+            if sect.get_name() == ".text" {
+                //map.set_size( (map.size() + 0x1000) as u64 );
+                map.set_size( map.size() as u64 );
+            }  
             map.memcpy(ptr, ptr.len());
 
             println!(
@@ -1237,11 +1253,11 @@ impl Emu {
         if self.cfg.entry_point != 0x3c0000 {
             self.regs.rip = self.cfg.entry_point;
         }
-        if self.cfg.code_base_addr != 0x3c0000 {
+        /*if self.cfg.code_base_addr != 0x3c0000 {
             let code = self.maps.get_mem("code");
             code.update_base(self.cfg.code_base_addr);
             code.update_bottom(self.cfg.code_base_addr + code.size() as u64);
-        }
+        }*/
     }
 
     pub fn load_code_bytes(&mut self, bytes: &[u8]) {
