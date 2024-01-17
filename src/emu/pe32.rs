@@ -855,10 +855,11 @@ impl PE32 {
                 println!("import: {}", iim.name);
             }
 
+            if iim.name.len() == 0 { 
+                continue;
+            }
+
             if emu::winapi32::kernel32::load_library(emu, &iim.name) == 0 {
-                if iim.name == "" { 
-                    continue
-                }
                 panic!("cannot found the library `{}` on maps32/", &iim.name);
             }
 
