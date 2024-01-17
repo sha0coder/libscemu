@@ -481,7 +481,7 @@ impl Emu {
         let orig_path = std::env::current_dir().unwrap();
         std::env::set_current_dir(self.cfg.maps_folder.clone());
 
-        //self.maps.get_mem("code").set_base(self.cfg.code_base_addr);
+        self.maps.get_mem("code").set_base(self.cfg.code_base_addr);
         let kernel32 = self.maps.get_mem("kernel32");
         kernel32.set_base(0x75e40000);
         if !kernel32.load("kernel32.bin") {
