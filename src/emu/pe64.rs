@@ -202,6 +202,24 @@ impl TlsDirectory64 {
     }
 }
 
+#[derive(Debug)]
+pub struct DelayLoadIAT {
+    name_ptr: u32,
+    iat_addr: u64,
+    bound_iat: u64,
+}
+
+impl DelayLoadIAT {
+    fn load(raw: &Vec<u8>, off: usize) -> DelayLoadIAT {
+        DelayLoadIAT {
+            name_ptr: read_u32_le!(raw, off),
+            iat_addr: read_u64_le!(raw, off+4),
+            bound_iat: read_u64_le!(raw, off+8),
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct PE64 {
     raw: Vec<u8>,
     pub dos: pe32::ImageDosHeader,
@@ -209,6 +227,7 @@ pub struct PE64 {
     pub fh: pe32::ImageFileHeader,
     pub opt: ImageOptionalHeader64,
     sect_hdr: Vec<pe32::ImageSectionHeader>,
+    pub delay_load_dir: Vec<pe32::DelayLoadDirectory>, 
     pub image_import_descriptor: Vec<pe32::ImageImportDescriptor>,
 }
 
@@ -253,9 +272,35 @@ impl PE64 {
         let exportd: pe32::ImageExportDirectory;
         let import_va = opt.data_directory[pe32::IMAGE_DIRECTORY_ENTRY_IMPORT].virtual_address;
         let export_va = opt.data_directory[pe32::IMAGE_DIRECTORY_ENTRY_EXPORT].virtual_address;
+        let delay_load_va = opt.data_directory[pe32::IMAGE_DIRECTORY_ENTRY_DELAY_LOAD].virtual_address;
         let mut import_off: usize;
+        let mut delay_load_off: usize;
 
         let mut image_import_descriptor: Vec<pe32::ImageImportDescriptor> = Vec::new();
+        let mut delay_load_dir: Vec<pe32::DelayLoadDirectory> = Vec::new();
+
+        if delay_load_va > 0 {
+            println!("delay load detected!");
+            delay_load_off = PE32::vaddr_to_off(&sect, delay_load_va) as usize;
+            if delay_load_off > 0 {
+                loop {
+                    let mut delay_load = pe32::DelayLoadDirectory::load(&raw, delay_load_off);
+                    if delay_load.handle == 0 || delay_load.name_ptr == 0 {
+                        break;
+                    }
+
+                    let off = PE32::vaddr_to_off(&sect, delay_load.name_ptr) as usize;
+                    if off > raw.len() {
+                        panic!("the delay_load.name of pe64 is out of buffer");
+                    }
+                    let libname = PE32::read_string(&raw, off);
+                    delay_load.name = libname.to_string();
+                    delay_load_dir.push(delay_load);
+                    println!("delay_load entry {}", libname);
+                    delay_load_off += pe32::DelayLoadDirectory::size();
+                }
+            }
+        }
 
         if import_va > 0 {
             import_off = PE32::vaddr_to_off(&sect, import_va) as usize;
@@ -290,6 +335,7 @@ impl PE64 {
             nt: nt,
             opt: opt,
             sect_hdr: sect,
+            delay_load_dir: delay_load_dir,
             image_import_descriptor: image_import_descriptor, //import_dir: importd,
                                                               //export_dir: exportd,
         }
@@ -389,6 +435,57 @@ impl PE64 {
         }
 
         callbacks
+    }
+
+    pub fn delay_load_binding(&mut self, emu: &mut emu::Emu) {
+        println!("Delay load binding started ...");
+        for i in 0..self.delay_load_dir.len() {
+            let dld = &self.delay_load_dir[i];
+            if dld.name.len() == 0 {
+                continue;
+            }
+            if emu::winapi64::kernel32::load_library(emu, &dld.name) == 0 {
+                panic!("cannot found the library `{}` on maps64", &dld.name);
+            }
+
+            let mut off_name = PE32::vaddr_to_off(&self.sect_hdr, dld.name_table) as usize;
+            let mut off_addr = PE32::vaddr_to_off(&self.sect_hdr, dld.bound_delay_import_table) as usize;
+
+            loop {
+                if self.raw.len() <= off_name+4 || self.raw.len() <= off_addr+4 {
+                    break;
+                }
+
+                let hint = pe32::HintNameItem::load(&self.raw, off_name);
+                let addr = read_u32_le!(self.raw, off_addr); // & 0b01111111_11111111_11111111_11111111;
+                let off2 = PE32::vaddr_to_off(&self.sect_hdr, hint.func_name_addr) as usize;
+                if off2 == 0 {
+                    //|| addr < 0x100 {
+                    off_name += pe32::HintNameItem::size();
+                    off_addr += 4;
+                    continue;
+                }
+                let func_name = PE32::read_string(&self.raw, off2 + 2);
+                //println!("IAT: 0x{:x} {}!{}", addr, iim.name, func_name);
+
+                let real_addr = emu::winapi64::kernel32::resolve_api_name(emu, &func_name);
+                if real_addr == 0 {
+                    break;
+                }
+                //println!("IAT: real addr: 0x{:x}", real_addr);
+                if emu.cfg.verbose >= 1 {
+                    println!("binded 0x{:x} {}", real_addr, func_name);
+                }
+
+                write_u32_le!(self.raw, off_addr, real_addr);
+
+                off_name += pe32::HintNameItem::size();
+                off_addr += 4;
+            }
+                
+        }
+        println!("delay load bound!");
+
     }
 
     pub fn iat_binding(&mut self, emu: &mut emu::Emu) {

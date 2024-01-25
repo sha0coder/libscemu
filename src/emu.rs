@@ -942,6 +942,7 @@ impl Emu {
             self.maps.write_dword(peb + 8, base);
 
             pe32.iat_binding(self);
+            pe32.delay_load_binding(self);
         }
 
         //TODO: query if this vaddr is already used
@@ -1061,6 +1062,7 @@ impl Emu {
 
         if set_entry {
             pe64.iat_binding(self);
+            pe64.delay_load_binding(self);
         }
 
         //TODO: query if this vaddr is already used
