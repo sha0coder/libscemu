@@ -53,7 +53,6 @@ macro_rules! read_u64_le {
     };
 }
 
-/*
 macro_rules! write_u64_le {
     ($raw:expr, $off:expr, $val:expr) => {
       $raw[$off+0]  = ($val & 0x00000000_000000ff) as u8;
@@ -65,7 +64,7 @@ macro_rules! write_u64_le {
       $raw[$off+6] = (($val & 0x00ff0000_00000000) >> 48) as u8;
       $raw[$off+7] = (($val & 0xff000000_00000000) >> 56) as u8;
     }
-}*/
+}
 
 /*
 #[derive(Debug)]
@@ -285,6 +284,7 @@ impl PE64 {
             if delay_load_off > 0 {
                 loop {
                     let mut delay_load = pe32::DelayLoadDirectory::load(&raw, delay_load_off);
+                    //println!("{:#x?}", delay_load);
                     if delay_load.handle == 0 || delay_load.name_ptr == 0 {
                         break;
                     }
@@ -462,7 +462,7 @@ impl PE64 {
                 if off2 == 0 {
                     //|| addr < 0x100 {
                     off_name += pe32::HintNameItem::size();
-                    off_addr += 4;
+                    off_addr += 8;
                     continue;
                 }
                 let func_name = PE32::read_string(&self.raw, off2 + 2);
@@ -477,7 +477,12 @@ impl PE64 {
                     println!("binded 0x{:x} {}", real_addr, func_name);
                 }
 
-                write_u32_le!(self.raw, off_addr, real_addr);
+                println!("delay binding:  {:x}  {:x}", off_addr, real_addr);
+                let test = read_u64_le!(self.raw, off_addr);
+                if test == 0x7ffa81727b80 || off_addr == 0x210F8 {
+                    panic!("yeah!!!!");
+                }
+                write_u64_le!(self.raw, off_addr, real_addr);
 
                 off_name += pe32::HintNameItem::size();
                 off_addr += 4;

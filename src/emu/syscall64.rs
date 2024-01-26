@@ -805,8 +805,9 @@ pub fn gateway(emu: &mut emu::Emu) {
 
 
         constants::NR64_MPROTECT => {
-            let addr = emu.regs.rdx;
-
+            let addr = emu.regs.rdi;
+            let sz = emu.regs.rsi;
+            let prot = emu.regs.rdx;
            
             if emu.maps.is_mapped(addr) {
                 emu.regs.rax = 0;

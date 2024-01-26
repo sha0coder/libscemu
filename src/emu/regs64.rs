@@ -2286,10 +2286,12 @@ impl Regs64 {
         match reg {
             "rax" | "rbx" | "rcx" | "rdx" | "rsi" | "rdi" | "rbp" | "rsp" | "rip" | "r8" | "r9"
             | "r10" | "r11" | "r12" | "eax" | "ebx" | "ecx" | "edx" | "esi" | "edi" | "esp"
-            | "ebp" | "eip" | "r8d" | "r9d" | "r10d" | "r11d" | "r12d" | "ax" | "bx" | "cx"
-            | "dx" | "bp" | "sp" | "r8w" | "r9w" | "r10w" | "r11w" | "r12w" | "si" | "di"
-            | "al" | "ah" | "bl" | "bh" | "cl" | "ch" | "dl" | "dh" | "r8l" | "r9l" | "r10l"
-            | "r11l" | "r12l" | "sil" | "dil" | "bpl" | "spl" => true,
+            | "ebp" | "eip"  
+            | "r8d" | "r9d" | "r10d" | "r11d" | "r12d" | "r13d" | "r14d" | "r15d" | "ax" | "bx" | "cx"
+            | "dx" | "bp" | "sp" | "r8w" | "r9w" | "r10w" | "r11w" | "r12w" | "r13w" | "r14w" | "r15w"
+            | "si" | "di" | "al" | "ah" | "bl" | "bh" | "cl" | "ch" | "dl" | "dh" | "r8l" | "r9l" 
+            | "r10l" | "r11l" | "r12l" | "r13l" | "r14l" | "r15l" | "sil" | "dil" | "bpl" | "spl" 
+            => true,
             &_ => false,
         }
     }

@@ -1038,13 +1038,14 @@ impl Emu {
     }
 
     pub fn load_pe64(&mut self, filename:&str, set_entry:bool, force_base:u64) -> (u64, u32) {
+        let is_maps = filename.contains("maps32/");
         let mut pe64 = PE64::load(filename);
         let mut base: u64;
 
         if force_base > 0 {
             base = force_base;
         } else {
-            if pe64.is_dll() {
+            if is_maps && pe64.is_dll() {
                 base = self.maps.lib64_alloc(0xfff).expect("out of memory");
             } else {
                 base = match self.maps.get_mem_by_addr(pe64.opt.image_base + 0x1000) {
@@ -1054,7 +1055,7 @@ impl Emu {
             }
         }
 
-        if self.cfg.code_base_addr != 0x3c0000 {
+        if set_entry && !is_maps && self.cfg.code_base_addr != 0x3c0000 {
             base = self.cfg.code_base_addr;
         }
 
