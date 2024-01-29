@@ -112,10 +112,17 @@ impl Elf64 {
             off += ehdr.e_shentsize as usize;
         }
 
-
-        let off_strtab = eshdr[ehdr.e_shstrndx as usize].sh_offset as usize;
-        let sz_strtab = eshdr[ehdr.e_shstrndx as usize].sh_size as usize;
-        let blob_strtab = bin[off_strtab..(off_strtab+sz_strtab)].to_vec();
+   
+        let mut off_strtab: usize = 0;
+        let mut sz_strtab: usize = 0;
+        if (ehdr.e_shstrndx as usize) < eshdr.len() {
+            off_strtab = eshdr[ehdr.e_shstrndx as usize].sh_offset as usize;
+            sz_strtab = eshdr[ehdr.e_shstrndx as usize].sh_size as usize;
+        } 
+        let mut blob_strtab: Vec<u8> = vec![];
+        if off_strtab > 0 {
+            blob_strtab = bin[off_strtab..(off_strtab+sz_strtab)].to_vec();
+        }
         let dynstr: Vec<String> = Vec::new();
 
         Ok(Elf64 {

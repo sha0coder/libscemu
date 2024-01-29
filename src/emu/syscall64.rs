@@ -118,6 +118,26 @@ pub fn gateway(emu: &mut emu::Emu) {
             }
         }
 
+        /*
+        constants::NR64_WRITEV => {
+            let fd = emu.regs.rdi;
+            let buff = emu.regs.rsi;
+            let sz = emu.regs.rdx;
+            emu.regs.rax = sz;
+            println!(
+                "{}** {} syscall write() fd: {} buf: 0x{:x} sz: {} {}",
+                emu.colors.light_red, emu.pos, fd, buff, sz, emu.colors.nc
+            );
+            if fd == 1 {
+                let s = emu.maps.read_string(buff);
+                println!("stdout: `{}`", s)
+            }
+            if fd == 2 {
+                let s = emu.maps.read_string(buff);
+                println!("stderr: `{}`", s)
+            }
+        }*/
+
         constants::NR64_OPEN => {
             let file_path = emu.maps.read_string(emu.regs.rdi);
             let fd = helper::handler_create(&file_path);
@@ -809,11 +829,12 @@ pub fn gateway(emu: &mut emu::Emu) {
             let sz = emu.regs.rsi;
             let prot = emu.regs.rdx;
            
-            if emu.maps.is_mapped(addr) {
+            /*if emu.maps.is_mapped(addr) {
                 emu.regs.rax = 0;
             } else {
                 emu.regs.rax = 0xffffffff_ffffffff;
-            }
+            }*/
+            emu.regs.rax = 0;
 
             println!(
                 "{}** {} syscall mprotect(0x{:x}) ={:x} {}",
