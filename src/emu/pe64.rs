@@ -296,7 +296,6 @@ impl PE64 {
                     let libname = PE32::read_string(&raw, off);
                     delay_load.name = libname.to_string();
                     delay_load_dir.push(delay_load);
-                    println!("delay_load entry {}", libname);
                     delay_load_off += pe32::DelayLoadDirectory::size();
                 }
             }
@@ -449,7 +448,7 @@ impl PE64 {
             }
 
             let mut off_name = PE32::vaddr_to_off(&self.sect_hdr, dld.name_table) as usize;
-            let mut off_addr = PE32::vaddr_to_off(&self.sect_hdr, dld.bound_delay_import_table) as usize;
+            let mut off_addr = PE32::vaddr_to_off(&self.sect_hdr, dld.address_table) as usize;
 
             loop {
                 if self.raw.len() <= off_name+4 || self.raw.len() <= off_addr+4 {
@@ -472,20 +471,14 @@ impl PE64 {
                 if real_addr == 0 {
                     break;
                 }
-                //println!("IAT: real addr: 0x{:x}", real_addr);
+                /*
                 if emu.cfg.verbose >= 1 {
                     println!("binded 0x{:x} {}", real_addr, func_name);
-                }
-
-                println!("delay binding:  {:x}  {:x}", off_addr, real_addr);
-                let test = read_u64_le!(self.raw, off_addr);
-                if test == 0x7ffa81727b80 || off_addr == 0x210F8 {
-                    panic!("yeah!!!!");
-                }
+                }*/
                 write_u64_le!(self.raw, off_addr, real_addr);
 
                 off_name += pe32::HintNameItem::size();
-                off_addr += 4;
+                off_addr += 8;
             }
                 
         }
@@ -496,12 +489,12 @@ impl PE64 {
     pub fn iat_binding(&mut self, emu: &mut emu::Emu) {
         // https://docs.microsoft.com/en-us/archive/msdn-magazine/2002/march/inside-windows-an-in-depth-look-into-the-win32-portable-executable-file-format-part-2#Binding
 
-        println!("IAT binding started ...");
+        println!("IAT binding started {} ...", self.image_import_descriptor.len());
         for i in 0..self.image_import_descriptor.len() {
             let iim = &self.image_import_descriptor[i];
-            //println!("IAT: import: {}", iim.name);
 
             if iim.name.len() == 0 {
+                println!("triggered");
                 continue;
             }
 
@@ -513,9 +506,11 @@ impl PE64 {
             let mut off_name =
                 PE32::vaddr_to_off(&self.sect_hdr, iim.original_first_thunk) as usize;
             let mut off_addr = PE32::vaddr_to_off(&self.sect_hdr, iim.first_thunk) as usize;
+            println!("IAT binding - off_name: {:x}", off_name);
+            println!("IAT binding - off_addr: {:x}", off_addr);
 
             loop {
-                if self.raw.len() <= off_name+4 || self.raw.len() <= off_addr+4 {
+                if self.raw.len() <= off_name+4 || self.raw.len() <= off_addr+8 {
                     break;
                 }
 
@@ -525,7 +520,7 @@ impl PE64 {
                 if off2 == 0 {
                     //|| addr < 0x100 {
                     off_name += pe32::HintNameItem::size();
-                    off_addr += 4;
+                    off_addr += 8;
                     continue;
                 }
                 let func_name = PE32::read_string(&self.raw, off2 + 2);
@@ -535,15 +530,15 @@ impl PE64 {
                 if real_addr == 0 {
                     break;
                 }
-                //println!("IAT: real addr: 0x{:x}", real_addr);
+                /*
                 if emu.cfg.verbose >= 1 {
                     println!("binded 0x{:x} {}", real_addr, func_name);
-                }
+                }*/
 
                 write_u32_le!(self.raw, off_addr, real_addr);
 
                 off_name += pe32::HintNameItem::size();
-                off_addr += 4;
+                off_addr += 8;
             }
         }
         println!("IAT Bound.");

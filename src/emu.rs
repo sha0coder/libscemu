@@ -941,8 +941,10 @@ impl Emu {
             let peb = peb32::init_peb(self, space_addr, base);
             self.maps.write_dword(peb + 8, base);
 
-            pe32.iat_binding(self);
-            pe32.delay_load_binding(self);
+            if !is_maps {
+                pe32.iat_binding(self);
+                pe32.delay_load_binding(self);
+            }
         }
 
         //TODO: query if this vaddr is already used
@@ -1061,7 +1063,7 @@ impl Emu {
 
         let map_name = self.filename_to_mapname(filename);
 
-        if set_entry {
+        if set_entry && !is_maps {
             pe64.iat_binding(self);
             pe64.delay_load_binding(self);
         }

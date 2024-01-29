@@ -489,6 +489,10 @@ impl DelayLoadDirectory {
         return 32;
     }
 
+    pub fn print(&self) {
+        println!("{:#x?}", self);
+    }
+
     pub fn load(raw: &Vec<u8>, off: usize) -> DelayLoadDirectory {
         DelayLoadDirectory {
             attributes: read_u32_le!(raw, off),

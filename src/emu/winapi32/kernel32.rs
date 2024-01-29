@@ -382,9 +382,10 @@ pub fn load_library(emu: &mut emu::Emu, libname: &str) -> u64 {
     match peb32::get_module_base(&dll, emu) {
         Some(base) => {
             // already linked
+            /*
             if emu.cfg.verbose > 0 {
                 println!("dll {} already linked.", dll);
-            }
+            }*/
             return base;
         }
         None => {
