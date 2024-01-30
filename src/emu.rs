@@ -1179,13 +1179,13 @@ impl Emu {
 
                 let mut elf64 = Elf64::parse(filename).unwrap();
                 let dyn_link = elf64.get_dynamic().len() > 0;
-                elf64.load(&mut self.maps, "elf64", false, dyn_link);
+                elf64.load(&mut self.maps, "elf64", false, dyn_link, self.cfg.code_base_addr);
                 self.init_linux64(dyn_link);
 
 
                 if dyn_link {
                     let mut ld = Elf64::parse("/lib64/ld-linux-x86-64.so.2").unwrap();
-                    ld.load(&mut self.maps, "ld-linux", true, dyn_link);
+                    ld.load(&mut self.maps, "ld-linux", true, dyn_link, 0x3c0000);
                     println!("--- emulating ld-linux _start ---");
 
                     self.regs.rip = ld.elf_hdr.e_entry + elf64::LD_BASE;
@@ -1258,6 +1258,7 @@ impl Emu {
         if self.cfg.entry_point != 0x3c0000 {
             self.regs.rip = self.cfg.entry_point;
         }
+
         /*if self.cfg.code_base_addr != 0x3c0000 {
             let code = self.maps.get_mem("code");
             code.update_base(self.cfg.code_base_addr);

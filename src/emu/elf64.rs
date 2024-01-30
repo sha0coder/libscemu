@@ -238,13 +238,17 @@ impl Elf64 {
         }
     }
 
-    pub fn load(&mut self, maps: &mut Maps, name:&str, is_lib: bool, dynamic_linking: bool) {
+    pub fn load(&mut self, maps: &mut Maps, name:&str, is_lib: bool, dynamic_linking: bool, 
+                force_base: u64) {
 
 
         if dynamic_linking {
             self.load_programs(maps, name, is_lib, dynamic_linking);
         } else {
-            let elf64_base = ELF64_STA_BASE;
+            let mut elf64_base = ELF64_STA_BASE;
+            if force_base != 0x3c0000 {
+                elf64_base = force_base;
+            }
             // elf executable need to map the header.
             let hdr = maps.create_map("elf64.hdr");
             hdr.set_base(elf64_base);
