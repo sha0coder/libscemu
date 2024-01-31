@@ -6725,6 +6725,63 @@ impl Emu {
                 }
             }
 
+            Mnemonic::Movsq => {
+                if ins.has_rep_prefix() {
+                    let mut first_iteration = true;
+                    loop {
+                        if first_iteration || self.cfg.verbose >= 3 {
+                            self.show_instruction(&self.colors.light_cyan, &ins);
+                        }
+                        if self.regs.rcx == 0 {
+                            return true;
+                        }
+                        if !first_iteration {
+                            self.pos += 1;
+                        }
+
+                        let val = self
+                            .maps
+                            .read_qword(self.regs.rsi)
+                            .expect("cannot read memory");
+                        self.maps.write_qword(self.regs.rdi, val);
+
+                        if !self.flags.f_df {
+                            self.regs.rsi += 8;
+                            self.regs.rdi += 8;
+                        } else {
+                            self.regs.rsi -= 8;
+                            self.regs.rdi -= 8;
+                        }
+
+                        self.regs.rcx -= 1;
+                        if self.regs.rcx == 0 {
+                            return true;
+                        }
+                        first_iteration = false;
+                        if rep_step {
+                            self.force_reload = true;
+                            break;
+                        }
+                    }
+                } else {
+                    self.show_instruction(&self.colors.light_cyan, &ins);
+                    let val = self
+                        .maps
+                        .read_qword(self.regs.rsi)
+                        .expect("cannot read memory");
+
+                    self.maps.write_qword(self.regs.rdi, val);
+
+                    if !self.flags.f_df {
+                        self.regs.rsi += 8;
+                        self.regs.rdi += 8;
+                    } else {
+                        self.regs.rsi -= 8;
+                        self.regs.rdi -= 8;
+                    }
+                }
+            }
+
             Mnemonic::Movsd => {
                 if self.cfg.is_64bits {
                     if ins.has_rep_prefix() {
@@ -6732,6 +6789,9 @@ impl Emu {
                         loop {
                             if first_iteration || self.cfg.verbose >= 3 {
                                 self.show_instruction(&self.colors.light_cyan, &ins);
+                            }
+                            if self.regs.rcx == 0 {
+                                return true;
                             }
                             if !first_iteration {
                                 self.pos += 1;
@@ -6784,6 +6844,9 @@ impl Emu {
                         loop {
                             if first_iteration || self.cfg.verbose >= 3 {
                                 self.show_instruction(&self.colors.light_cyan, &ins);
+                            }
+                            if self.regs.get_ecx() == 0 {
+                                return true;
                             }
                             if !first_iteration {
                                 self.pos += 1;
@@ -12556,6 +12619,14 @@ impl Emu {
             }
 
             Mnemonic::Mwait => {
+                self.show_instruction(&self.colors.red, &ins);
+            }
+
+            Mnemonic::Endbr64 => {
+                self.show_instruction(&self.colors.red, &ins);
+            }
+
+            Mnemonic::Endbr32 => {
                 self.show_instruction(&self.colors.red, &ins);
             }
 
