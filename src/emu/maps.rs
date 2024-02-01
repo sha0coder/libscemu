@@ -307,7 +307,6 @@ impl Maps {
     }
 
     pub fn write_wide_string(&mut self, to: u64, from: &str) {
-        println!("to: {:x}", to);
         let bs: Vec<u8> = from.bytes().collect();
         let mut off = 0;
         for bsi in bs.iter() {

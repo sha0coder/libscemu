@@ -24,6 +24,12 @@ pub fn gateway(addr: u64, name: String, emu: &mut emu::Emu) {
     };
 
     if unimplemented_api.len() > 0 {
+        println!("{}({}, {}, {}, {}) (unimplemented)", unimplemented_api,
+            emu.regs.rcx, emu.regs.rdx, emu.regs.r8, emu.regs.r9);
+
+        emu.regs.rax = 1;
+
+        /*
         if emu.cfg.skip_unimplemented {
             let params = emu.banzai.get_params(&unimplemented_api);
             println!("{} {} parameters", unimplemented_api, params);
@@ -36,6 +42,6 @@ pub fn gateway(addr: u64, name: String, emu: &mut emu::Emu) {
             emu.regs.rax = 1;
         } else {
             panic!("function is not in emulation list.");
-        }
+        }*/
     }
 }

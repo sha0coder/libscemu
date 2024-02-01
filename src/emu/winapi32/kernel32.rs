@@ -3018,7 +3018,9 @@ fn GetCommandLineA(emu: &mut emu::Emu) {
         "{}** {} kernel32!GetCommandlineA {}",
         emu.colors.light_red, emu.pos, emu.colors.nc
     );
-    emu.regs.rax = 0;
+    let cmdline = emu.alloc("cmdline", 1024);
+    emu.maps.write_string(cmdline, "test.exe");
+    emu.regs.rax = cmdline;
 }
 
 fn GetCommandLineW(emu: &mut emu::Emu) {
@@ -3026,7 +3028,9 @@ fn GetCommandLineW(emu: &mut emu::Emu) {
         "{}** {} kernel32!GetCommandlineW {}",
         emu.colors.light_red, emu.pos, emu.colors.nc
     );
-    emu.regs.rax = 0;
+    let cmdline = emu.alloc("cmdline", 1024);
+    emu.maps.write_string(cmdline, "test.exe");
+    emu.regs.rax = cmdline;
 }
 
 fn GetAcp(emu: &mut emu::Emu) {
@@ -3550,7 +3554,9 @@ fn GetEnvironmentStrings(emu: &mut emu::Emu) {
         "{}** {} kernel32!GetEnvironmentStrings {}",
         emu.colors.light_red, emu.pos, emu.colors.nc
     );
-    emu.regs.rax = 0;
+    let ptr = emu.alloc("environment", 1024);
+    emu.maps.write_string(ptr, "PATH=c:\\Windows\\System32");
+    emu.regs.rax = ptr;
 }
 
 fn GetEnvironmentStringsW(emu: &mut emu::Emu) {
@@ -3559,7 +3565,7 @@ fn GetEnvironmentStringsW(emu: &mut emu::Emu) {
         emu.colors.light_red, emu.pos, emu.colors.nc
     );
     let addr = emu.alloc("environment", 1024);
-    emu.maps.write_string(addr, "PATH=c:\\Windows\\System32");
+    emu.maps.write_wide_string(addr, "PATH=c:\\Windows\\System32");
     emu.regs.rax = addr;
 }
 
@@ -3725,7 +3731,6 @@ fn WideCharToMultiByte(emu: &mut emu::Emu) {
     //emu.maps.write_byte(out_default_char, 0);
 
 
-    println!("dest ptr: 0x{:x}", mbytestr_ptr);
     let s = emu.maps.read_wide_string(wstr_ptr);
     emu.maps.write_string(mbytestr_ptr, &s);
 

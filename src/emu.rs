@@ -394,6 +394,10 @@ impl Emu {
             self.maps.create_map("linux_static_stack").load_at(0x7ffffffde000);
             self.maps.create_map("dso").load_at(0x7ffff7ffd000);
         }
+        let tls = self.maps.create_map("tls");
+        tls.set_base(0x7ffff7fff000);
+        tls.set_size(0xfff);
+
         std::env::set_current_dir(orig_path);
 
         if dyn_link {
@@ -3421,12 +3425,15 @@ impl Emu {
                             if self.cfg.verbose > 0 {
                                 println!("reading FS[0x{:x}] -> 0x{:x}", mem_addr, *val);
                             }
+                            if *val == 0 {
+                                return Some(0x7ffff7ff000);
+                            }
                             return Some(*val);
                         } else {
                             if self.cfg.verbose > 0 {
                                 println!("reading FS[0x{:x}] -> 0", mem_addr);
                             }
-                            return Some(0); 
+                            return Some(0x7ffff7fff000); 
                         }
                     }
 
@@ -12628,6 +12635,64 @@ impl Emu {
 
             Mnemonic::Endbr32 => {
                 self.show_instruction(&self.colors.red, &ins);
+            }
+
+            Mnemonic::Enqcmd => {
+                self.show_instruction(&self.colors.red, &ins);
+            }
+
+            Mnemonic::Enqcmds => {
+                self.show_instruction(&self.colors.red, &ins);
+            }
+
+            Mnemonic::Enter => {
+                self.show_instruction(&self.colors.red, &ins);
+
+                let allocSZ = match self.get_operand_value(&ins, 0, true) {
+                    Some(v) => v,
+                    None => return false,
+                };
+
+                let nestingLvl = match self.get_operand_value(&ins, 1, true) {
+                    Some(v) => v,
+                    None => return false,
+                };
+
+                let frameTmp;
+
+                if self.cfg.is_64bits {
+                    self.stack_push64(self.regs.rbp);
+                    frameTmp = self.regs.rsp;
+                } else {
+                    self.stack_push32(self.regs.get_ebp() as u32);
+                    frameTmp = self.regs.get_esp();
+                }
+
+                if nestingLvl > 1 {
+                    for i in 1..nestingLvl {
+                        if self.cfg.is_64bits {
+                            self.regs.rbp -= 8;
+                            self.stack_push64(self.regs.rbp);
+                        } else {
+                            self.regs.set_ebp(self.regs.get_ebp() - 4);
+                            self.stack_push32(self.regs.get_ebp() as u32);
+                        }
+                    }
+                } else {
+                    if self.cfg.is_64bits {
+                        self.stack_push64(frameTmp);
+                    } else {
+                        self.stack_push32(frameTmp as u32);
+                    }
+                }
+
+                if self.cfg.is_64bits {
+                    self.regs.rbp = frameTmp;
+                    self.regs.rsp -= allocSZ;
+                } else {
+                    self.regs.set_ebp(frameTmp);
+                    self.regs.set_esp(self.regs.get_esp() - allocSZ);
+                }
             }
 
             ////   Ring0  ////
