@@ -21,6 +21,15 @@ impl Maps {
         self.maps.clear();
     }
 
+    pub fn get_base(&self) -> Option<u64> {
+        for map in self.maps.iter() {
+            if map.get_name().ends_with(".pe") {
+                return Some(map.get_base());
+            }
+        }
+        return None;
+    }
+
     pub fn exists_mapname(&self, name: &str) -> bool {
         for map in self.maps.iter() {
             if map.get_name() == name {

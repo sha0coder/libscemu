@@ -1904,7 +1904,6 @@ impl Emu {
             };
 
             if handle_winapi {
-                println!("handled");
                 winapi32::gateway(to32!(addr), name, self);
             }
 

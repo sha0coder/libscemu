@@ -72,6 +72,7 @@ pub fn gateway(addr: u32, emu: &mut emu::Emu) -> String {
         0x75e8ba60 => GetTickCount(emu),
         0x75e8bb9f => QueryPerformanceCounter(emu),
         0x75e93ea2 => HeapCreate(emu),
+        0x75e82301 => HeapDestroy(emu),
         0x75e8cf41 => GetModuleHandleA(emu),
         0x75e9374d => GetModuleHandleW(emu),
         0x75e935a1 => TlsAlloc(emu),
@@ -156,6 +157,8 @@ pub fn gateway(addr: u32, emu: &mut emu::Emu) -> String {
         0x75e94157 => HeapSetInformation(emu),
         0x75eff395 => OpenProcessToken(emu),
         0x75e80ef7 => CreateEventA(emu),
+        0x75efee2a => AddVectoredExceptionHandler(emu),
+        0x75e91181 => GetLongPathNameW(emu),
 
 
         _ => {
@@ -1929,6 +1932,24 @@ fn QueryPerformanceCounter(emu: &mut emu::Emu) {
     emu.regs.rax = 1;
 }
 
+fn HeapDestroy(emu: &mut emu::Emu) {
+    let hndl = emu
+        .maps
+        .read_dword(emu.regs.get_esp())
+        .expect("kernel32!HeapDestroy cannot read handle") as u64;
+
+    println!(
+        "{}** {} kernel32!HeapDestroy {:x}  {}",
+        emu.colors.light_red, emu.pos, hndl, emu.colors.nc
+    );
+
+    helper::handler_close(hndl);
+    
+    emu.regs.rax = hndl;
+    emu.stack_pop32(false);
+}
+
+
 fn HeapCreate(emu: &mut emu::Emu) {
     let opts = emu
         .maps
@@ -1965,8 +1986,13 @@ fn GetModuleHandleA(emu: &mut emu::Emu) {
 
     if mod_name_ptr == 0 {
         mod_name = "self".to_string();
+        emu.regs.rax = match emu.maps.get_base() {
+            Some(base) => base,
+            None => helper::handler_create(&mod_name)
+        }
     } else {
         mod_name = emu.maps.read_string(mod_name_ptr);
+        emu.regs.rax = helper::handler_create(&mod_name);
     }
 
     println!(
@@ -1975,7 +2001,6 @@ fn GetModuleHandleA(emu: &mut emu::Emu) {
     );
 
     emu.stack_pop32(false);
-    emu.regs.rax = helper::handler_create(&mod_name);
 }
 
 fn GetModuleHandleW(emu: &mut emu::Emu) {
@@ -3855,5 +3880,60 @@ fn CreateEventA(emu: &mut emu::Emu) {
 }
 
 
+fn AddVectoredExceptionHandler(emu: &mut emu::Emu) {
+    let p1 = emu
+        .maps
+        .read_dword(emu.regs.get_esp())
+        .expect("kernel32!AddVectoredExceptionHandler: error reading p1") as u64;
+    let fptr = emu
+        .maps
+        .read_dword(emu.regs.get_esp() + 4)
+        .expect("kernel32!AddVectoredExceptionHandler: error reading fptr") as u64;
 
+    println!(
+        "{}** {} kernel32!AddVectoredExceptionHandler  {} callback: 0x{:x} {}",
+        emu.colors.light_red, emu.pos, p1, fptr, emu.colors.nc
+    );
+
+    emu.veh = fptr;
+
+    emu.regs.rax = 0x2c2878;
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+}
+
+fn GetLongPathNameW(emu: &mut emu::Emu) {
+    let short_path_ptr = emu
+        .maps
+        .read_dword(emu.regs.get_esp())
+        .expect("kernel32!GetLongPathNameW: error reading param") as u64;
+    let long_path_ptr = emu
+        .maps
+        .read_dword(emu.regs.get_esp() + 4)
+        .expect("kernel32!GetLongPathNameW: error reading param") as u64;
+    let buff = emu
+        .maps
+        .read_dword(emu.regs.get_esp() + 8)
+        .expect("kernel32!GetLongPathNameW: error reading param") as u64;
+
+
+    let short = emu.maps.read_wide_string(short_path_ptr);
+
+    println!(
+        "{}** {} kernel32!GetLongPathNameW  {} {:x} {}",
+        emu.colors.light_red, emu.pos, short, long_path_ptr, emu.colors.nc
+    );
+
+    if long_path_ptr > 0 {
+        let mut base = String::from("\\.\\");
+        base.push_str(&short);
+        emu.maps.write_wide_string(long_path_ptr, &base);
+    }
+
+    emu.regs.rax = short.len() as u64;
+
+    for _ in 0..3 {
+        emu.stack_pop32(false);
+    }
+}
 
