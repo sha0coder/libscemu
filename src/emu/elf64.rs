@@ -238,9 +238,8 @@ impl Elf64 {
         }
     }
 
-    pub fn load(&mut self, maps: &mut Maps, name:&str, is_lib: bool, dynamic_linking: bool, 
-                force_base: u64) {
-
+    pub fn load(&mut self, maps: &mut Maps, name:&str, is_lib: bool, 
+        dynamic_linking: bool, force_base: u64) {
 
         if dynamic_linking {
             self.load_programs(maps, name, is_lib, dynamic_linking);

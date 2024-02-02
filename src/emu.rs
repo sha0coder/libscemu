@@ -1170,8 +1170,10 @@ impl Emu {
                 let mut elf32 = Elf32::parse(filename).unwrap();
                 elf32.load(&mut self.maps);
                 self.regs.rip = elf32.elf_hdr.e_entry.into();
-                let stack = self.alloc("stack", 0x30000); 
-                unimplemented!("elf32 is not supported for now");
+                let stack_sz = 0x30000;
+                let stack = self.alloc("stack", stack_sz);
+                self.regs.rsp = stack+(stack_sz/2);
+                //unimplemented!("elf32 is not supported for now");
 
         } else if Elf64::is_elf64(filename) {
 
@@ -1902,6 +1904,7 @@ impl Emu {
             };
 
             if handle_winapi {
+                println!("handled");
                 winapi32::gateway(to32!(addr), name, self);
             }
 

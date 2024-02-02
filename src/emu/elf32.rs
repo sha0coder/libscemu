@@ -60,7 +60,7 @@ impl Elf32 {
     pub fn load(&mut self, maps: &mut Maps) {
         maps.clear();
         let mut off = self.elf_hdr.e_phoff as usize;
-
+ 
         for _ in 0..self.elf_hdr.e_phnum {
             let phdr:Elf32Phdr = Elf32Phdr::parse(&self.bin, off);
             self.elf_phdr.push(phdr);
@@ -77,15 +77,29 @@ impl Elf32 {
 
         for phdr in &self.elf_phdr {
             if phdr.p_type == constants::PT_LOAD {
-                println!("loading map {}", format!("elf_{}", phdr.p_vaddr));
-                let mem = maps.create_map(&format!("elf_{}", phdr.p_vaddr));
+
+                /*
+                for shdr in &self.elf_shdr {
+                    if shdr.sh_addr >= phdr.p_vaddr &&
+                        shdr.sh_addr < phdr.p_vaddr+phdr.p_memsz {
+                            let end = self.bin.iter().skip(off)
+                                .position(|&x| x == 0x00).unwrap_or(0) + off;
+                            let name = std::str::from_utf8(&self.bin[off..end]).unwrap();
+                            println!("la seccion {} es pt_load", &name);
+
+                    }
+                }*/
+
+                let mem = maps.create_map(&format!("code"));
                 mem.set_base(phdr.p_vaddr.into());
                 mem.set_size(phdr.p_memsz.into());
                 if phdr.p_filesz >phdr.p_memsz {
                     println!("p_filesz > p_memsz bigger in file than in memory.");
                 }
-                let segment = &self.bin[phdr.p_offset as usize..(phdr.p_offset + phdr.p_filesz) as usize];
-                mem.write_bytes(0, segment);
+                println!("segment {} - {}", phdr.p_offset, (phdr.p_offset+phdr.p_filesz));
+                let segment = &self.bin[phdr.p_offset as usize..
+                    (phdr.p_offset + phdr.p_filesz) as usize];
+                mem.write_bytes(phdr.p_vaddr.into(), segment);
             }
         }
 
