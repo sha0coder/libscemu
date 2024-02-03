@@ -8923,6 +8923,10 @@ impl Emu {
                 self.show_instruction(&self.colors.light_purple, &ins);
             }
 
+            Mnemonic::Fnop => {
+                self.show_instruction(&self.colors.light_purple, &ins);
+            }
+
             Mnemonic::Mfence | Mnemonic::Lfence | Mnemonic::Sfence => {
                 self.show_instruction(&self.colors.red, &ins);
             }
