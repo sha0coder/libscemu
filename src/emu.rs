@@ -1029,6 +1029,9 @@ impl Emu {
                         "\tentry point at 0x{:x}  0x{:x} ",
                         self.regs.rip, pe32.opt.address_of_entry_point
                     );
+                } else if sect.get_name() == ".tls" {
+                    let tls_off = sect.pointer_to_raw_data;
+                    self.tls_callbacks = pe32.get_tls_callbacks(sect.virtual_address);
                 }
             }
         }
@@ -1228,7 +1231,18 @@ impl Emu {
 
         } else if !self.cfg.is_64bits && PE32::is_pe32(filename) {
             println!("PE32 header detected.");
-            self.load_pe32(filename, true, 0);
+            let (base, pe_off) = self.load_pe32(filename, true, 0);
+            let ep = self.regs.rip;
+
+            // emulating tls callbacks
+            for i in 0..self.tls_callbacks.len() {
+                self.regs.rip = self.tls_callbacks[i];
+                println!("emulating tls_callback {} at 0x{:x}", i+1, self.regs.rip);
+                self.stack_push32(base);
+                self.run(Some(base as u64));
+            }
+
+            self.regs.rip = ep;
 
         } else if self.cfg.is_64bits && PE64::is_pe64(filename) {
             println!("PE64 header detected.");
@@ -1237,9 +1251,8 @@ impl Emu {
 
             // emulating tls callbacks
             for i in 0..self.tls_callbacks.len() {
-                println!("Emulating tls_callback {}", i + 1);
                 self.regs.rip = self.tls_callbacks[i];
-                println!("ret address: 0x{:x}", base);
+                println!("emulating tls_callback {} at 0x{:x}", i+1, self.regs.rip);
                 self.stack_push64(base);
                 self.run(Some(base));
             }
@@ -1312,7 +1325,8 @@ impl Emu {
                 Some(n) => n,
                 None => "not mapped".to_string(),
             };
-            println!("\tmem_trace: pos = {} rip = {:x} op = write bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, 32, self.regs.get_esp(), value, name);
+            println!("\tmem_trace: pos = {} rip = {:x} op = write bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", 
+                self.pos, self.regs.rip, 32, self.regs.get_esp(), value, name);
         }
 
         self.regs.set_esp(self.regs.get_esp() - 4);
@@ -3428,14 +3442,14 @@ impl Emu {
                                 println!("reading FS[0x{:x}] -> 0x{:x}", mem_addr, *val);
                             }
                             if *val == 0 {
-                                return Some(0x7ffff7ff000);
+                                return Some(0); //0x7ffff7ff000);
                             }
                             return Some(*val);
                         } else {
                             if self.cfg.verbose > 0 {
                                 println!("reading FS[0x{:x}] -> 0", mem_addr);
                             }
-                            return Some(0x7ffff7fff000); 
+                            return Some(0); //0x7ffff7fff000); 
                         }
                     }
 

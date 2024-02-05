@@ -409,16 +409,13 @@ impl PE64 {
             return callbacks;
         }
 
-        let entry_tls = &self.opt.data_directory[pe32::IMAGE_DIRECTORY_ENTRY_TLS].virtual_address;
+        let entry_tls = self.opt.data_directory[pe32::IMAGE_DIRECTORY_ENTRY_TLS].virtual_address;
         let iat = self.opt.data_directory[pe32::IMAGE_DIRECTORY_ENTRY_IAT].virtual_address;
         let align = self.opt.file_alignment;
 
-        tls_off = (entry_tls - (iat + align)) as usize;
-        //println!("tls_off = (entry_tls - (iat + align))");
-        //println!("{:x} - ({:x} + {:x})", entry_tls, iat, align);
-        //}
+        //tls_off = (entry_tls - (iat + align)) as usize;
+        tls_off = PE32::vaddr_to_off(&self.sect_hdr, entry_tls) as usize;
 
-        //println!("vaddr: 0x{:x} tls_off 0x{:x} {}", vaddr, tls_off, tls_off);
         let tls = TlsDirectory64::load(&self.raw, tls_off);
         tls.print();
 

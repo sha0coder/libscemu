@@ -159,6 +159,7 @@ pub fn gateway(addr: u32, emu: &mut emu::Emu) -> String {
         0x75e80ef7 => CreateEventA(emu),
         0x75efee2a => AddVectoredExceptionHandler(emu),
         0x75e91181 => GetLongPathNameW(emu),
+        0x75e8d9d0 => FreeLibrary(emu),
 
 
         _ => {
@@ -3937,3 +3938,18 @@ fn GetLongPathNameW(emu: &mut emu::Emu) {
     }
 }
 
+fn FreeLibrary(emu: &mut emu::Emu) {
+    let hmod = emu
+        .maps
+        .read_dword(emu.regs.get_esp())
+        .expect("kernel32!FreeLibrary: error reading param") as u64;
+
+
+    println!(
+        "{}** {} kernel32!FreeLibrary   {:x} {}",
+        emu.colors.light_red, emu.pos, hmod, emu.colors.nc
+    );
+
+    emu.regs.rax = 1;
+    emu.stack_pop32(false);
+}

@@ -190,19 +190,33 @@ pub fn gateway(emu: &mut emu::Emu) {
         }
 
         constants::NR64_BRK => {
-            match emu.regs.rdi {
-                0 => {
-                    emu.regs.rax = 0x4b6000;
-                    emu.regs.r11 = 0x346;
-                    emu.regs.rcx = 0x4679f7;
+            let heap_base = 0x4b5b00;
+            let heap_size = 0x4d8000-0x4b5000;
+
+            let heap = match emu.maps.get_map_by_name_mut("heap") {
+                Some(h) => h,
+                None => {
+                    let h = emu.maps.create_map("heap");
+                    h.set_base(heap_base);
+                    h.set_size(heap_size);
+                    h
                 }
-                _ => {
-                    emu.regs.rax = emu.regs.rdi;
-                    emu.regs.rcx = 0x4679f7;
-                    emu.regs.rdx = 0x2f;
-                    emu.regs.r11 = 0x302;
-                }
+            };
+
+            if emu.regs.rdi == 0 {
+                emu.regs.r11 = 0x346;
+                emu.regs.rcx = 0x4679f7;
+                emu.regs.rax = heap.get_base();
+            } else {
+                let bottom = emu.regs.rdi;
+                let new_sz = bottom - heap_base;
+                heap.set_size(new_sz);
+                emu.regs.rax = emu.regs.rdi;
+                emu.regs.rcx = 0x4679f7;
+                emu.regs.rdx = 0x2f;
+                emu.regs.r11 = 0x302;
             }
+
             //emu.fs.insert(0xffffffffffffffc8, 0x4b6c50);  
 
             println!("{}** {} syscall brk({:x}) ={:x} {}", 

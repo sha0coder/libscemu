@@ -12,6 +12,7 @@ mod shlwapi;
 mod user32;
 mod wininet;
 mod ws2_32;
+mod libgcc;
 
 use crate::emu;
 
@@ -32,6 +33,7 @@ pub fn gateway(addr: u32, name: String, emu: &mut emu::Emu) {
         "shlwapi_text" => msvcrt::gateway(addr, emu),
         "oleaut32_text" => oleaut32::gateway(addr, emu),
         "kernelbase_text" => kernelbase::gateway(addr, emu),
+        "libgcc_s_dw2-1.text" => libgcc::gateway(addr, emu),
         _ => panic!("/!\\ trying to execute on {} at 0x{:x}", name, addr),
     };
 

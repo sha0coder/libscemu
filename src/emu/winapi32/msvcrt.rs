@@ -13,8 +13,10 @@ pub fn gateway(addr: u32, emu: &mut emu::Emu) -> String {
         0x761f4142 => fflush(emu),
         0x761f3d79 => fclose(emu),
         0x76233ab4 => __p___argv(emu),
-        0x76233aa9 => __p___argc(emu),
+        0x76233a88 => __p___argc(emu),
         0x761e9cee => malloc(emu),
+        0x761f112d => _onexit(emu),
+        0x761ea449 => _lock(emu),
         _ => {
             let apiname = kernel32::guess_api_name(emu, addr);
             println!("calling unimplemented msvcrt API 0x{:x} {}", addr, apiname);
@@ -185,14 +187,37 @@ fn fclose(emu: &mut emu::Emu) {
 }
 
 fn __p___argv(emu: &mut emu::Emu) {
+    println!(
+        "{}** {} msvcrt!__p___argc {}",
+        emu.colors.light_red, emu.pos, emu.colors.nc
+    );
     emu.regs.rax = 0;
 }
 
 fn __p___argc(emu: &mut emu::Emu) {
-    emu.regs.rax = 0;
+
+    let args = match emu.maps.get_map_by_name("args") {
+        Some(a) => a,
+        None => {
+            let addr = emu.maps.alloc(1024).expect("out of memory");
+            let a = emu.maps.create_map("args");
+            a.set_base(addr);
+            a.set_size(1024);
+
+            a
+        }
+    };
+
+    println!(
+        "{}** {} msvcrt!__p___argc {} {}",
+        emu.colors.light_red, emu.pos, args.get_base(), emu.colors.nc
+    );
+
+    emu.regs.rax = args.get_base();
 }
 
 fn malloc(emu: &mut emu::Emu) {
+
     let size = emu
         .maps
         .read_dword(emu.regs.get_esp())
@@ -207,3 +232,39 @@ fn malloc(emu: &mut emu::Emu) {
     emu.regs.rax = emu.alloc("alloc_malloc", size);
 }
 
+fn __p__acmdln(emu: &mut emu::Emu) {
+
+    println!(
+        "{}** {} msvcrt!__p___argc {}",
+        emu.colors.light_red, emu.pos, emu.colors.nc
+    );
+    emu.regs.rax = 0;
+}
+
+fn _onexit(emu: &mut emu::Emu) {
+
+    let fptr = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("msvcrt!_onexit") as u64;
+
+    println!(
+        "{}** {} msvcrt!_onexit 0x{:x} {}",
+        emu.colors.light_red, emu.pos, fptr, emu.colors.nc
+    );
+
+    emu.regs.rax = fptr;
+    emu.stack_pop32(false);
+}
+
+fn _lock(emu: &mut emu::Emu) {
+
+    let lock_num = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("msvcrt!_lock");
+
+    println!(
+        "{}** {} msvcrt!_lock {} {}",
+        emu.colors.light_red, emu.pos, lock_num, emu.colors.nc
+    );
+
+    emu.regs.rax = 1;
+    emu.stack_pop32(false);
+}

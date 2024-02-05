@@ -7,7 +7,6 @@ pub fn gateway(addr: u32, emu: &mut emu::Emu) -> String {
     match addr {
         0x77733553 => StartServiceCtrlDispatcherA(emu),
         0x776fa965 => StartServiceCtrlDispatcherW(emu),
-        0x776f91dd => CryptAcquireContextA(emu),
         0x777041b3 => LookupPrivilegeValueW(emu),
         0x776f91dd => CryptAcquireContextA(emu),
         0x776fdf14 => CryptAcquireContextW(emu),
@@ -329,28 +328,29 @@ fn CryptCreateHash(emu: &mut emu::Emu) {
     let hprov =
         emu.maps
             .read_dword(emu.regs.get_esp())
-            .expect("advapi32!CryptCreateHash error reading param") as u64;
+            .expect("advapi32!CryptCreateHash error reading param");
     let algid =
         emu.maps
             .read_dword(emu.regs.get_esp()+4)
-            .expect("advapi32!CryptCreateHash error reading param") as u64;
+            .expect("advapi32!CryptCreateHash error reading param");
     let hkey =
         emu.maps
             .read_dword(emu.regs.get_esp()+8)
-            .expect("advapi32!CryptCreateHash error reading param") as u64;
+            .expect("advapi32!CryptCreateHash error reading param");
     let flags =
         emu.maps
             .read_dword(emu.regs.get_esp()+12)
-            .expect("advapi32!CryptCreateHash error reading param") as u64;
+            .expect("advapi32!CryptCreateHash error reading param");
     let hash_ptr =
         emu.maps
             .read_dword(emu.regs.get_esp()+16)
-            .expect("advapi32!CryptCreateHash error reading param") as u64;
+            .expect("advapi32!CryptCreateHash error reading param");
 
 
     println!(
-        "{}** {} advapi32!CryptCreateHash {}",
-        emu.colors.light_red, emu.pos,  emu.colors.nc
+        "{}** {} advapi32!CryptCreateHash {} {}",
+        emu.colors.light_red, emu.pos, get_cryptoalgorithm_name(algid),
+        emu.colors.nc
     );
 
     for _ in 0..5 {
@@ -365,24 +365,25 @@ fn CryptGenKey(emu: &mut emu::Emu) {
     let hprov =
         emu.maps
             .read_dword(emu.regs.get_esp())
-            .expect("advapi32!CryptGenKey error reading param") as u64;
+            .expect("advapi32!CryptGenKey error reading param");
     let algid =
         emu.maps
             .read_dword(emu.regs.get_esp()+4)
-            .expect("advapi32!CryptGenKey error reading param") as u64;
+            .expect("advapi32!CryptGenKey error reading param");
     let flags =
         emu.maps
             .read_dword(emu.regs.get_esp()+8)
-            .expect("advapi32!CryptGenKey error reading param") as u64;
+            .expect("advapi32!CryptGenKey error reading param");
     let hkey_ptr =
         emu.maps
             .read_dword(emu.regs.get_esp()+12)
-            .expect("advapi32!CryptGenKey error reading param") as u64;
+            .expect("advapi32!CryptGenKey error reading param");
 
 
     println!(
-        "{}** {} advapi32!CryptGenKey {}",
-        emu.colors.light_red, emu.pos,  emu.colors.nc
+        "{}** {} advapi32!CryptGenKey {} {}",
+        emu.colors.light_red, emu.pos, get_cryptoalgorithm_name(algid), 
+        emu.colors.nc
     );
 
     for _ in 0..4 {

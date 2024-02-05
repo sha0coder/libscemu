@@ -466,6 +466,36 @@ impl ImageExportDirectory {
     }
 }
 
+#[derive(Debug)]
+pub struct TlsDirectory32 {
+    tls_data_start: u32,
+    tls_data_end: u32,
+    tls_index: u32, // DS:[FS:[2Ch]] + tls_index *4
+    tls_callbacks: u32,
+    zero_fill_size: u32, // size = tls_data_end - tls_data_start + zero_fill_size
+    characteristic: u32,
+}
+
+impl TlsDirectory32 {
+    pub fn load(raw: &Vec<u8>, off: usize) -> TlsDirectory32 {
+        TlsDirectory32 {
+            tls_data_start: read_u32_le!(raw, off),
+            tls_data_end: read_u32_le!(raw, off + 4),
+            tls_index: read_u32_le!(raw, off + 8),
+            tls_callbacks: read_u32_le!(raw, off + 12),
+            zero_fill_size: read_u32_le!(raw, off + 16),
+            characteristic: read_u32_le!(raw, off + 20),
+        }
+    }
+
+    pub fn print(&self) {
+        println!("{:#x?}", self);
+    }
+
+    pub fn size() -> usize {
+        return 24;
+    }
+}
 
 //
 // https://github.com/MicrosoftDocs/win32/blob/docs/desktop-src/Debug/pe-format.md#delay-load-import-tables-image-only
@@ -885,8 +915,9 @@ impl PE32 {
 
     pub fn vaddr_to_off(sections: &Vec<ImageSectionHeader>, vaddr: u32) -> u32 {
         for sect in sections {
-            if vaddr >= sect.virtual_address && vaddr < sect.virtual_address + sect.virtual_size {
-                return vaddr - sect.virtual_address + sect.pointer_to_raw_data;
+            if vaddr >= sect.virtual_address && 
+                vaddr < sect.virtual_address + sect.virtual_size {
+                    return vaddr - sect.virtual_address + sect.pointer_to_raw_data;
             }
         }
 
@@ -927,6 +958,47 @@ impl PE32 {
 
     pub fn get_section_vaddr(&self, id: usize) -> u32 {
         return self.sect_hdr[id].virtual_address;
+    }
+
+    pub fn get_tls_callbacks(&self, vaddr: u32) -> Vec<u64> {
+        let tls_off; 
+        let mut callbacks: Vec<u64> = Vec::new();
+
+        if self.opt.data_directory.len() < IMAGE_DIRECTORY_ENTRY_TLS {
+            println!("/!\\ alert there is .tls section but not tls directory entry");
+            return callbacks;
+        }
+
+        let entry_tls = self.opt.data_directory[IMAGE_DIRECTORY_ENTRY_TLS].virtual_address;
+        let iat = self.opt.data_directory[IMAGE_DIRECTORY_ENTRY_IAT].virtual_address;
+        let align = self.opt.file_alignment;
+
+        tls_off = PE32::vaddr_to_off(&self.sect_hdr, entry_tls) as usize;
+        
+        println!("raw {:x} off {:x}", self.raw.len(), tls_off);
+        let tls = TlsDirectory32::load(&self.raw, tls_off);
+        tls.print();
+
+        let mut cb_off; // = PE32::vaddr_to_off(&self.sect_hdr, tls.tls_callbacks) as usize;
+
+        cb_off = (tls.tls_callbacks - self.opt.image_base - 0xf000 + 0xa400) as usize;
+
+
+        println!("cb_off {:x}", cb_off);
+        //cb_off = (tls.tls_callbacks - iat - self.opt.image_base - align) as usize;
+        println!("cb_off {:x} {:x}", cb_off, self.opt.image_base);
+
+        loop {
+            let callback: u64 = read_u32_le!(&self.raw, cb_off as usize) as u64;
+            if callback == 0 {
+                break;
+            }
+            println!("TLS Callback: 0x{:x}", callback);
+            callbacks.push(callback);
+            cb_off += 4;
+        }
+
+        callbacks
     }
 
     pub fn delay_load_binding(&mut self, emu: &mut emu::Emu) {
