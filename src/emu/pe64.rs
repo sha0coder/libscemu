@@ -401,7 +401,7 @@ impl PE64 {
 
     pub fn get_tls_callbacks(&self, vaddr: u32) -> Vec<u64> {
         let tls_off; // = PE32::vaddr_to_off(&self.sect_hdr, vaddr) as usize;
-        let mut callbacks: Vec<u64> = Vec::new();
+        let callbacks: Vec<u64> = Vec::new();
         //if tls_off == 0 {
 
         if self.opt.data_directory.len() < pe32::IMAGE_DIRECTORY_ENTRY_TLS {
