@@ -419,6 +419,7 @@ impl PE64 {
         let tls = TlsDirectory64::load(&self.raw, tls_off);
         tls.print();
 
+        /*
         let mut cb_off = tls.tls_callbacks - iat as u64 - self.opt.image_base - align as u64;
         loop {
             let callback: u64 = read_u64_le!(&self.raw, cb_off as usize);
@@ -428,7 +429,7 @@ impl PE64 {
             println!("TLS Callback: 0x{:x}", callback);
             callbacks.push(callback);
             cb_off += 8;
-        }
+        }*/
 
         callbacks
     }
@@ -491,12 +492,12 @@ impl PE64 {
             let iim = &self.image_import_descriptor[i];
 
             if iim.name.len() == 0 {
-                println!("triggered");
                 continue;
             }
 
             if emu::winapi64::kernel32::load_library(emu, &iim.name) == 0 {
-                panic!("cannot found the library {} on maps64/", &iim.name);
+                println!("cannot found the library {} on maps64/", &iim.name);
+                return;
             }
 
             // Walking function names.
