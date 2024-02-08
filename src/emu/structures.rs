@@ -1435,6 +1435,33 @@ impl Stat {
     }
 }
 
+pub struct Hostent {
+    pub hname: u64,
+    pub alias_list: u64,
+    pub addr_type: u16,
+    pub length: u16,
+    pub addr_list: u64, 
+    // (gdb) 0x7ffff7fa0b60 -> 0x5555555595d0 -> 0x5555555595cc -> IP
+}
+
+impl Hostent {
+    pub fn new() -> Hostent {
+        Hostent {
+            hname: 0,
+            alias_list: 0,
+            addr_type: 0,
+            length: 4,
+            addr_list: 0,
+        }
+    }
+
+    pub fn save(&self, addr: u64, maps: &mut Maps) { 
+        maps.write_qword(addr, self.hname);
+    }
+}
+
+
+
 
 
 
