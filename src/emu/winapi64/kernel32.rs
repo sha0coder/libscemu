@@ -3,6 +3,9 @@ use crate::emu::console;
 use crate::emu::constants;
 use crate::emu::peb64;
 use crate::emu::winapi32::helper;
+use std::time::{SystemTime, UNIX_EPOCH};
+use crate::emu::structures;
+
 
 use crate::emu::context64;
 use lazy_static::lazy_static;
@@ -126,6 +129,8 @@ pub fn gateway(addr: u64, emu: &mut emu::Emu) -> String {
         0x76e5a2dc => DecodePointer(emu),
         0x76dfbac0 => lstrcpyn(emu),
         0x76dc64a0 => GetModuleFileNameA(emu),
+        0x76dbb990 => GetLocalTime(emu),
+        0x76dd3560 => SystemTimeToFileTime(emu),
 
         _ => {
             let api = guess_api_name(emu, addr);
@@ -2204,4 +2209,46 @@ fn GetModuleFileNameA(emu: &mut emu::Emu) {
     );
 }
 
+
+fn GetLocalTime(emu: &mut emu::Emu) {
+    let ptr = emu.regs.rcx;
+
+    let duration = SystemTime::now().duration_since(UNIX_EPOCH)
+        .expect("error getting the localtime");
+
+
+    let seconds = duration.as_secs();
+    let seconds_since_midnight = seconds % 86400;
+    let hours = seconds_since_midnight / 3600;
+    let minutes = (seconds_since_midnight % 3600) / 60;
+    let seconds = seconds_since_midnight % 60;
+
+    let mut buffer = [0u8; 8];
+    buffer[0] = hours as u8;
+    buffer[1] = minutes as u8;
+    buffer[2] = seconds as u8;
+
+    emu.maps.write_bytes_slice(ptr, &buffer);
+
+    println!(
+        "{}** {} kernel32!GetLocalTime  {}",
+        emu.colors.light_red, emu.pos,  emu.colors.nc
+    );
+}
+
+
+
+
+fn SystemTimeToFileTime(emu: &mut emu::Emu) {
+    let in_ptr = emu.regs.rcx;
+    let out_ptr = emu.regs.rdx;
+
+    let now = structures::SystemTime::now();
+    now.save(out_ptr, &mut emu.maps);
+
+    println!(
+        "{}** {} kernel32!SystemTimeToFileTime  {}",
+        emu.colors.light_red, emu.pos,  emu.colors.nc
+    );
+}
 

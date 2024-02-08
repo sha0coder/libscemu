@@ -130,6 +130,15 @@ impl Maps {
         }
     }
 
+    pub fn write_bytes_slice(&mut self, addr: u64, data: &[u8]) {
+        for mem in self.maps.iter_mut() {
+            if mem.inside(addr) {
+                mem.write_bytes(addr, &data);
+                return;
+            }
+        }
+    }
+
     pub fn read_128bits_be(&self, addr: u64) -> Option<u128> {
         for mem in self.maps.iter() {
             if mem.inside(addr)

@@ -37,6 +37,7 @@ pub fn gateway(addr: u64, emu: &mut emu::Emu) -> String {
         0x77022ed0 => memset(emu),
         0x77011950 => RtlSetUnhandledExceptionFilter(emu),
         0x7701e6d0 => RtlCopyMemory(emu),
+        0x77003f20 => RtlReAllocateHeap(emu),
 
         _ => {
             let apiname = kernel32::guess_api_name(emu, addr);
@@ -310,7 +311,7 @@ fn RtlAllocateHeap(emu: &mut emu::Emu) {
 
     let alloc = emu
         .maps
-        .create_map(format!("valloc_{:x}", alloc_addr).as_str());
+        .create_map(&format!("valloc_{:x}", handle));
     alloc.set_base(alloc_addr);
     alloc.set_size(size);
 
@@ -774,3 +775,26 @@ fn RtlCopyMemory(emu: &mut emu::Emu) {
     );
 
 }
+
+fn RtlReAllocateHeap(emu: &mut emu::Emu) {
+    let hndl = emu.regs.rcx;
+    let flags = emu.regs.rdx;
+    let sz = emu.regs.r8;
+
+    let mapname = format!("valloc_{:x}", hndl);
+    emu.regs.rax = match emu.maps.get_map_by_name_mut(&mapname) {
+        Some(mem) => {
+            mem.set_size(sz);
+            mem.get_base()
+        }
+        None => 0,
+    };
+
+    println!(
+        "{}** {} ntdll!RtlCopyMemory hndl: {:x} sz: {} {}",
+        emu.colors.light_red, emu.pos, hndl, sz, emu.colors.nc
+    );
+
+}
+
+
