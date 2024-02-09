@@ -302,8 +302,11 @@ fn RtlAllocateHeap(emu: &mut emu::Emu) {
     let map_name = format!("valloc_{:x}", handle);
 
     if emu.maps.exists_mapname(&map_name) {
-        let map = emu.maps.get_map_by_name(&map_name).unwrap();
+        let map = emu.maps.get_map_by_name_mut(&map_name).unwrap();
         alloc_addr = map.get_base();
+        if size as usize > map.size() {
+            map.set_size(size+1024);
+        }
 
     } else {
         alloc_addr = match emu.maps.alloc(size) {
@@ -312,13 +315,13 @@ fn RtlAllocateHeap(emu: &mut emu::Emu) {
         };
         let alloc = emu.maps.create_map(&map_name);
         alloc.set_base(alloc_addr);
-        alloc.set_size(size);
+        alloc.set_size(size + 1024);
     }
 
 
     println!(
-        "{}** {} ntdll!RtlAllocateHeap  sz: {}   =addr: 0x{:x} {}",
-        emu.colors.light_red, emu.pos, size, alloc_addr, emu.colors.nc
+        "{}** {} ntdll!RtlAllocateHeap  hndl: {:x} sz: {}   =addr: 0x{:x} {}",
+        emu.colors.light_red, emu.pos, handle, size, alloc_addr, emu.colors.nc
     );
 
 
@@ -791,14 +794,14 @@ fn RtlReAllocateHeap(emu: &mut emu::Emu) {
     let mapname = format!("valloc_{:x}", hndl);
     emu.regs.rax = match emu.maps.get_map_by_name_mut(&mapname) {
         Some(mem) => {
-            mem.set_size(sz);
+            mem.set_size(sz+1024);
             mem.get_base()
         }
         None => 0,
     };
 
     println!(
-        "{}** {} ntdll!RtlAllocateHeap hndl: {:x} sz: {} {}",
+        "{}** {} ntdll!RtlReAllocateHeap hndl: {:x} sz: {} {}",
         emu.colors.light_red, emu.pos, hndl, sz, emu.colors.nc
     );
 
