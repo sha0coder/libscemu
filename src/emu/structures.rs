@@ -1457,6 +1457,14 @@ impl Hostent {
 
     pub fn save(&self, addr: u64, maps: &mut Maps) { 
         maps.write_qword(addr, self.hname);
+        maps.write_qword(addr+8, self.alias_list);
+        maps.write_word(addr+16, self.addr_type);
+        maps.write_word(addr+20, self.length);
+        maps.write_qword(addr+24, self.addr_list);
+    }
+
+    pub fn size() -> usize {
+        28
     }
 }
 

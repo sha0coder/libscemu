@@ -791,7 +791,7 @@ fn RtlReAllocateHeap(emu: &mut emu::Emu) {
     };
 
     println!(
-        "{}** {} ntdll!RtlCopyMemory hndl: {:x} sz: {} {}",
+        "{}** {} ntdll!RtlAllocateHeap hndl: {:x} sz: {} {}",
         emu.colors.light_red, emu.pos, hndl, sz, emu.colors.nc
     );
 
