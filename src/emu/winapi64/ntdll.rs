@@ -310,7 +310,7 @@ fn RtlAllocateHeap(emu: &mut emu::Emu) {
             Some(a) => a,
             None => panic!("/!\\ out of memory cannot allocate ntdll!RtlAllocateHeap"),
         };
-        let alloc = emu.maps.create_map(map_name);
+        let alloc = emu.maps.create_map(&map_name);
         alloc.set_base(alloc_addr);
         alloc.set_size(size);
     }
