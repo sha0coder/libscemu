@@ -298,22 +298,29 @@ fn RtlAllocateHeap(emu: &mut emu::Emu) {
     let handle = emu.regs.rcx;
     let flags = emu.regs.rdx;
     let size = emu.regs.r8;
+    let alloc_addr;
+    let map_name = format!("valloc_{:x}", handle);
 
-    let alloc_addr = match emu.maps.alloc(size) {
-        Some(a) => a,
-        None => panic!("/!\\ out of memory cannot allocate ntdll!RtlAllocateHeap"),
-    };
+    if emu.maps.exists_mapname(&map_name) {
+        let map = emu.maps.get_map_by_name(&map_name).unwrap();
+        alloc_addr = map.get_base();
+
+    } else {
+        alloc_addr = match emu.maps.alloc(size) {
+            Some(a) => a,
+            None => panic!("/!\\ out of memory cannot allocate ntdll!RtlAllocateHeap"),
+        };
+        let alloc = emu.maps.create_map(map_name);
+        alloc.set_base(alloc_addr);
+        alloc.set_size(size);
+    }
+
 
     println!(
         "{}** {} ntdll!RtlAllocateHeap  sz: {}   =addr: 0x{:x} {}",
         emu.colors.light_red, emu.pos, size, alloc_addr, emu.colors.nc
     );
 
-    let alloc = emu
-        .maps
-        .create_map(&format!("valloc_{:x}", handle));
-    alloc.set_base(alloc_addr);
-    alloc.set_size(size);
 
     emu.regs.rax = alloc_addr;
 }

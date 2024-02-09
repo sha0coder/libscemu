@@ -471,9 +471,9 @@ fn gethostbyname(emu: &mut emu::Emu) {
 
     map.set_base(addr);
     map.set_size(1024);
-
     map.write_dword(addr, 0x04030201);
     map.write_qword(addr+8, addr);
+    map.write_qword(addr+16, 0);
     map.write_string(str_addr, &domain_name);
 
     let mut hostent = Hostent::new();
@@ -481,9 +481,9 @@ fn gethostbyname(emu: &mut emu::Emu) {
     hostent.alias_list = 0;
     hostent.length = 4;
     hostent.addr_list = addr+8;
-    hostent.save(addr+20, &mut emu.maps);
+    hostent.save(addr+30, &mut emu.maps);
 
-    emu.regs.rax = addr+20;
+    emu.regs.rax = addr+30;
 }
 
 

@@ -1464,7 +1464,7 @@ impl Hostent {
     }
 
     pub fn size() -> usize {
-        28
+        32
     }
 }
 
