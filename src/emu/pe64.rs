@@ -398,10 +398,10 @@ impl PE64 {
     pub fn get_section_vaddr(&self, id: usize) -> u32 {
         return self.sect_hdr[id].virtual_address;
     }
-
+    
     pub fn get_tls_callbacks(&self, vaddr: u32) -> Vec<u64> {
         let tls_off; // = PE32::vaddr_to_off(&self.sect_hdr, vaddr) as usize;
-        let callbacks: Vec<u64> = Vec::new();
+        let mut callbacks: Vec<u64> = Vec::new();
         //if tls_off == 0 {
 
         if self.opt.data_directory.len() < pe32::IMAGE_DIRECTORY_ENTRY_TLS {
@@ -419,17 +419,18 @@ impl PE64 {
         let tls = TlsDirectory64::load(&self.raw, tls_off);
         tls.print();
 
-        /*
-        let mut cb_off = tls.tls_callbacks - iat as u64 - self.opt.image_base - align as u64;
+
+        //let mut cb_off = tls.tls_callbacks - iat as u64 - self.opt.image_base - align as u64;
+        let mut cb_off = PE32::vaddr_to_off(&self.sect_hdr, (tls.tls_callbacks & 0xffff) as u32);
         loop {
             let callback: u64 = read_u64_le!(&self.raw, cb_off as usize);
             if callback == 0 {
                 break;
             }
-            println!("TLS Callback: 0x{:x}", callback);
+            println!("0x{:x} TLS Callback: 0x{:x}", cb_off, callback);
             callbacks.push(callback);
             cb_off += 8;
-        }*/
+        }
 
         callbacks
     }

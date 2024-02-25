@@ -468,12 +468,12 @@ impl ImageExportDirectory {
 
 #[derive(Debug)]
 pub struct TlsDirectory32 {
-    tls_data_start: u32,
-    tls_data_end: u32,
-    tls_index: u32, // DS:[FS:[2Ch]] + tls_index *4
-    tls_callbacks: u32,
-    zero_fill_size: u32, // size = tls_data_end - tls_data_start + zero_fill_size
-    characteristic: u32,
+    pub tls_data_start: u32,
+    pub tls_data_end: u32,
+    pub tls_index: u32, // DS:[FS:[2Ch]] + tls_index *4
+    pub tls_callbacks: u32,
+    pub zero_fill_size: u32, // size = tls_data_end - tls_data_start + zero_fill_size
+    pub characteristic: u32,
 }
 
 impl TlsDirectory32 {
