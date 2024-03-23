@@ -38,6 +38,7 @@ pub fn gateway(addr: u64, emu: &mut emu::Emu) -> String {
         0x77011950 => RtlSetUnhandledExceptionFilter(emu),
         0x7701e6d0 => RtlCopyMemory(emu),
         0x77003f20 => RtlReAllocateHeap(emu),
+        0x77021f60 => NtFlushInstructionCache(emu),
 
         _ => {
             let apiname = kernel32::guess_api_name(emu, addr);
@@ -807,4 +808,16 @@ fn RtlReAllocateHeap(emu: &mut emu::Emu) {
 
 }
 
+fn NtFlushInstructionCache(emu: &mut emu::Emu) {
+    let proc_hndl = emu.regs.rcx;
+    let addr = emu.regs.rdx;
+    let sz = emu.regs.r8;
 
+    println!(
+        "{}** {} ntdll!NtFlushInstructionCache hndl: {:x} 0x{:x} sz: {} {}",
+        emu.colors.light_red, emu.pos, proc_hndl, addr, sz, emu.colors.nc
+    );
+
+
+    emu.regs.rax = 0;
+}

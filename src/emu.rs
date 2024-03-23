@@ -798,7 +798,9 @@ impl Emu {
         self.maps.create_map("m20000").load_at(0x20000);
         self.maps.create_map("m520000").load_at(0x520000);
         self.maps.create_map("m53b000").load_at(0x53b000);
-        self.maps.create_map("exe_pe").load_at(0x400000);
+        //self.maps.create_map("exe_pe").load_at(0x400000);
+        self.maps.create_map("calc").load_at(0x400000);
+        self.maps.create_map("calc").load_at(0x140000000);
         self.maps
             .create_map("code")
             .set_base(self.cfg.code_base_addr);
@@ -878,8 +880,9 @@ impl Emu {
         self.maps.create_map("ws2_32_rdata").load_at(0x7fefeee1000);
         self.maps.create_map("msvcrt_pe").load_at(0x7fefef00000);
         self.maps.create_map("msvcrt_text").load_at(0xfefef01000);
-        self.maps.create_map("advapi32_pe").load_at(0xfefefa0000);
+        self.maps.create_map("advapi32_pe").load_at(0x7fefefa0000);
         self.maps.create_map("advapi32_text").load_at(0x7fefefa1000);
+        self.maps.create_map("advapi32_rdata").load_at(0x7feff00a000);
         self.maps.create_map("oleaut32_pe").load_at(0x7feff180000);
         self.maps.create_map("oleaut32_text").load_at(0x7feff181000);
         self.maps
@@ -6479,7 +6482,6 @@ impl Emu {
 
             Mnemonic::Movzx => {
                 self.show_instruction(&self.colors.light_cyan, &ins);
-
                 assert!(ins.op_count() == 2);
 
                 let value1 = match self.get_operand_value(&ins, 1, true) {
@@ -10962,6 +10964,7 @@ impl Emu {
                     unimplemented!("movdqa");
                 }
             }
+
 
             Mnemonic::Andpd => {
                 self.show_instruction(&self.colors.green, &ins);

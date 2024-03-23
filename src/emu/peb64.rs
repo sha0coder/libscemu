@@ -106,6 +106,8 @@ impl Flink {
             return;
         }
 
+        //println!("mod_base 0x{:x} pe_hdr 0x{:x}", self.mod_base, self.pe_hdr);
+
         self.export_table_rva = emu
             .maps
             .read_dword(self.mod_base + self.pe_hdr + 0x88)
@@ -116,6 +118,24 @@ impl Flink {
         }
 
         self.export_table = self.export_table_rva + self.mod_base;
+
+        ////////
+        /*
+        emu.maps.print_maps();
+        println!("rva: 0x{:x} = 0x{:x} + 0x{:x} + 0x88 -> 0x{:x}", 
+            self.mod_base+self.pe_hdr+0x88,
+            self.mod_base,
+            self.pe_hdr,
+            self.export_table_rva);
+        println!("export_table: 0x{:x} = 0x{:x} + 0x{:x}",
+            self.export_table,
+            self.mod_base,
+            self.export_table_rva);
+        println!("num_of_funcs [0x{:x} + 0x18] = [0x{:x}]", 
+            self.export_table,
+            self.export_table+0x18);
+        */
+
 
         self.num_of_funcs = emu
             .maps

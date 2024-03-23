@@ -3722,6 +3722,12 @@ impl Banzai {
         self.add("SetDllDirectoryW", 1);
         self.add("SetSearchPathMode", 1);
         self.add("SetProcessDEPPolicy", 1);
+        self.add("LCMapStringEx", 9);
+        self.add("AreFileApisANSI", 0);
+        self.add("GetSystemDefaultLocaleName", 2);
+        self.add("GetKeyboardLayout", 1);
+        self.add("GetLocaleInfoW", 4);
+        self.add("SetCurrentDirectoryW", 1);
     }
 
 

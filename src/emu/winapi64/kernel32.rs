@@ -131,6 +131,7 @@ pub fn gateway(addr: u64, emu: &mut emu::Emu) -> String {
         0x76dc64a0 => GetModuleFileNameA(emu),
         0x76dbb990 => GetLocalTime(emu),
         0x76dd3560 => SystemTimeToFileTime(emu),
+        0x76dbb7e0 => GetNativeSystemInfo(emu),
 
         _ => {
             let api = guess_api_name(emu, addr);
@@ -591,21 +592,32 @@ fn VirtualAlloc(emu: &mut emu::Emu) {
     let typ = emu.regs.r8;
     let prot = emu.regs.r9;
 
-    let base = emu
-        .maps
-        .alloc(size)
-        .expect("kernel32!VirtualAlloc out of memory");
 
-    println!(
-        "{}** {} kernel32!VirtualAlloc addr: 0x{:x} sz: {} = 0x{:x} {}",
-        emu.colors.light_red, emu.pos, addr, size, base, emu.colors.nc
-    );
+    if size == 0 {
+        println!(
+            "{}** {} kernel32!VirtualAlloc addr: 0x{:x} sz: {} = 0 {}",
+            emu.colors.light_red, emu.pos, addr, size, emu.colors.nc
+        );
+        emu.regs.rax = 0
+    } else {
+        let base = emu
+            .maps
+            .alloc(size)
+            .expect("kernel32!VirtualAlloc out of memory");
 
-    let alloc = emu.maps.create_map(format!("alloc_{:x}", base).as_str());
-    alloc.set_base(base);
-    alloc.set_size(size);
 
-    emu.regs.rax = base;
+        println!(
+            "{}** {} kernel32!VirtualAlloc addr: 0x{:x} sz: {} = 0x{:x} {}",
+            emu.colors.light_red, emu.pos, addr, size, base, emu.colors.nc
+        );
+
+
+        let alloc = emu.maps.create_map(format!("alloc_{:x}", base).as_str());
+        alloc.set_base(base);
+        alloc.set_size(size);
+
+        emu.regs.rax = base;
+    }
 }
 
 fn VirtualAllocEx(emu: &mut emu::Emu) {
@@ -2252,3 +2264,15 @@ fn SystemTimeToFileTime(emu: &mut emu::Emu) {
     );
 }
 
+fn GetNativeSystemInfo(emu: &mut emu::Emu) {
+    let ptr_sysinfo = emu.regs.rcx;
+
+    let mut sysinfo = emu::structures::SystemInfo32::new();
+    sysinfo.save(ptr_sysinfo, &mut emu.maps);
+
+    println!(
+        "{}** {} kernel32!GetNativeSysteminfo 0x{:x}  {}",
+        emu.colors.light_red, emu.pos, ptr_sysinfo, emu.colors.nc
+    );
+
+}
