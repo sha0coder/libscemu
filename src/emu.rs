@@ -260,6 +260,27 @@ impl Emu {
         self.banzai.add(name, nparams);
     }
 
+    pub fn api_addr_to_name(&mut self, addr: u64) -> String {
+        let name: String;
+        if self.cfg.is_64bits {
+            name = winapi64::kernel32::resolve_api_addr_to_name(self, addr);
+        } else {
+            name = winapi32::kernel32::resolve_api_addr_to_name(self, addr);
+        }
+
+        return name;
+    }
+
+    pub fn api_name_to_addr(&mut self, kw: &str) -> u64 {
+        if self.cfg.is_64bits {
+            let (addr, lib, name) = winapi64::kernel32::search_api_name(self, &kw);
+            return addr;
+        } else {
+            let (addr, lib, name) = winapi32::kernel32::search_api_name(self, &kw);
+            return addr;
+        }
+    }
+
     pub fn init_stack32(&mut self) {
         let stack = self.maps.get_mem("stack");
 
@@ -3153,23 +3174,27 @@ impl Emu {
                     }
                 }
                 "iatx" => {
-                    //TODO: implement this well
-                    con.print("api name");
-                    let api = con.cmd2();
-                    let addr: u64;
-                    let lib: String;
+                    // addr to name
+                    con.print("api addr");
+                    let addr = match con.cmd_hex64() {
+                        Ok(v) => v,
+                        Err(_) => {
+                            println!("bad hex value.");
+                            continue;
+                        }
+                    };
                     let name: String;
 
                     if self.cfg.is_64bits {
-                        addr = winapi64::kernel32::resolve_api_name(self, &api);
+                        name = winapi64::kernel32::resolve_api_addr_to_name(self, addr);
                     } else {
-                        addr = winapi32::kernel32::resolve_api_name(self, &api);
+                        name = winapi32::kernel32::resolve_api_addr_to_name(self, addr);
                     }
 
-                    if addr == 0 {
-                        println!("api not found");
+                    if name == "" {
+                        println!("api addr not found");
                     } else {
-                        println!("found: 0x{:x} {}", addr, api);
+                        println!("found: 0x{:x} {}", addr, name);
                     }
                 }
                 "iatd" => {

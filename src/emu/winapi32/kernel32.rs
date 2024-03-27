@@ -213,6 +213,36 @@ pub fn dump_module_iat(emu: &mut emu::Emu, module: &str) {
     }
 }
 
+pub fn resolve_api_addr_to_name(emu: &mut emu::Emu, addr: u64) -> String {
+    let mut flink = peb32::Flink::new(emu);
+    flink.load(emu);
+    let first_ptr = flink.get_ptr();
+
+    loop {
+        if flink.export_table_rva > 0 {
+            for i in 0..flink.num_of_funcs {
+                if flink.pe_hdr == 0 {
+                    continue;
+                }
+
+
+                let ordinal = flink.get_function_ordinal(emu, i);
+                if ordinal.func_va == addr {
+                    let apiname = ordinal.func_va.to_string();
+                    return apiname;
+                }
+            }
+        }
+        flink.next(emu);
+
+        if flink.get_ptr() == first_ptr {
+            break;
+        }
+    }
+
+    return "".to_string();
+}
+
 pub fn resolve_api_name(emu: &mut emu::Emu, name: &str) -> u64 {
     let mut flink = peb32::Flink::new(emu);
     flink.load(emu);
