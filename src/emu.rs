@@ -1599,6 +1599,18 @@ impl Emu {
                 return constants::EN_US_LOCALE as u64;
             }
 
+            if value == 0xc0 {
+                if self.cfg.verbose >= 1 {
+                    println!("CHECKING IF ITS 32bits (ISWOW64)");
+                }
+
+                if self.cfg.is_64bits {
+                    return 0;
+                }
+
+                return 1;
+            }
+
             panic!("not implemented: {}", operand);
         }
 
@@ -3482,6 +3494,16 @@ impl Emu {
                     }
 
                     let value: u64 = match mem_addr {
+                        0xc0 => {
+                            if self.cfg.verbose >= 1 {
+                               println!("{} Reading ISWOW64 is 32bits on a 64bits system?", self.pos);
+                            }
+                            if self.cfg.is_64bits {
+                                0
+                            } else {
+                                1
+                            }
+                        }
                         0x30 => {
                             let peb = self.maps.get_mem("peb");
                             if self.cfg.verbose >= 1 {
