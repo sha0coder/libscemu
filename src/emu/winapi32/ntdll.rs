@@ -38,7 +38,7 @@ pub fn gateway(addr: u32, emu: &mut emu::Emu) -> String {
         0x775a55c0 => strlen(emu),
         0x77593030 => VerSetConditionMask(emu),
         0x775a53d0 => strcat(emu),
-        // TODO: 0x775a4cc0 => memcpy(emu), 
+        0x775a4cc0 => memcpy(emu), 
 
         _ => {
             let apiname = kernel32::guess_api_name(emu, addr);
@@ -1046,7 +1046,7 @@ fn strcat(emu: &mut emu::Emu) {
         .expect("ntdll!strcat error reading dst") as u64;
     let src_ptr = emu
         .maps
-        .read_dword(emu.regs.get_esp())
+        .read_dword(emu.regs.get_esp()+4)
         .expect("ntdll!strcat error reading src") as u64;
 
     let dst = emu.maps.read_string(dst_ptr);
@@ -1063,4 +1063,32 @@ fn strcat(emu: &mut emu::Emu) {
     emu.stack_pop32(false);
     emu.stack_pop32(false);
     emu.regs.rax = dst_cont_ptr;
+}
+
+fn memcpy(emu: &mut emu::Emu) {
+    let dst_ptr = emu
+        .maps
+        .read_dword(emu.regs.get_esp())
+        .expect("ntdll!strcat error reading dst") as u64;
+    let src_ptr = emu
+        .maps
+        .read_dword(emu.regs.get_esp()+4)
+        .expect("ntdll!strcat error reading src") as u64;
+    let count = emu
+        .maps
+        .read_dword(emu.regs.get_esp()+8)
+        .expect("ntdll!strcat error reading src") as usize;
+
+
+    println!(
+        "{}** {} ntdll!memcpy: 0x{:x} <- 0x{:x} {} {}",
+        emu.colors.light_red, emu.pos, dst_ptr, src_ptr, count, emu.colors.nc
+    );
+
+    emu.maps.memcpy(dst_ptr, src_ptr, count);
+
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+
 }
