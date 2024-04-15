@@ -80,8 +80,14 @@ impl Maps {
                 return true;
             }
         }
-        println!("writing qword on non mapped zone 0x{:x}", addr);
-        false
+
+        for i in 0..8 {
+            if !self.write_byte(addr+i, ((value >> (i * 8)) & 0xff) as u8) {
+                return false;
+            }
+        }
+    
+        true
     }
 
     pub fn write_dword(&mut self, addr: u64, value: u32) -> bool {
@@ -95,8 +101,14 @@ impl Maps {
                 return true;
             }
         }
-        println!("writing dword on non mapped zone 0x{:x}", addr);
-        false
+
+        for i in 0..4 {
+            if !self.write_byte(addr+i, ((value >> (i * 8)) & 0xff) as u8) {
+                return false;
+            }
+        }
+    
+        true
     }
 
     pub fn write_word(&mut self, addr: u64, value: u16) -> bool {
@@ -106,8 +118,14 @@ impl Maps {
                 return true;
             }
         }
-        println!("writing word on non mapped zone 0x{:x}", addr);
-        false
+
+        for i in 0..2 {
+            if !self.write_byte(addr+i, ((value >> (i * 8)) & 0xff) as u8) {
+                return false;
+            }
+        }
+    
+        true
     }
 
     pub fn write_byte(&mut self, addr: u64, value: u8) -> bool {
@@ -122,6 +140,7 @@ impl Maps {
     }
 
     pub fn write_bytes(&mut self, addr: u64, data: Vec<u8>) {
+        //TODO: fix map jump
         for mem in self.maps.iter_mut() {
             if mem.inside(addr) {
                 mem.write_bytes(addr, &data);
@@ -131,6 +150,7 @@ impl Maps {
     }
 
     pub fn write_bytes_slice(&mut self, addr: u64, data: &[u8]) {
+        //TODO: fix map jump
         for mem in self.maps.iter_mut() {
             if mem.inside(addr) {
                 mem.write_bytes(addr, &data);
@@ -166,7 +186,17 @@ impl Maps {
                 return Some(n);
             }
         }
-        None
+
+        let mut n: u128 = 0;
+        for i in 0..16 {
+            let v = match self.read_byte(addr+i) {
+                Some(v) => v,
+                None => return None,
+            };
+            n |= (v as u128) << ((15 - i) * 8);
+        }
+   
+        Some(n)
     }
 
     pub fn read_128bits_le(&self, addr: u64) -> Option<u128> {
@@ -196,7 +226,17 @@ impl Maps {
                 return Some(n);
             }
         }
-        None
+
+        let mut n: u128 = 0;
+        for i in 0..16 {
+            let v = match self.read_byte(addr+i) {
+                Some(v) => v,
+                None => return None,
+            };
+            n |= (v as u128) << (i*8);
+        }
+   
+        Some(n)
     }
 
     pub fn read_qword(&self, addr: u64) -> Option<u64> {
@@ -213,7 +253,17 @@ impl Maps {
                 return Some(mem.read_qword(addr));
             }
         }
-        None
+
+        let mut n: u64 = 0;
+        for i in 0..8 {
+            let v = match self.read_byte(addr+i) {
+                Some(v) => v,
+                None => return None,
+            };
+            n |= (v as u64) << (i*8);
+        }
+
+        Some(n)
     }
 
     pub fn read_dword(&self, addr: u64) -> Option<u32> {
@@ -226,7 +276,17 @@ impl Maps {
                 return Some(mem.read_dword(addr));
             }
         }
-        None
+
+        let mut n: u32 = 0;
+        for i in 0..4 {
+            let v = match self.read_byte(addr+i) {
+                Some(v) => v,
+                None => return None,
+            };
+            n |= (v as u32) << (i*8);
+        }
+
+        Some(n)
     }
 
     pub fn read_word(&self, addr: u64) -> Option<u16> {
@@ -235,7 +295,17 @@ impl Maps {
                 return Some(mem.read_word(addr));
             }
         }
-        None
+
+        let mut n: u16 = 0;
+        for i in 0..2 {
+            let v = match self.read_byte(addr+i) {
+                Some(v) => v,
+                None => return None,
+            };
+            n |= (v as u16) << (i*8);
+        }
+
+        Some(n)
     }
 
     pub fn read_byte(&self, addr: u64) -> Option<u8> {
