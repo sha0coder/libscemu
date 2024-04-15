@@ -6870,26 +6870,73 @@ impl Emu {
             }
 
             Mnemonic::Movsd => {
-                if self.cfg.is_64bits {
-                    if ins.has_rep_prefix() {
-                        let mut first_iteration = true;
-                        loop {
-                            if first_iteration || self.cfg.verbose >= 3 {
-                                self.show_instruction(&self.colors.light_cyan, &ins);
-                            }
-                            if self.regs.rcx == 0 {
-                                return true;
-                            }
-                            if !first_iteration {
-                                self.pos += 1;
-                            }
 
+                if ins.op_count() == 2 && self.get_operand_sz(&ins, 0) == 128 {
+
+                    self.show_instruction(&self.colors.light_cyan, &ins);
+                    let src = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                        Some(v) => v & 0xffffffff_ffffffff,
+                        None => return false,
+                    };
+
+                    let mut dst = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                        Some(v) => v,
+                        None => return false,
+                    };
+
+                    dst = (dst & 0xffffffff_ffffffff_00000000_00000000) | src;
+
+                    self.set_operand_xmm_value_128(&ins, 0, dst);
+
+                    
+                } else {
+
+                    if self.cfg.is_64bits {
+                        if ins.has_rep_prefix() {
+                            let mut first_iteration = true;
+                            loop {
+                                if first_iteration || self.cfg.verbose >= 3 {
+                                    self.show_instruction(&self.colors.light_cyan, &ins);
+                                }
+                                if self.regs.rcx == 0 {
+                                    return true;
+                                }
+                                if !first_iteration {
+                                    self.pos += 1;
+                                }
+
+                                let val = self
+                                    .maps
+                                    .read_dword(self.regs.rsi)
+                                    .expect("cannot read memory");
+
+                                self.maps.write_dword(self.regs.rdi, val);
+
+                                if !self.flags.f_df {
+                                    self.regs.rsi += 4;
+                                    self.regs.rdi += 4;
+                                } else {
+                                    self.regs.rsi -= 4;
+                                    self.regs.rdi -= 4;
+                                }
+
+                                self.regs.rcx -= 1;
+                                if self.regs.rcx == 0 {
+                                    return true;
+                                }
+                                first_iteration = false;
+                                if rep_step {
+                                    self.force_reload = true;
+                                    break;
+                                }
+                            }
+                        } else {
+                            self.show_instruction(&self.colors.light_cyan, &ins);
                             let val = self
                                 .maps
                                 .read_dword(self.regs.rsi)
                                 .expect("cannot read memory");
                             self.maps.write_dword(self.regs.rdi, val);
-
                             if !self.flags.f_df {
                                 self.regs.rsi += 4;
                                 self.regs.rdi += 4;
@@ -6897,57 +6944,60 @@ impl Emu {
                                 self.regs.rsi -= 4;
                                 self.regs.rdi -= 4;
                             }
-
-                            self.regs.rcx -= 1;
-                            if self.regs.rcx == 0 {
-                                return true;
-                            }
-                            first_iteration = false;
-                            if rep_step {
-                                self.force_reload = true;
-                                break;
-                            }
                         }
                     } else {
-                        self.show_instruction(&self.colors.light_cyan, &ins);
-                        let val = self
-                            .maps
-                            .read_dword(self.regs.rsi)
-                            .expect("cannot read memory");
-                        self.maps.write_dword(self.regs.rdi, val);
-                        if !self.flags.f_df {
-                            self.regs.rsi += 4;
-                            self.regs.rdi += 4;
+                        // 32bits
+
+                        if ins.has_rep_prefix() {
+                            let mut first_iteration = true;
+                            loop {
+                                if first_iteration || self.cfg.verbose >= 3 {
+                                    self.show_instruction(&self.colors.light_cyan, &ins);
+                                }
+                                if self.regs.get_ecx() == 0 {
+                                    return true;
+                                }
+                                if !first_iteration {
+                                    self.pos += 1;
+                                }
+
+                                let val = match self.maps.read_dword(self.regs.get_esi()) {
+                                    Some(v) => v,
+                                    None => {
+                                        println!("cannot read memory at esi");
+                                        return false;
+                                    }
+                                };
+                                self.maps.write_dword(self.regs.get_edi(), val);
+
+                                if !self.flags.f_df {
+                                    self.regs.set_esi(self.regs.get_esi() + 4);
+                                    self.regs.set_edi(self.regs.get_edi() + 4);
+                                } else {
+                                    self.regs.set_esi(self.regs.get_esi() - 4);
+                                    self.regs.set_edi(self.regs.get_edi() - 4);
+                                }
+
+                                self.regs.set_ecx(self.regs.get_ecx() - 1);
+                                if self.regs.get_ecx() == 0 {
+                                    return true;
+                                }
+                                first_iteration = false;
+                                if rep_step {
+                                    self.force_reload = true;
+                                    break;
+                                }
+                            }
                         } else {
-                            self.regs.rsi -= 4;
-                            self.regs.rdi -= 4;
-                        }
-                    }
-                } else {
-                    // 32bits
-
-                    if ins.has_rep_prefix() {
-                        let mut first_iteration = true;
-                        loop {
-                            if first_iteration || self.cfg.verbose >= 3 {
-                                self.show_instruction(&self.colors.light_cyan, &ins);
-                            }
-                            if self.regs.get_ecx() == 0 {
-                                return true;
-                            }
-                            if !first_iteration {
-                                self.pos += 1;
-                            }
-
+                            self.show_instruction(&self.colors.light_cyan, &ins);
                             let val = match self.maps.read_dword(self.regs.get_esi()) {
                                 Some(v) => v,
                                 None => {
-                                    println!("cannot read memory at esi");
+                                    println!("cannot read memory");
                                     return false;
                                 }
                             };
                             self.maps.write_dword(self.regs.get_edi(), val);
-
                             if !self.flags.f_df {
                                 self.regs.set_esi(self.regs.get_esi() + 4);
                                 self.regs.set_edi(self.regs.get_edi() + 4);
@@ -6955,33 +7005,6 @@ impl Emu {
                                 self.regs.set_esi(self.regs.get_esi() - 4);
                                 self.regs.set_edi(self.regs.get_edi() - 4);
                             }
-
-                            self.regs.set_ecx(self.regs.get_ecx() - 1);
-                            if self.regs.get_ecx() == 0 {
-                                return true;
-                            }
-                            first_iteration = false;
-                            if rep_step {
-                                self.force_reload = true;
-                                break;
-                            }
-                        }
-                    } else {
-                        self.show_instruction(&self.colors.light_cyan, &ins);
-                        let val = match self.maps.read_dword(self.regs.get_esi()) {
-                            Some(v) => v,
-                            None => {
-                                println!("cannot read memory");
-                                return false;
-                            }
-                        };
-                        self.maps.write_dword(self.regs.get_edi(), val);
-                        if !self.flags.f_df {
-                            self.regs.set_esi(self.regs.get_esi() + 4);
-                            self.regs.set_edi(self.regs.get_edi() + 4);
-                        } else {
-                            self.regs.set_esi(self.regs.get_esi() - 4);
-                            self.regs.set_edi(self.regs.get_edi() - 4);
                         }
                     }
                 }
