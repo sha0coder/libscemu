@@ -6871,7 +6871,7 @@ impl Emu {
 
             Mnemonic::Movsd => {
 
-                if ins.op_count() == 2 && self.get_operand_sz(&ins, 0) == 128 {
+                if ins.op_count() == 2 && (self.get_operand_sz(&ins, 0) == 128 || self.get_operand_sz(&ins, 1) == 128) {
 
                     self.show_instruction(&self.colors.light_cyan, &ins);
                     let src = match self.get_operand_xmm_value_128(&ins, 1, true) {
