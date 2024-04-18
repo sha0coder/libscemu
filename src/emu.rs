@@ -1324,6 +1324,10 @@ impl Emu {
         code.write_bytes(base, bytes);
     }
 
+    pub fn free(&mut self, name: &str) {
+        self.maps.free(name);
+    }
+
     pub fn alloc(&mut self, name: &str, size: u64) -> u64 {
         let addr = match self.maps.alloc(size) {
             Some(a) => a,

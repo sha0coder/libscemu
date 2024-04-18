@@ -984,13 +984,14 @@ impl Maps {
     }
 
     pub fn free(&mut self, name: &str) {
-        let mut id_to_delete = 0;
+        let id_to_delete;
         let mut remove = false;
 
         for i in 0..self.maps.len() {
             if self.maps[i].get_name() == name {
                 id_to_delete = i;
                 remove = true;
+                break;
             }
         }
         if remove {
