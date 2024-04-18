@@ -981,12 +981,12 @@ impl Emu {
         pemap.set_size(pe32.opt.size_of_headers.into());
         pemap.memcpy(pe32.get_headers(), pe32.opt.size_of_headers as usize);
 
-        println!("Loaded {}", filename);
+        /*println!("Loaded {}", filename);
         println!(
             "\t{} sections  base addr 0x{:x}",
             pe32.num_of_sections(),
             base
-        );
+        );*/
 
 
         for i in 0..pe32.num_of_sections() {
@@ -1031,12 +1031,12 @@ impl Emu {
             }  
             map.memcpy(ptr, ptr.len());
 
-            println!(
+            /*println!(
                 "\tcreated pe32 map for section `{}` at 0x{:x} size: {}",
                 sect.get_name(),
                 map.get_base(),
                 sect.virtual_size
-            );
+            );*/
             if set_entry {
                 if sect.get_name() == ".text" || i == 0 {
                     if self.cfg.entry_point != 0x3c0000 {
@@ -1105,12 +1105,12 @@ impl Emu {
         pemap.set_size(pe64.opt.size_of_headers.into());
         pemap.memcpy(pe64.get_headers(), pe64.opt.size_of_headers as usize);
 
-        println!("Loaded {}", filename);
+        /*println!("Loaded {}", filename);
         println!(
             "\t{} sections, base addr 0x{:x}",
             pe64.num_of_sections(),
             base
-        );
+        );*/
 
         for i in 0..pe64.num_of_sections() {
             /*let base;
