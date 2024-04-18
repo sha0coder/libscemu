@@ -840,7 +840,7 @@ impl PE32 {
         let mut delay_load_dir: Vec<DelayLoadDirectory> = Vec::new();
 
         if delay_load_va > 0 {
-            println!("delay load detected!");
+            //println!("delay load detected!");
             delay_load_off = PE32::vaddr_to_off(&sect, delay_load_va) as usize;
             if delay_load_off > 0 {
                 loop {
