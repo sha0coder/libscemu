@@ -373,7 +373,7 @@ impl Emu {
             self.disable_ctrlc();
         }
 
-        println!("initializing regs");
+        //println!("initializing regs");
         self.regs.clear::<64>();
         //self.regs.rand();
 
@@ -442,7 +442,7 @@ impl Emu {
     }
 
     pub fn init_mem32(&mut self) {
-        println!("loading memory maps");
+        //println!("loading memory maps");
         self.maps.create_map("10000");
         self.maps.create_map("20000");
         self.maps.create_map("stack");
@@ -1139,12 +1139,12 @@ impl Emu {
             }
             map.memcpy(ptr, ptr.len());
 
-            println!(
+            /*println!(
                 "\tcreated pe64 map for section `{}` at 0x{:x} size: {}",
                 sect.get_name(),
                 map.get_base(),
                 sect.virtual_size
-            );
+            );*/
 
             if set_entry {
                 if sect.get_name() == ".text" || i == 0 {
