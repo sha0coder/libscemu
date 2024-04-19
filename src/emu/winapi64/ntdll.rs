@@ -39,6 +39,7 @@ pub fn gateway(addr: u64, emu: &mut emu::Emu) -> String {
         0x7701e6d0 => RtlCopyMemory(emu),
         0x77003f20 => RtlReAllocateHeap(emu),
         0x77021f60 => NtFlushInstructionCache(emu),
+        0x770295d0 => LdrGetDllHandleEx(emu),
 
         _ => {
             let apiname = kernel32::guess_api_name(emu, addr);
@@ -821,3 +822,29 @@ fn NtFlushInstructionCache(emu: &mut emu::Emu) {
 
     emu.regs.rax = 0;
 }
+
+fn LdrGetDllHandleEx(emu: &mut emu::Emu) {
+    //LdrGetDllHandleEx (_In_ ULONG Flags, _In_opt_ PWSTR DllPath, _In_opt_ PULONG DllCharacteristics, _In_ PUNICODE_STRING DllName, _Out_opt_ PVOID *DllHandle)
+    let flags = emu.regs.rcx;
+    let path_ptr = emu.regs.rdx;
+    let characteristics = emu.regs.r8;
+    let dll_name_ptr = emu.regs.r9;
+    let out_hndl = emu.maps.read_qword(emu.regs.rsp).expect("ntdll!LdrGetDllHandleEx error reading out_hdl");
+
+    let dll_name = emu.maps.read_wide_string(dll_name_ptr);
+
+    
+    println!(
+        "{}** {} ntdll!LdrGetDllHandleEx {} {}",
+        emu.colors.light_red, emu.pos, dll_name ,emu.colors.nc
+    );
+
+    emu.maps.memcpy(path_ptr, dll_name_ptr, dll_name.len());
+
+    let handle = helper::handler_create(&dll_name) as u64;
+    emu.maps.write_qword(out_hndl, handle);
+
+    emu.regs.rax = 1;
+}
+
+
