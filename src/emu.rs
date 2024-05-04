@@ -11992,24 +11992,16 @@ impl Emu {
             Mnemonic::Movaps => {
                 self.show_instruction(&self.colors.green, &ins);
                 assert!(ins.op_count() == 2);
-                let sz0 = self.get_operand_sz(&ins, 0);
-                let sz1 = self.get_operand_sz(&ins, 1);
 
-                if sz0 == 32 && sz1 == 128 {
-                        let source = match self.get_operand_xmm_value_128(&ins, 1, true) {
-                            Some(v) => v,
-                            None => {
-                                println!("error reading memory xmm 1 source operand");
-                                return false;
-                            }
-                        };
+                let source = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error reading memory xmm 1 source operand");
+                        return false;
+                    }
+                };
 
-                        self.set_operand_xmm_value_128(&ins, 0, source);
-                    
-                } else {
-                    unimplemented!("case unimplemented");
-                }
-
+                self.set_operand_xmm_value_128(&ins, 0, source);
             }
 
             Mnemonic::Vmovd => {

@@ -31,6 +31,7 @@ pub fn gateway(addr: u64, emu: &mut emu::Emu) -> String {
         0x76e0fdb0 => Process32First(emu),
         0x76e0fcc0 => Process32Next(emu),
         0x76db40a0 => LStrCmpI(emu),
+        0x76dc1930 => LStrCmpIW(emu),
         0x76dfc5d0 => AreFileApiIsAnsi(emu),
         0x76e3e420 => BeginUpdateResourceA(emu),
         0x76dccad0 => OpenProcess(emu),
@@ -133,6 +134,7 @@ pub fn gateway(addr: u64, emu: &mut emu::Emu) -> String {
         0x76dd3560 => SystemTimeToFileTime(emu),
         0x76dbb7e0 => GetNativeSystemInfo(emu),
         0x76dfe0d0 => lstrcpyW(emu),
+        0x76dfe160 => lstrcpy(emu),
 
         _ => {
             let api = guess_api_name(emu, addr);
@@ -574,6 +576,28 @@ fn LStrCmpI(emu: &mut emu::Emu) {
     } else {
         println!(
             "{}** {} kernel32!lstrcmpi `{}` != `{}` {}",
+            emu.colors.light_red, emu.pos, s1, s2, emu.colors.nc
+        );
+        emu.regs.rax = 1;
+    }
+}
+
+fn LStrCmpIW(emu: &mut emu::Emu) {
+    let sptr1 = emu.regs.rcx;
+    let sptr2 = emu.regs.rdx;
+
+    let s1 = emu.maps.read_wide_string(sptr1);
+    let s2 = emu.maps.read_wide_string(sptr2);
+
+    if s1 == s2 {
+        println!(
+            "{}** {} kernel32!lstrcmpiW `{}` == `{}` {}",
+            emu.colors.light_red, emu.pos, s1, s2, emu.colors.nc
+        );
+        emu.regs.rax = 0;
+    } else {
+        println!(
+            "{}** {} kernel32!lstrcmpiW `{}` != `{}` {}",
             emu.colors.light_red, emu.pos, s1, s2, emu.colors.nc
         );
         emu.regs.rax = 1;
@@ -2313,9 +2337,30 @@ fn lstrcpyW(emu: &mut emu::Emu) {
 
     let s = emu.maps.read_wide_string(src);
     emu.maps.write_wide_string(dst, &s);
+    emu.maps.write_byte(dst+(s.len() as u64 * 2), 0);
 
     println!(
         "{}** {} kernel32!lstrcpyW 0x{:x} 0x{:x} {}  {}",
+        emu.colors.light_red, emu.pos, dst, src, &s, emu.colors.nc
+    );
+
+    if s.len() == 0 {
+        emu.regs.rax = 0;
+    } else {
+        emu.regs.rax = dst;
+    }
+}
+
+fn lstrcpy(emu: &mut emu::Emu) {
+    let dst = emu.regs.rcx;
+    let src = emu.regs.rdx;
+
+    let s = emu.maps.read_string(src);
+    emu.maps.write_string(dst, &s);
+    emu.maps.write_byte(dst+(s.len() as u64), 0);
+
+    println!(
+        "{}** {} kernel32!lstrcpy 0x{:x} 0x{:x} {}  {}",
         emu.colors.light_red, emu.pos, dst, src, &s, emu.colors.nc
     );
 
