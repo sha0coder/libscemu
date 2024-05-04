@@ -132,6 +132,7 @@ pub fn gateway(addr: u64, emu: &mut emu::Emu) -> String {
         0x76dbb990 => GetLocalTime(emu),
         0x76dd3560 => SystemTimeToFileTime(emu),
         0x76dbb7e0 => GetNativeSystemInfo(emu),
+        0x76dfe0d0 => lstrcpyW(emu),
 
         _ => {
             let api = guess_api_name(emu, addr);
@@ -2305,3 +2306,23 @@ fn GetNativeSystemInfo(emu: &mut emu::Emu) {
     );
 
 }
+
+fn lstrcpyW(emu: &mut emu::Emu) {
+    let dst = emu.regs.rcx;
+    let src = emu.regs.rdx;
+
+    let s = emu.maps.read_wide_string(src);
+    emu.maps.write_wide_string(dst, &s);
+
+    println!(
+        "{}** {} kernel32!lstrcpyW 0x{:x} 0x{:x} {}  {}",
+        emu.colors.light_red, emu.pos, dst, src, &s, emu.colors.nc
+    );
+
+    if s.len() == 0 {
+        emu.regs.rax = 0;
+    } else {
+        emu.regs.rax = dst;
+    }
+}
+

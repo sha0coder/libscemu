@@ -31,6 +31,7 @@ macro_rules! read_u32_le {
     };
 }
 
+/*
 macro_rules! write_u32_le {
     ($raw:expr, $off:expr, $val:expr) => {
         $raw[$off + 0] = ($val & 0x000000ff) as u8;
@@ -38,7 +39,7 @@ macro_rules! write_u32_le {
         $raw[$off + 2] = (($val & 0x00ff0000) >> 16) as u8;
         $raw[$off + 3] = (($val & 0xff000000) >> 24) as u8;
     };
-}
+}*/
 
 macro_rules! read_u64_le {
     ($raw:expr, $off:expr) => {
@@ -55,7 +56,7 @@ macro_rules! read_u64_le {
 
 macro_rules! write_u64_le {
     ($raw:expr, $off:expr, $val:expr) => {
-      $raw[$off+0]  = ($val & 0x00000000_000000ff) as u8;
+      $raw[$off+0] =  ($val & 0x00000000_000000ff) as u8;
       $raw[$off+1] = (($val & 0x00000000_0000ff00) >> 8) as u8;
       $raw[$off+2] = (($val & 0x00000000_00ff0000) >> 16) as u8;
       $raw[$off+3] = (($val & 0x00000000_ff000000) >> 24) as u8;
@@ -489,6 +490,7 @@ impl PE64 {
         // https://docs.microsoft.com/en-us/archive/msdn-magazine/2002/march/inside-windows-an-in-depth-look-into-the-win32-portable-executable-file-format-part-2#Binding
 
         println!("IAT binding started {} ...", self.image_import_descriptor.len());
+
         for i in 0..self.image_import_descriptor.len() {
             let iim = &self.image_import_descriptor[i];
 
@@ -504,13 +506,14 @@ impl PE64 {
             // Walking function names.
             let mut off_name =
                 PE32::vaddr_to_off(&self.sect_hdr, iim.original_first_thunk) as usize;
+
             let mut off_addr = PE32::vaddr_to_off(&self.sect_hdr, iim.first_thunk) as usize;
-            println!("IAT binding - off_name: {:x}", off_name);
-            println!("IAT binding - off_addr: {:x}", off_addr);
+            off_addr += 8;
+
 
             loop {
                 if self.raw.len() <= off_name+4 || self.raw.len() <= off_addr+8 {
-                    break;
+                   break;
                 }
 
                 let hint = pe32::HintNameItem::load(&self.raw, off_name);
@@ -519,22 +522,23 @@ impl PE64 {
                 if off2 == 0 {
                     //|| addr < 0x100 {
                     off_name += pe32::HintNameItem::size();
-                    off_addr += 8;
+                    //off_addr += 8;
                     continue;
                 }
                 let func_name = PE32::read_string(&self.raw, off2 + 2);
-                //println!("IAT: 0x{:x} {}!{}", addr, iim.name, func_name);
+                println!("IAT: 0x{:x} {}!{}", addr, iim.name, func_name);
 
                 let real_addr = emu::winapi64::kernel32::resolve_api_name(emu, &func_name);
                 if real_addr == 0 {
                     break;
                 }
-                /*
-                if emu.cfg.verbose >= 1 {
-                    println!("binded 0x{:x} {}", real_addr, func_name);
-                }*/
 
-                write_u32_le!(self.raw, off_addr, real_addr);
+                //if emu.cfg.verbose >= 1 {
+                    println!("binded 0x{:x} {}", real_addr, func_name);
+                //}
+
+                println!("patching 0x{:x} at 0x{:x}", real_addr, off_addr); 
+                write_u64_le!(self.raw, off_addr, real_addr);
 
                 off_name += pe32::HintNameItem::size();
                 off_addr += 8;

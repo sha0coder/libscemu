@@ -19,6 +19,7 @@ impl Banzai {
         self.api_params.insert(name.to_string(), nparams);
     }
 
+    //TODO: fix slow compilation of harcoded
     pub fn init(&mut self) {
         self.add("??2@YAPAXI@Z", 1);
         self.add("??2@YAPEAX_K@Z", 1);
