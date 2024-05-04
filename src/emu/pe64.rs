@@ -526,18 +526,18 @@ impl PE64 {
                     continue;
                 }
                 let func_name = PE32::read_string(&self.raw, off2 + 2);
-                println!("IAT: 0x{:x} {}!{}", addr, iim.name, func_name);
+                //println!("IAT: 0x{:x} {}!{}", addr, iim.name, func_name);
 
                 let real_addr = emu::winapi64::kernel32::resolve_api_name(emu, &func_name);
                 if real_addr == 0 {
                     break;
                 }
 
-                //if emu.cfg.verbose >= 1 {
+                /*if emu.cfg.verbose >= 1 {
                     println!("binded 0x{:x} {}", real_addr, func_name);
-                //}
+                }*/
 
-                println!("patching 0x{:x} at 0x{:x}", real_addr, off_addr); 
+                //println!("patching 0x{:x} at 0x{:x}", real_addr, off_addr); 
                 write_u64_le!(self.raw, off_addr, real_addr);
 
                 off_name += pe32::HintNameItem::size();
