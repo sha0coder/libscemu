@@ -11989,7 +11989,7 @@ impl Emu {
                 }
             }
 
-            Mnemonic::Movaps => {
+            Mnemonic::Movaps | Mnemonic::Movapd => {
                 self.show_instruction(&self.colors.green, &ins);
                 assert!(ins.op_count() == 2);
 
