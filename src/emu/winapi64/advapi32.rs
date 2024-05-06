@@ -65,7 +65,7 @@ fn RegOpenKeyExA(emu: &mut emu::Emu) {
     );
 
     emu.maps.write_qword(result, helper::handler_create(&subkey));
-    emu.regs.rax = 1;
+    emu.regs.rax = constants::ERROR_SUCCESS;
 }
 
 fn RegCloseKey(emu: &mut emu::Emu) {
@@ -78,7 +78,7 @@ fn RegCloseKey(emu: &mut emu::Emu) {
 
     helper::handler_close(hkey);
 
-    emu.regs.rax = 1;
+    emu.regs.rax = constants::ERROR_SUCCESS;
 }
 
 fn RegQueryValueExA(emu: &mut emu::Emu) {
@@ -98,6 +98,6 @@ fn RegQueryValueExA(emu: &mut emu::Emu) {
 
     emu.maps.write_string(data_out, "some_random_reg_contents");
     emu.maps.write_qword(datasz_out, 24);
-    emu.regs.rax = 1;
+    emu.regs.rax = constants::ERROR_SUCCESS;
 }
 

@@ -7,6 +7,8 @@ pub const STATUS_NO_MEMORY: u64 = 0xC0000017;
 pub const STATUS_ACCESS_VIOLATION: u64 = 0xC0000005;
 pub const STATUS_INVALID_PARAMETER: u64 = 0xC000000D;
 
+pub const ERROR_SUCCESS: u64 = 0;
+
 pub const NUM_BYTES_TRACE: usize = 16;
 pub const VERSION: u64 = 0x1db10106;
 
