@@ -1,3 +1,4 @@
+use md5;
 use crate::emu;
 use crate::emu::constants::*;
 use crate::emu::winapi32::helper;
@@ -20,6 +21,8 @@ pub fn gateway(addr: u32, emu: &mut emu::Emu) -> String {
         0x777332a8 => CryptSignHashA(emu),
         0x777332b8 => CryptSignHashW(emu),
         0x776fe124 => CryptReleaseContext(emu),
+        0x776fdf36 => CryptHashData(emu),
+        0x77733188 => CryptDeriveKey(emu),
 
 
         _ => {
@@ -344,7 +347,7 @@ fn CryptCreateHash(emu: &mut emu::Emu) {
     let hash_ptr =
         emu.maps
             .read_dword(emu.regs.get_esp()+16)
-            .expect("advapi32!CryptCreateHash error reading param");
+            .expect("advapi32!CryptCreateHash error reading param") as u64;
 
 
     println!(
@@ -353,12 +356,14 @@ fn CryptCreateHash(emu: &mut emu::Emu) {
         emu.colors.nc
     );
 
+    let hndl = helper::handler_create(get_cryptoalgorithm_name(algid));
+    assert!( hndl < 0x00000001_00000000 );
+    emu.maps.write_dword(hash_ptr, hndl as u32);
+
     for _ in 0..5 {
         emu.stack_pop32(false);
     }
     emu.regs.rax = 1;
-
-
 }
 
 fn CryptGenKey(emu: &mut emu::Emu) {
@@ -574,3 +579,67 @@ fn CryptSignHashW(emu: &mut emu::Emu) {
     }
     emu.regs.rax = 1;
 }
+
+fn CryptHashData(emu: &mut emu::Emu) {
+    let hhash = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("advapi32!CryptHashData error on param") as u64;
+    let data_ptr = emu.maps.read_dword(emu.regs.get_esp()+4)
+        .expect("advapi32!CryptHashData error on param") as u64;
+    let data_len = emu.maps.read_dword(emu.regs.get_esp()+8)
+        .expect("advapi32!CryptHashData error on param") as usize;
+    let flags = emu.maps.read_dword(emu.regs.get_esp()+12)
+        .expect("advapi32!CryptHashData error on param");
+
+    let data = emu.maps.read_bytes(data_ptr, data_len);
+    
+    let mut hex_hash = "".to_string();
+    let algo = helper::handler_get_uri(hhash);
+    if algo == "CALG_MD5" {
+        let digest:md5::Digest = md5::compute(data);
+        let hash_bytes = digest.0;
+        hex_hash = format!("{:x}", digest);
+        helper::handler_put_bytes(hhash, &hash_bytes);
+    } else {
+        helper::handler_put_bytes(hhash, b"deadcafebabe");
+    }
+
+    println!(
+        "{}** {} advapi32!CryptHashData {} {}",
+        emu.colors.light_red, emu.pos, hex_hash,  emu.colors.nc
+    );
+
+    for _ in 0..4 {
+        emu.stack_pop32(false);
+    }
+    emu.regs.rax = 1;
+}
+
+fn CryptDeriveKey(emu: &mut emu::Emu) {
+    let hprov = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("advapi32!CryptDeriveKey error on param") as u64;
+    let algid = emu.maps.read_dword(emu.regs.get_esp()+4)
+        .expect("advapi32!CryptDeriveKey error on param");
+    let data = emu.maps.read_dword(emu.regs.get_esp()+8)
+        .expect("advapi32!CryptDeriveKey error on param") as usize;
+    let flags = emu.maps.read_dword(emu.regs.get_esp()+12)
+        .expect("advapi32!CryptDeriveKey error on param");
+    let hkey_ptr = emu.maps.read_dword(emu.regs.get_esp()+16)
+        .expect("advapi32!CryptDeriveKey error on param") as u64;
+
+    let alg = get_cryptoalgorithm_name(algid);
+    let alg_len = get_crypto_key_len(algid);
+
+    let handle = helper::handler_create(alg);
+    helper::handler_put_bytes(handle, &vec![0x41u8;alg_len]);
+
+    println!(
+        "{}** {} advapi32!CryptDeriveKey {} {}",
+        emu.colors.light_red, emu.pos, alg,  emu.colors.nc
+    );
+
+    for _ in 0..5 {
+        emu.stack_pop32(false);
+    }
+    emu.regs.rax = 1;
+}
+

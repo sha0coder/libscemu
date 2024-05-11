@@ -4,6 +4,7 @@ use std::sync::Mutex;
 pub struct Handler {
     id: u64,
     uri: String,
+    data: Vec<u8>,
 }
 
 impl Handler {
@@ -11,6 +12,7 @@ impl Handler {
         Handler {
             id: id,
             uri: uri.to_string(),
+            data: vec![],
         }
     }
 }
@@ -59,6 +61,14 @@ pub fn handler_exist(hndl: u64) -> bool {
     match handles.iter().position(|h| (*h).id == hndl) {
         Some(_) => return true,
         None => return false,
+    }
+}
+
+pub fn handler_put_bytes(hndl: u64, data: &[u8]) {
+    let mut handles = HANDLERS.lock().unwrap();
+    match handles.iter().position(|h| (*h).id == hndl) {
+        Some(idx) => handles[idx].data = data.to_vec(),
+        None => (),
     }
 }
 

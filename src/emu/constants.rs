@@ -230,6 +230,62 @@ pub fn get_cryptoalgorithm_name(value: u32) -> &'static str {
     }
 }
 
+pub fn get_crypto_key_len(value: u32) -> usize {
+    match value {
+        0x00006603 => 24, // CALG_3DES
+        0x00006609 => 14, // CALG_3DES_112
+        0x00006611 => 0,  // CALG_AES, variable: 128, 192, or 256 bits (set dynamically)
+        0x0000660e => 16, // CALG_AES_128
+        0x0000660f => 24, // CALG_AES_192
+        0x00006610 => 32, // CALG_AES_256
+        0x0000aa03 => 0,  // CALG_AGREEDKEY_ANY, variable
+        0x0000660c => 0,  // CALG_CYLINK_MEK, variable
+        0x00006601 => 8,  // CALG_DES
+        0x00006604 => 8,  // CALG_DESX
+        0x0000aa02 => 0,  // CALG_DH_EPHEM, variable
+        0x0000aa01 => 0,  // CALG_DH_SF, variable
+        0x00002200 => 0,  // CALG_DSS_SIGN, variable
+        0x0000aa05 => 0,  // CALG_ECDH, variable
+        0x0000ae06 => 0,  // CALG_ECDH_EPHEM, variable
+        0x00002203 => 0,  // CALG_ECDSA, variable
+        0x0000a001 => 0,  // CALG_ECMQV, variable
+        0x0000800b => 0,  // CALG_HASH_REPLACE_OWF, variable
+        0x0000a003 => 0,  // CALG_HUGHES_MD5, variable
+        0x00008009 => 0,  // CALG_HMAC, variable
+        0x0000aa04 => 0,  // CALG_KEA_KEYX, variable
+        0x00008005 => 0,  // CALG_MAC, variable
+        0x00008001 => 0,  // CALG_MD2, variable
+        0x00008002 => 0,  // CALG_MD4, variable
+        0x00008003 => 0,  // CALG_MD5, variable
+        0x00002000 => 0,  // CALG_NO_SIGN, variable
+        0xffffffff => 0,  // CALG_OID_INFO_CNG_ONLY, variable
+        0xfffffffe => 0,  // CALG_OID_INFO_PARAMETERS, variable
+        0x00004c04 => 0,  // CALG_PCT1_MASTER, variable
+        0x00006602 => 8,  // CALG_RC2
+        0x00006801 => 0,  // CALG_RC4, variable length
+        0x0000660d => 0,  // CALG_RC5, variable
+        0x0000a400 => 0,  // CALG_RSA_KEYX, variable
+        0x00002400 => 0,  // CALG_RSA_SIGN, variable
+        0x00004c07 => 0,  // CALG_SCHANNEL_ENC_KEY, variable
+        0x00004c03 => 0,  // CALG_SCHANNEL_MAC_KEY, variable
+        0x00004c02 => 0,  // CALG_SCHANNEL_MASTER_HASH, variable
+        0x00006802 => 0,  // CALG_SEAL, variable
+        0x00008004 => 0,  // CALG_SHA, variable
+        0x0000800c => 0,  // CALG_SHA_256, variable
+        0x0000800d => 0,  // CALG_SHA_384, variable
+        0x0000800e => 0,  // CALG_SHA_512, variable
+        0x0000660a => 0,  // CALG_SKIPJACK, variable
+        0x00004c05 => 0,  // CALG_SSL2_MASTER, variable
+        0x00004c01 => 0,  // CALG_SSL3_MASTER, variable
+        0x00008008 => 0,  // CALG_SSL3_SHAMD5, variable
+        0x0000660b => 0,  // CALG_TEK, variable
+        0x00004c06 => 0,  // CALG_TLS1_MASTER, variable
+        0x0000800a => 0,  // CALG_TLS1PRF, variable
+        _ => 0,           // Unknown Algorithm or variable length
+    }
+}
+
+
 
 //// LINUX ////
 

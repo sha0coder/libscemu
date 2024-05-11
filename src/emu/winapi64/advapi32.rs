@@ -1,4 +1,5 @@
 use crate::emu;
+use crate::emu::constants;
 use crate::emu::winapi32::helper;
 
 pub fn gateway(addr: u64, emu: &mut emu::Emu) -> String {
