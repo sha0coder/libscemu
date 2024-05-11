@@ -622,14 +622,17 @@ fn CryptDeriveKey(emu: &mut emu::Emu) {
     let data = emu.maps.read_dword(emu.regs.get_esp()+8)
         .expect("advapi32!CryptDeriveKey error on param") as usize;
     let flags = emu.maps.read_dword(emu.regs.get_esp()+12)
-        .expect("advapi32!CryptDeriveKey error on param");
+        .expect("advapi32!CryptDeriveKey error on param") as usize;
     let hkey_ptr = emu.maps.read_dword(emu.regs.get_esp()+16)
         .expect("advapi32!CryptDeriveKey error on param") as u64;
 
     let alg = get_cryptoalgorithm_name(algid);
-    let alg_len = get_crypto_key_len(algid);
+    let mut alg_len = get_crypto_key_len(algid);
 
     let handle = helper::handler_create(alg);
+    if alg_len == 0 {
+        alg_len = (flags >> 16) & 0xffff;
+    }
     helper::handler_put_bytes(handle, &vec![0x41u8;alg_len]);
 
     println!(
