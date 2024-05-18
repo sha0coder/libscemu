@@ -1071,206 +1071,243 @@ impl Emu {
     }
 
     pub fn load_pe64(&mut self, filename:&str, set_entry:bool, force_base:u64) -> (u64, u32) {
-        let is_maps = filename.contains("maps32/");
+        let is_maps = filename.contains("maps64/");
         let mut pe64 = PE64::load(filename);
-        let mut base: u64;
+        let base: u64;
 
+        if force_base != 0 {
+            if self.maps.overlaps(force_base, pe64.size()) {
+                panic!("the forced base address overlapps");
+            } else {
+                base = force_base;
+            }
+        } else {
+            if set_entry {
+                if self.cfg.code_base_addr != 0x3c0000 {
+                    base = self.cfg.code_base_addr;
+                    if self.maps.overlaps(base, pe64.size()) {
+                        panic!("the setted base address overlaps");
+                    }
+                } else {
+                    if self.maps.overlaps(pe64.opt.image_base, pe64.size()) {
+                        base = self.maps.alloc(pe64.size()).expect("out of memory");
+                    } else {
+                        base = pe64.opt.image_base;
+                    }
+                }
+            } else {
+
+
+                if self.maps.overlaps(pe64.opt.image_base, pe64.size()) {
+                    base = self.maps.lib64_alloc(pe64.size()).expect("out of memory");
+                } else {
+                    if pe64.opt.image_base < constants::LIB64_BARRIER {
+                        base = self.maps.lib64_alloc(pe64.size()).expect("out of memory");
+                    } else {
+                        base = pe64.opt.image_base;
+                    }
+                }
+            }
+        }
+
+    /*
+    if force_base > 0 {
+        base = force_base;
+    } else {
+        if is_maps && pe64.is_dll() {
+            base = self.maps.lib64_alloc(pe64.size()).expect("out of memory");
+        } else {
+            base = match self.maps.get_mem_by_addr(pe64.opt.image_base + 0x1000) {
+                Some(_) => self.maps.alloc(pe64.size()).expect("out of memory"),
+                None => pe64.opt.image_base,
+            };
+        }
+    }
+
+    if set_entry && !is_maps && self.cfg.code_base_addr != 0x3c0000 {
+        base = self.cfg.code_base_addr;
+    }
+    */
+
+    let map_name = self.filename_to_mapname(filename);
+
+    if set_entry && !is_maps {
+        pe64.iat_binding(self);
+        pe64.delay_load_binding(self);
+    }
+
+    //TODO: query if this vaddr is already used
+    let pemap = self.maps.create_map(&format!("{}.pe", map_name));
+    pemap.set_base(base.into());
+    pemap.set_size(pe64.opt.size_of_headers.into());
+    pemap.memcpy(pe64.get_headers(), pe64.opt.size_of_headers as usize);
+
+    /*println!("Loaded {}", filename);
+    println!(
+        "\t{} sections, base addr 0x{:x}",
+        pe64.num_of_sections(),
+        base
+    );*/
+
+    for i in 0..pe64.num_of_sections() {
+        /*let base;
         if force_base > 0 {
             base = force_base;
         } else {
-            if is_maps && pe64.is_dll() {
-                base = self.maps.lib64_alloc(0xfff).expect("out of memory");
-            } else {
-                base = match self.maps.get_mem_by_addr(pe64.opt.image_base + 0x1000) {
-                    Some(_) => self.maps.alloc(0xfff).expect("out of memory"),
-                    None => pe64.opt.image_base,
-                };
-            }
+            base = pe64.opt.image_base;
+        }*/
+        let ptr = pe64.get_section_ptr(i);
+        let sect = pe64.get_section(i);
+        let map = self.maps.create_map(&format!(
+            "{}{}",
+            map_name,
+            sect.get_name()
+                .replace(" ", "")
+                .replace("\t", "")
+                .replace("\x0a", "")
+                .replace("\x0d", "")
+        ));
+
+        map.set_base(base + sect.virtual_address as u64);
+        if sect.virtual_size > sect.size_of_raw_data {
+            map.set_size(sect.virtual_size as u64);
+        } else {
+            map.set_size(sect.size_of_raw_data as u64);
         }
+        map.memcpy(ptr, ptr.len());
 
-        if set_entry && !is_maps && self.cfg.code_base_addr != 0x3c0000 {
-            base = self.cfg.code_base_addr;
-        }
-
-        let map_name = self.filename_to_mapname(filename);
-
-        if set_entry && !is_maps {
-            pe64.iat_binding(self);
-            pe64.delay_load_binding(self);
-        }
-
-        //TODO: query if this vaddr is already used
-        let pemap = self.maps.create_map(&format!("{}.pe", map_name));
-        pemap.set_base(base.into());
-        pemap.set_size(pe64.opt.size_of_headers.into());
-        pemap.memcpy(pe64.get_headers(), pe64.opt.size_of_headers as usize);
-
-        /*println!("Loaded {}", filename);
-        println!(
-            "\t{} sections, base addr 0x{:x}",
-            pe64.num_of_sections(),
-            base
+        /*println!(
+            "\tcreated pe64 map for section `{}` at 0x{:x} size: {}",
+            sect.get_name(),
+            map.get_base(),
+            sect.virtual_size
         );*/
 
-        for i in 0..pe64.num_of_sections() {
-            /*let base;
-            if force_base > 0 {
-                base = force_base;
-            } else {
-                base = pe64.opt.image_base;
-            }*/
-            let ptr = pe64.get_section_ptr(i);
-            let sect = pe64.get_section(i);
-            let map = self.maps.create_map(&format!(
-                "{}{}",
-                map_name,
-                sect.get_name()
-                    .replace(" ", "")
-                    .replace("\t", "")
-                    .replace("\x0a", "")
-                    .replace("\x0d", "")
-            ));
-
-            map.set_base(base + sect.virtual_address as u64);
-            if sect.virtual_size > sect.size_of_raw_data {
-                map.set_size(sect.virtual_size as u64);
-            } else {
-                map.set_size(sect.size_of_raw_data as u64);
-            }
-            map.memcpy(ptr, ptr.len());
-
-            /*println!(
-                "\tcreated pe64 map for section `{}` at 0x{:x} size: {}",
-                sect.get_name(),
-                map.get_base(),
-                sect.virtual_size
-            );*/
-
-            if set_entry {
-                if sect.get_name() == ".text" || i == 0 {
-                    if pe64.opt.address_of_entry_point == 0 {
-                        self.regs.rip =
-                            base + sect.virtual_address as u64 + sect.pointer_to_raw_data as u64;
-                    } else {
-                        self.regs.rip = base + pe64.opt.address_of_entry_point as u64;
-                    }
-
-                    println!(
-                        "\tentry point at 0x{:x}  0x{:x} ",
-                        self.regs.rip, pe64.opt.address_of_entry_point
-                    );
-                } else if sect.get_name() == ".tls" {
-                    let tls_off = sect.pointer_to_raw_data;
-                    self.tls_callbacks = pe64.get_tls_callbacks(sect.virtual_address);
-                }
-            }
-        }
-
-        let pe_hdr_off = pe64.dos.e_lfanew;
-
-        pe64.clear();
-        return (base, pe_hdr_off);
-    }
-
-    pub fn set_config(&mut self, cfg: Config) {
-        self.cfg = cfg;
-        if self.cfg.console {
-            self.exp = self.cfg.console_num;
-        }
-        if self.cfg.nocolors {
-            self.colors.disable();
-        }
-    }
-
-    pub fn load_code(&mut self, filename: &str) {
-        self.filename = filename.to_string();
-        self.cfg.filename = self.filename.clone();
-
-        //let map_name = self.filename_to_mapname(filename);
-        //self.cfg.filename = map_name;
-
-        if Elf32::is_elf32(filename) {
-                self.linux = true;
-                self.cfg.is_64bits = false;
-
-                println!("elf32 detected.");
-                let mut elf32 = Elf32::parse(filename).unwrap();
-                elf32.load(&mut self.maps);
-                self.regs.rip = elf32.elf_hdr.e_entry.into();
-                let stack_sz = 0x30000;
-                let stack = self.alloc("stack", stack_sz);
-                self.regs.rsp = stack+(stack_sz/2);
-                //unimplemented!("elf32 is not supported for now");
-
-        } else if Elf64::is_elf64(filename) {
-
-                self.linux = true;
-                self.cfg.is_64bits = true;
-                self.maps.clear();
-
-                println!("elf64 detected.");
-
-                let mut elf64 = Elf64::parse(filename).unwrap();
-                let dyn_link = elf64.get_dynamic().len() > 0;
-                elf64.load(&mut self.maps, "elf64", false, dyn_link, self.cfg.code_base_addr);
-                self.init_linux64(dyn_link);
-
-
-                if dyn_link {
-                    let mut ld = Elf64::parse("/lib64/ld-linux-x86-64.so.2").unwrap();
-                    ld.load(&mut self.maps, "ld-linux", true, dyn_link, 0x3c0000);
-                    println!("--- emulating ld-linux _start ---");
-
-                    self.regs.rip = ld.elf_hdr.e_entry + elf64::LD_BASE;
-                    self.run(None);
+        if set_entry {
+            if sect.get_name() == ".text" || i == 0 {
+                if pe64.opt.address_of_entry_point == 0 {
+                    self.regs.rip =
+                        base + sect.virtual_address as u64 + sect.pointer_to_raw_data as u64;
                 } else {
-                     self.regs.rip = elf64.elf_hdr.e_entry;
+                    self.regs.rip = base + pe64.opt.address_of_entry_point as u64;
                 }
 
+                println!(
+                    "\tentry point at 0x{:x}  0x{:x} ",
+                    self.regs.rip, pe64.opt.address_of_entry_point
+                );
+            } else if sect.get_name() == ".tls" {
+                let tls_off = sect.pointer_to_raw_data;
+                self.tls_callbacks = pe64.get_tls_callbacks(sect.virtual_address);
+            }
+        }
+    }
+
+    let pe_hdr_off = pe64.dos.e_lfanew;
+
+    pe64.clear();
+    return (base, pe_hdr_off);
+}
+
+pub fn set_config(&mut self, cfg: Config) {
+    self.cfg = cfg;
+    if self.cfg.console {
+        self.exp = self.cfg.console_num;
+    }
+    if self.cfg.nocolors {
+        self.colors.disable();
+    }
+}
+
+pub fn load_code(&mut self, filename: &str) {
+    self.filename = filename.to_string();
+    self.cfg.filename = self.filename.clone();
+
+    //let map_name = self.filename_to_mapname(filename);
+    //self.cfg.filename = map_name;
+
+    if Elf32::is_elf32(filename) {
+            self.linux = true;
+            self.cfg.is_64bits = false;
+
+            println!("elf32 detected.");
+            let mut elf32 = Elf32::parse(filename).unwrap();
+            elf32.load(&mut self.maps);
+            self.regs.rip = elf32.elf_hdr.e_entry.into();
+            let stack_sz = 0x30000;
+            let stack = self.alloc("stack", stack_sz);
+            self.regs.rsp = stack+(stack_sz/2);
+            //unimplemented!("elf32 is not supported for now");
+
+    } else if Elf64::is_elf64(filename) {
+
+            self.linux = true;
+            self.cfg.is_64bits = true;
+            self.maps.clear();
+
+            println!("elf64 detected.");
+
+            let mut elf64 = Elf64::parse(filename).unwrap();
+            let dyn_link = elf64.get_dynamic().len() > 0;
+            elf64.load(&mut self.maps, "elf64", false, dyn_link, self.cfg.code_base_addr);
+            self.init_linux64(dyn_link);
 
 
+            if dyn_link {
+                let mut ld = Elf64::parse("/lib64/ld-linux-x86-64.so.2").unwrap();
+                ld.load(&mut self.maps, "ld-linux", true, dyn_link, 0x3c0000);
+                println!("--- emulating ld-linux _start ---");
+
+                self.regs.rip = ld.elf_hdr.e_entry + elf64::LD_BASE;
+                self.run(None);
+            } else {
+                 self.regs.rip = elf64.elf_hdr.e_entry;
+            }
+
+
+
+
+            /*
+            for lib in elf64.get_dynamic() {
+                println!("dynamic library {}", lib);
+                let libspath = "/usr/lib/x86_64-linux-gnu/";
+                let libpath = format!("{}{}", libspath, lib);
+                let mut elflib = Elf64::parse(&libpath).unwrap();
+                elflib.load(&mut self.maps, &lib, true);
+
+                if lib.contains("libc") {
+                    elflib.craft_libc_got(&mut self.maps, "elf64");
+                }
 
                 /*
-                for lib in elf64.get_dynamic() {
-                    println!("dynamic library {}", lib);
-                    let libspath = "/usr/lib/x86_64-linux-gnu/";
-                    let libpath = format!("{}{}", libspath, lib);
-                    let mut elflib = Elf64::parse(&libpath).unwrap();
-                    elflib.load(&mut self.maps, &lib, true);
-
-                    if lib.contains("libc") {
-                        elflib.craft_libc_got(&mut self.maps, "elf64");
+                match elflib.init {
+                    Some(addr) => {
+                        self.call64(addr, &[]);
                     }
-
-                    /*
-                    match elflib.init {
-                        Some(addr) => {
-                            self.call64(addr, &[]);
-                        }
-                        None => {}
-                    }*/
+                    None => {}
                 }*/
+            }*/
 
 
 
-        } else if !self.cfg.is_64bits && PE32::is_pe32(filename) {
-            println!("PE32 header detected.");
-            let (base, pe_off) = self.load_pe32(filename, true, 0);
-            let ep = self.regs.rip;
+    } else if !self.cfg.is_64bits && PE32::is_pe32(filename) {
+        println!("PE32 header detected.");
+        let (base, pe_off) = self.load_pe32(filename, true, 0);
+        let ep = self.regs.rip;
 
-            // emulating tls callbacks
-            for i in 0..self.tls_callbacks.len() {
-                self.regs.rip = self.tls_callbacks[i];
-                println!("emulating tls_callback {} at 0x{:x}", i+1, self.regs.rip);
-                self.stack_push32(base);
-                self.run(Some(base as u64));
-            }
+        // emulating tls callbacks
+        for i in 0..self.tls_callbacks.len() {
+            self.regs.rip = self.tls_callbacks[i];
+            println!("emulating tls_callback {} at 0x{:x}", i+1, self.regs.rip);
+            self.stack_push32(base);
+            self.run(Some(base as u64));
+        }
 
-            self.regs.rip = ep;
+        self.regs.rip = ep;
 
-        } else if self.cfg.is_64bits && PE64::is_pe64(filename) {
-            println!("PE64 header detected.");
-            let (base, pe_off) = self.load_pe64(filename, true, 0);
+    } else if self.cfg.is_64bits && PE64::is_pe64(filename) {
+        println!("PE64 header detected.");
+        let (base, pe_off) = self.load_pe64(filename, true, 0);
             let ep = self.regs.rip;
 
             // emulating tls callbacks

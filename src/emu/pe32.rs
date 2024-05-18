@@ -900,6 +900,10 @@ impl PE32 {
         }
     }
 
+    pub fn size(&self) -> usize {
+        return self.raw.len();
+    }
+
     pub fn get_raw(&self) -> &[u8] {
         return &self.raw[0..self.raw.len()];
     }

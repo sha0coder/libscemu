@@ -341,6 +341,10 @@ impl PE64 {
         }
     }
 
+    pub fn size(&self) -> u64 {
+        return self.raw.len() as u64;
+    }
+
     pub fn is_dll(&self) -> bool {
         self.fh.characteristics & IMAGE_FILE_DLL != 0
     }

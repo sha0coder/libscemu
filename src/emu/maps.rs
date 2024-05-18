@@ -1,5 +1,6 @@
 pub mod mem64;
 
+use crate::emu::constants;
 use mem64::Mem64;
 use std::str;
 
@@ -959,7 +960,7 @@ impl Maps {
         sz
     }
 
-    pub fn overlapps(&self, addr: u64, sz: u64) -> bool {
+    pub fn overlaps(&self, addr: u64, sz: u64) -> bool {
         for a in addr..addr + sz {
             if self.is_mapped(a) {
                 return true;
@@ -1002,7 +1003,7 @@ impl Maps {
 
     pub fn lib64_alloc(&self, sz: u64) -> Option<u64> {
         // super simple memory allocator
-        let mut addr: u64 = 0x07fefff00000; //  0x7ffffff00000;
+        let mut addr: u64 = constants::LIB64_BARRIER;
 
         loop {
             addr += sz;
@@ -1019,7 +1020,7 @@ impl Maps {
 
             //return Some(addr);
 
-            if !self.overlapps(addr, sz) {
+            if !self.overlaps(addr, sz) {
                 return Some(addr);
             }
         }
@@ -1043,7 +1044,7 @@ impl Maps {
                 }
             }
 
-            if !self.overlapps(addr, sz) {
+            if !self.overlaps(addr, sz) {
                 return Some(addr);
             }
         }
