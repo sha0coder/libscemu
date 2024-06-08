@@ -299,7 +299,7 @@ fn ZwQueueApcThread(emu: &mut emu::Emu) {
 fn RtlAllocateHeap(emu: &mut emu::Emu) {
     let handle = emu.regs.rcx;
     let flags = emu.regs.rdx;
-    let size = emu.regs.r8;
+    let mut size = emu.regs.r8;
     let alloc_addr;
     let map_name = format!("valloc_{:x}_{}", handle, size);
 
