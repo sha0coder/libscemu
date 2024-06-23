@@ -1077,7 +1077,7 @@ impl Emu {
 
         if force_base != 0 {
             if self.maps.overlaps(force_base, pe64.size()) {
-                panic!("the forced base address overlapps");
+                panic!("the forced base address overlaps");
             } else {
                 base = force_base;
             }
@@ -4624,6 +4624,14 @@ pub fn load_code(&mut self, filename: &str) {
                         }
                     }
 
+                    if !emulation_ok {
+                        if self.cfg.console_enabled {
+                            self.spawn_console();
+                        } else {
+                            return Err(ScemuError::new("emulation error"));
+                        }
+                    }
+
                     if self.force_reload {
                         self.force_reload = false;
                         break;
@@ -4640,13 +4648,6 @@ pub fn load_code(&mut self, filename: &str) {
                         break;
                     }
 
-                    if !emulation_ok {
-                        if self.cfg.console_enabled {
-                            self.spawn_console();
-                        } else {
-                            return Err(ScemuError::new("emulation error"));
-                        }
-                    }
                 } // end decoder loop
             } // end running loop
 
@@ -9461,6 +9462,12 @@ pub fn load_code(&mut self, filename: &str) {
                             self.linux = true;
                             syscall32::gateway(self);
                         }
+
+                        0x29 => {
+                            println!("int 0x21: __fastfail {}", self.regs.rcx);
+                            process::exit(1);
+                        }
+
                         _ => {
                             println!("unimplemented interrupt {}", interrupt);
                             return false;
