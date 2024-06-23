@@ -9465,7 +9465,7 @@ pub fn load_code(&mut self, filename: &str) {
 
                         0x29 => {
                             println!("int 0x21: __fastfail {}", self.regs.rcx);
-                            process::exit(1);
+                            std::process::exit(1);
                         }
 
                         _ => {
