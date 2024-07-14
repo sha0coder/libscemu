@@ -228,6 +228,15 @@ impl Emu {
         self.cfg.console_addr = addr;
     }
 
+    pub fn get_base_addr(&self) -> Option<u64> {
+        let map = match self.maps.get_map_by_name("code") {
+            Some(m) => m,
+            None => return None,
+        };
+
+        Some(map.get_base())
+    }
+
     pub fn enable_ctrlc(&mut self) {
         self.enabled_ctrlc = true;
     }
