@@ -956,6 +956,10 @@ impl PE32 {
             //println!("/!\\ warning: raw sz:{} off:{} sz:{}  off+sz:{}", self.raw.len(), off, sz, off+sz);
             sz = self.raw.len() - off - 1;
         }
+        if sz == 0 || off > self.raw.len() || off+sz > self.raw.len() {
+            return &[];
+        }
+
         let section_ptr = &self.raw[off..off + sz];
         return section_ptr;
     }
