@@ -130,7 +130,7 @@ impl Console {
         println!("trc .................... trace regs clear");
         println!("ldr .................... show ldr linked list");
         println!("iat .................... find api name in all iat's ");
-        println!("iatx ................... find exact api name in all iat's");
+        println!("iatx ................... addr to api name");
         println!("iatd ................... dump the iat of specific module");
 
         //println!("o ...................... step over");
