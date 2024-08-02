@@ -491,6 +491,11 @@ impl PE64 {
     }
 
     pub fn iat_binding(&mut self, emu: &mut emu::Emu) {
+        // TODO: refactor this, instead of patching the raw and the loading it, do the iat_binding
+        // after the loading, in this way its possible to use virtual addreses instad of calculate
+        // the offset on the raw blob
+
+
         // https://docs.microsoft.com/en-us/archive/msdn-magazine/2002/march/inside-windows-an-in-depth-look-into-the-win32-portable-executable-file-format-part-2#Binding
 
         println!("IAT binding started {} ...", self.image_import_descriptor.len());
@@ -508,11 +513,12 @@ impl PE64 {
             }
 
             // Walking function names.
-            let mut off_name =
+            let mut off_name = 
                 PE32::vaddr_to_off(&self.sect_hdr, iim.original_first_thunk) as usize;
 
+            //println!("----> 0x{:x}", iim.first_thunk);
             let mut off_addr = PE32::vaddr_to_off(&self.sect_hdr, iim.first_thunk) as usize;
-            off_addr += 8;
+            //off_addr += 8;
 
 
             loop {

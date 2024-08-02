@@ -6,6 +6,7 @@ mod user32;
 mod winhttp;
 mod wininet;
 mod ws2_32;
+mod comctl64;
 
 use crate::emu;
 
@@ -20,6 +21,7 @@ pub fn gateway(addr: u64, name: String, emu: &mut emu::Emu) {
         "advapi32_text" => advapi32::gateway(addr, emu),
         "winhttp_text" => winhttp::gateway(addr, emu),
         "dnsapi_text" => dnsapi::gateway(addr, emu),
+        "comctl32.text" => comctl64::gateway(addr, emu),
         _ => panic!("/!\\ trying to execute on {} at 0x{:x}", name, addr),
     };
 

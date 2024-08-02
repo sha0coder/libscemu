@@ -3673,6 +3673,12 @@ pub fn load_code(&mut self, filename: &str) {
                         0x14 => {
                             unimplemented!("GS:[14]  get stack canary")
                         }
+                        0x1488 => {
+                            if self.cfg.verbose >= 1 {
+                                println!("Reading SEH 0x{:x}", self.seh); 
+                            }
+                            self.seh
+                        }
                         _ => {
                             println!("unimplemented gs:[{}]", mem_addr);
                             return None;
@@ -3786,7 +3792,7 @@ pub fn load_code(&mut self, filename: &str) {
                                     self.fs.insert(idx as u64, value);
                                 } else {
                                     if self.cfg.verbose >= 1 {
-                                        println!("setting SEH to 0x{:x}", value);
+                                        println!("fs:{:x} setting SEH to 0x{:x}", idx, value);
                                     }
                                     self.seh = value;
                                 }
@@ -6514,6 +6520,121 @@ pub fn load_code(&mut self, filename: &str) {
                 if !self.set_operand_value(&ins, 0, res) {
                     return false;
                 }
+            }
+
+            Mnemonic::Ucomiss => {
+                self.show_instruction(&self.colors.light_cyan, &ins);
+
+                assert!(ins.op_count() == 2);
+
+                let val1 = match self.get_operand_xmm_value_128(&ins, 0, true) {
+                    Some(v) => v,
+                    None => return false,
+                };
+
+                let val2 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                    Some(v) => v,
+                    None => return false,
+                };
+
+                let low_val1 = (val1 & 0xFFFFFFFF) as u32;
+                let low_val2 = (val2 & 0xFFFFFFFF) as u32;
+
+                let f1 = f32::from_bits(low_val1);
+                let f2 = f32::from_bits(low_val2);
+
+                
+                self.flags.f_zf = false;
+                self.flags.f_pf = false;
+                self.flags.f_cf = false;
+
+                if f1.is_nan() || f2.is_nan() {
+                    self.flags.f_pf = true;
+                } else if f1 == f2 {
+                    self.flags.f_zf = true;
+                } else if f1 < f2 {
+                    self.flags.f_cf = true;
+                }
+            }
+
+            Mnemonic::Ucomisd => {
+                self.show_instruction(&self.colors.light_cyan, &ins);
+
+                assert!(ins.op_count() == 2);
+
+                let value1 = match self.get_operand_xmm_value_128(&ins, 0, true) {
+                    Some(v) => v,
+                    None => return false,
+                };
+
+                let value2 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                    Some(v) => v,
+                    None => return false,
+                };
+
+                let low_val1 = (value1 & 0xFFFFFFFFFFFFFFFF) as u64;
+                let low_val2 = (value2 & 0xFFFFFFFFFFFFFFFF) as u64;
+
+                let f1 = f64::from_bits(low_val1);
+                let f2 = f64::from_bits(low_val2);
+
+                self.flags.f_zf = false;
+                self.flags.f_pf = false;
+                self.flags.f_cf = false;
+
+                if f1.is_nan() || f2.is_nan() {
+                    self.flags.f_pf = true;
+                } else if f1 == f2 {
+                    self.flags.f_zf = true;
+                } else if f1 < f2 {
+                    self.flags.f_cf = true;
+                }
+            }
+
+
+            Mnemonic::Movss => {
+                self.show_instruction(&self.colors.light_cyan, &ins);
+
+                if ins.op_count() > 2 {
+                    unimplemented!("Movss with 3 operands is not implemented yet");
+                }
+
+                assert!(ins.op_count() == 2);
+
+                let sz0 = self.get_operand_sz(&ins, 0);
+                let sz1 = self.get_operand_sz(&ins, 1);
+
+                if sz1 == 128 {
+                    let val = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                        Some(v) => v, 
+                        None => return false,
+                    };
+
+                    let vf32: f32 = f32::from_bits((val & 0xFFFFFFFF) as u32);
+                    let result: u32 = vf32.to_bits();
+
+                    if !self.set_operand_value(&ins, 0, result as u64) {
+                        return false;
+                    }
+
+                } else if sz0 == 128 && sz1 < 128 {
+                    let val = match self.get_operand_value(&ins, 1, true) {
+                        Some(v) => v,
+                        None => return false,
+                    };
+
+                    let value1_f32: f32 = f32::from_bits(val as u32);
+                    let result: u32 = value1_f32.to_bits();
+                    let xmm_value: u128 = result as u128;
+
+                    self.set_operand_xmm_value_128(&ins, 0, xmm_value);
+                
+
+
+                } else {
+                    unimplemented!("Movss unimplemented operation");
+                }
+
             }
 
             Mnemonic::Movsxd => {

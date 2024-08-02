@@ -921,6 +921,10 @@ impl PE32 {
         for sect in sections {
             if vaddr >= sect.virtual_address && 
                 vaddr < sect.virtual_address + sect.virtual_size {
+                    /*
+                    println!("{:x} = vaddr:{:x} - sect.vaddr:{:x} + sect.ptr2rawdata:{:x}", 
+                        (vaddr - sect.virtual_address + sect.pointer_to_raw_data),
+                        vaddr, sect.virtual_address, sect.pointer_to_raw_data); */
                     return vaddr - sect.virtual_address + sect.pointer_to_raw_data;
             }
         }
