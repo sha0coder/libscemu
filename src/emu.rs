@@ -40,6 +40,7 @@ use banzai::Banzai;
 use breakpoint::Breakpoint;
 use colors::Colors;
 use console::Console;
+use csv::ReaderBuilder;
 use eflags::Eflags;
 use elf32::Elf32;
 use elf64::Elf64;
@@ -372,7 +373,6 @@ impl Emu {
 
     pub fn init(&mut self) {
         self.pos = 0;
-        self.banzai.init();
 
         if !atty::is(Stream::Stdout) {
             self.cfg.nocolors = true;
@@ -401,6 +401,25 @@ impl Emu {
             self.init_stack32();
         }
 
+        // loading banzai on 32bits
+        if !self.cfg.is_64bits {
+            println!(
+                "loading banzai {} ...",
+                &format!("{}/banzai.csv", self.cfg.maps_folder)
+            );
+            let mut rdr = ReaderBuilder::new()
+                .from_path(&format!("{}/banzai.csv", self.cfg.maps_folder))
+                .expect("banzai.csv not found on maps folder, please download last scemu maps");
+
+            for result in rdr.records() {
+                let record = result.expect("error parsing banzai.csv");
+                let api = &record[0];
+                let params: i32 = record[1].parse().expect("error parsing maps32/banzai.csv");
+
+                self.banzai.add(api, params);
+            }
+            println!("loaded!");
+        }
         //self.init_tests();
     }
 

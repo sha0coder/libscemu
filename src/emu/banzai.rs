@@ -19,8 +19,10 @@ impl Banzai {
         self.api_params.insert(name.to_string(), nparams);
     }
 
-    //TODO: fix slow compilation of harcoded
-    pub fn init(&mut self) {
+    pub fn _init() {
+        // now this is loaded from maps32/
+
+        /*
         self.add("??2@YAPAXI@Z", 1);
         self.add("??2@YAPEAX_K@Z", 1);
         self.add("??3@YAXPAX@Z", 1);
@@ -15248,5 +15250,6 @@ impl Banzai {
         self.add("ZwUnloadDriver", 1);
         self.add("ZwUnmapViewOfSection", 2);
         self.add("ZwWriteFile", 9);
+        */
     }
 }
