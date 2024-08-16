@@ -9,7 +9,6 @@ use std::fs::File;
 use std::io::Read;
 use std::str;
 
-
 macro_rules! read_u8 {
     ($raw:expr, $off:expr) => {
         $raw[$off]
@@ -56,15 +55,15 @@ macro_rules! read_u64_le {
 
 macro_rules! write_u64_le {
     ($raw:expr, $off:expr, $val:expr) => {
-      $raw[$off+0] =  ($val & 0x00000000_000000ff) as u8;
-      $raw[$off+1] = (($val & 0x00000000_0000ff00) >> 8) as u8;
-      $raw[$off+2] = (($val & 0x00000000_00ff0000) >> 16) as u8;
-      $raw[$off+3] = (($val & 0x00000000_ff000000) >> 24) as u8;
-      $raw[$off+4] = (($val & 0x000000ff_00000000) >> 32) as u8;
-      $raw[$off+5] = (($val & 0x0000ff00_00000000) >> 40) as u8;
-      $raw[$off+6] = (($val & 0x00ff0000_00000000) >> 48) as u8;
-      $raw[$off+7] = (($val & 0xff000000_00000000) >> 56) as u8;
-    }
+        $raw[$off + 0] = ($val & 0x00000000_000000ff) as u8;
+        $raw[$off + 1] = (($val & 0x00000000_0000ff00) >> 8) as u8;
+        $raw[$off + 2] = (($val & 0x00000000_00ff0000) >> 16) as u8;
+        $raw[$off + 3] = (($val & 0x00000000_ff000000) >> 24) as u8;
+        $raw[$off + 4] = (($val & 0x000000ff_00000000) >> 32) as u8;
+        $raw[$off + 5] = (($val & 0x0000ff00_00000000) >> 40) as u8;
+        $raw[$off + 6] = (($val & 0x00ff0000_00000000) >> 48) as u8;
+        $raw[$off + 7] = (($val & 0xff000000_00000000) >> 56) as u8;
+    };
 }
 
 /*
@@ -213,8 +212,8 @@ impl DelayLoadIAT {
     fn load(raw: &Vec<u8>, off: usize) -> DelayLoadIAT {
         DelayLoadIAT {
             name_ptr: read_u32_le!(raw, off),
-            iat_addr: read_u64_le!(raw, off+4),
-            bound_iat: read_u64_le!(raw, off+8),
+            iat_addr: read_u64_le!(raw, off + 4),
+            bound_iat: read_u64_le!(raw, off + 8),
         }
     }
 }
@@ -226,14 +225,15 @@ pub struct PE64 {
     pub nt: pe32::ImageNtHeaders,
     pub fh: pe32::ImageFileHeader,
     pub opt: ImageOptionalHeader64,
-    sect_hdr: Vec<pe32::ImageSectionHeader>,
-    pub delay_load_dir: Vec<pe32::DelayLoadDirectory>, 
+    pub sect_hdr: Vec<pe32::ImageSectionHeader>,
+    pub delay_load_dir: Vec<pe32::DelayLoadDirectory>,
     pub image_import_descriptor: Vec<pe32::ImageImportDescriptor>,
 }
 
 impl PE64 {
     pub fn is_pe64(filename: &str) -> bool {
         let mut fd = File::open(filename).expect("file not found");
+        println!("loading pe64: {}", filename);
         let mut raw = vec![0u8; pe32::ImageDosHeader::size()];
         fd.read_exact(&mut raw).expect("couldnt read the file");
         let dos = pe32::ImageDosHeader::load(&raw, 0);
@@ -261,7 +261,7 @@ impl PE64 {
         let opt = ImageOptionalHeader64::load(&raw, dos.e_lfanew as usize + 24);
         let mut sect: Vec<pe32::ImageSectionHeader> = Vec::new();
 
-        let mut off = dos.e_lfanew as usize + 264;
+        let mut off = dos.e_lfanew as usize + 24 + fh.size_of_optional_header as usize;
         for i in 0..fh.number_of_sections {
             let s = pe32::ImageSectionHeader::load(&raw, off);
             sect.push(s);
@@ -272,7 +272,8 @@ impl PE64 {
         let exportd: pe32::ImageExportDirectory;
         let import_va = opt.data_directory[pe32::IMAGE_DIRECTORY_ENTRY_IMPORT].virtual_address;
         let export_va = opt.data_directory[pe32::IMAGE_DIRECTORY_ENTRY_EXPORT].virtual_address;
-        let delay_load_va = opt.data_directory[pe32::IMAGE_DIRECTORY_ENTRY_DELAY_LOAD].virtual_address;
+        let delay_load_va =
+            opt.data_directory[pe32::IMAGE_DIRECTORY_ENTRY_DELAY_LOAD].virtual_address;
         let mut import_off: usize;
         let mut delay_load_off: usize;
 
@@ -384,17 +385,23 @@ impl PE64 {
     }
 
     pub fn get_section_ptr(&self, id: usize) -> &[u8] {
+        if id > self.sect_hdr.len() {
+            panic!("/!\\ warning: invalid section id {}", id);
+        }
         let off = self.sect_hdr[id].pointer_to_raw_data as usize;
-        let mut sz = self.sect_hdr[id].size_of_raw_data as usize; //TODO: coger sz en disk no en va
+        let sz = self.sect_hdr[id].size_of_raw_data as usize; //TODO: coger sz en disk
         if off + sz >= self.raw.len() {
             println!(
-                "/!\\ warning: raw sz:{} off:{} sz:{}  off+sz:{}",
+                "/!\\ warning: id:{} name:{} raw sz:{} off:{} sz:{}  off+sz:{}",
+                id,
+                self.sect_hdr[id].get_name(),
                 self.raw.len(),
                 off,
                 sz,
                 off + sz
             );
-            sz = self.raw.len() - off - 1;
+            //sz = self.raw.len() - off - 1;
+            return &[];
         }
         let section_ptr = &self.raw[off..off + sz];
         return section_ptr;
@@ -403,7 +410,7 @@ impl PE64 {
     pub fn get_section_vaddr(&self, id: usize) -> u32 {
         return self.sect_hdr[id].virtual_address;
     }
-    
+
     pub fn get_tls_callbacks(&self, vaddr: u32) -> Vec<u64> {
         let tls_off; // = PE32::vaddr_to_off(&self.sect_hdr, vaddr) as usize;
         let mut callbacks: Vec<u64> = Vec::new();
@@ -423,7 +430,6 @@ impl PE64 {
 
         let tls = TlsDirectory64::load(&self.raw, tls_off);
         tls.print();
-
 
         //let mut cb_off = tls.tls_callbacks - iat as u64 - self.opt.image_base - align as u64;
         let mut cb_off = PE32::vaddr_to_off(&self.sect_hdr, (tls.tls_callbacks & 0xffff) as u32);
@@ -455,7 +461,7 @@ impl PE64 {
             let mut off_addr = PE32::vaddr_to_off(&self.sect_hdr, dld.address_table) as usize;
 
             loop {
-                if self.raw.len() <= off_name+4 || self.raw.len() <= off_addr+4 {
+                if self.raw.len() <= off_name + 4 || self.raw.len() <= off_addr + 4 {
                     break;
                 }
 
@@ -484,10 +490,8 @@ impl PE64 {
                 off_name += pe32::HintNameItem::size();
                 off_addr += 8;
             }
-                
         }
         println!("delay load bound!");
-
     }
 
     pub fn iat_binding(&mut self, emu: &mut emu::Emu) {
@@ -495,10 +499,12 @@ impl PE64 {
         // after the loading, in this way its possible to use virtual addreses instad of calculate
         // the offset on the raw blob
 
-
         // https://docs.microsoft.com/en-us/archive/msdn-magazine/2002/march/inside-windows-an-in-depth-look-into-the-win32-portable-executable-file-format-part-2#Binding
 
-        println!("IAT binding started {} ...", self.image_import_descriptor.len());
+        println!(
+            "IAT binding started {} ...",
+            self.image_import_descriptor.len()
+        );
 
         for i in 0..self.image_import_descriptor.len() {
             let iim = &self.image_import_descriptor[i];
@@ -513,17 +519,16 @@ impl PE64 {
             }
 
             // Walking function names.
-            let mut off_name = 
+            let mut off_name =
                 PE32::vaddr_to_off(&self.sect_hdr, iim.original_first_thunk) as usize;
 
             //println!("----> 0x{:x}", iim.first_thunk);
             let mut off_addr = PE32::vaddr_to_off(&self.sect_hdr, iim.first_thunk) as usize;
             //off_addr += 8;
 
-
             loop {
-                if self.raw.len() <= off_name+4 || self.raw.len() <= off_addr+8 {
-                   break;
+                if self.raw.len() <= off_name + 4 || self.raw.len() <= off_addr + 8 {
+                    break;
                 }
 
                 let hint = pe32::HintNameItem::load(&self.raw, off_name);
@@ -547,7 +552,7 @@ impl PE64 {
                     println!("binded 0x{:x} {}", real_addr, func_name);
                 }*/
 
-                //println!("patching 0x{:x} at 0x{:x}", real_addr, off_addr); 
+                //println!("patching 0x{:x} at 0x{:x}", real_addr, off_addr);
                 write_u64_le!(self.raw, off_addr, real_addr);
 
                 off_name += pe32::HintNameItem::size();

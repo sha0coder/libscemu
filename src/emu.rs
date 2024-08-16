@@ -4,7 +4,6 @@
 #![allow(unused_must_use)]
 #![allow(clippy::assertions_on_constants)]
 
-mod err;
 pub mod banzai;
 pub mod breakpoint;
 pub mod colors;
@@ -13,7 +12,10 @@ pub mod constants;
 pub mod context32;
 pub mod context64;
 pub mod eflags;
+mod err;
 //pub mod endpoint;
+mod elf32;
+mod elf64;
 mod exception;
 pub mod flags;
 pub mod fpu;
@@ -24,8 +26,6 @@ mod pe32;
 mod pe64;
 mod peb32;
 mod peb64;
-mod elf32;
-mod elf64;
 pub mod regs64;
 pub mod script;
 pub mod structures;
@@ -34,7 +34,6 @@ pub mod syscall64;
 mod winapi32;
 mod winapi64;
 
-use err::ScemuError;
 use crate::config::Config;
 use atty::Stream;
 use banzai::Banzai;
@@ -42,6 +41,9 @@ use breakpoint::Breakpoint;
 use colors::Colors;
 use console::Console;
 use eflags::Eflags;
+use elf32::Elf32;
+use elf64::Elf64;
+use err::ScemuError;
 use flags::Flags;
 use fpu::FPU;
 use hook::Hook;
@@ -49,20 +51,16 @@ use maps::Maps;
 use pe32::PE32;
 use pe64::PE64;
 use regs64::Regs64;
-use elf32::Elf32;
-use elf64::Elf64;
-use std::time::Instant;
+use std::collections::BTreeMap;
 use std::sync::atomic;
 use std::sync::Arc;
-use std::collections::BTreeMap;
+use std::time::Instant;
 //use std::arch::asm;
 
 use iced_x86::{
     Decoder, DecoderOptions, Formatter, Instruction, InstructionInfoFactory, IntelFormatter,
     MemorySize, Mnemonic, OpKind, Register,
 };
-
-
 
 /*
 macro_rules! rotate_left {
@@ -207,7 +205,7 @@ impl Emu {
     }
 
     // configure the base address of stack map
-    pub fn set_stack_address(&mut self, addr: u64) { 
+    pub fn set_stack_address(&mut self, addr: u64) {
         self.cfg.stack_addr = addr;
     }
 
@@ -294,13 +292,14 @@ impl Emu {
         let stack = self.maps.get_mem("stack");
 
         if self.cfg.stack_addr == 0 {
-            self.cfg.stack_addr = 0x212000; 
+            self.cfg.stack_addr = 0x212000;
         }
 
-        stack.set_base(self.cfg.stack_addr); 
+        stack.set_base(self.cfg.stack_addr);
         stack.set_size(0x030000);
         self.regs.set_esp(self.cfg.stack_addr + 0x1c000 + 4);
-        self.regs.set_ebp(self.cfg.stack_addr + 0x1c000 + 4 + 0x1000);
+        self.regs
+            .set_ebp(self.cfg.stack_addr + 0x1c000 + 4 + 0x1000);
 
         assert!(self.regs.get_esp() < self.regs.get_ebp());
         assert!(self.regs.get_esp() > stack.get_base());
@@ -318,8 +317,8 @@ impl Emu {
             self.cfg.stack_addr = 0x22a000;
         }
 
-        self.regs.rsp = self.cfg.stack_addr+0x4000;
-        self.regs.rbp = self.cfg.stack_addr+0x4000+0x1000;
+        self.regs.rsp = self.cfg.stack_addr + 0x4000;
+        self.regs.rbp = self.cfg.stack_addr + 0x4000 + 0x1000;
         stack.set_base(self.cfg.stack_addr);
         stack.set_size(0x6000);
 
@@ -414,14 +413,18 @@ impl Emu {
         std::env::set_current_dir(self.cfg.maps_folder.clone());
         if dyn_link {
             //self.regs.rsp = 0x7fffffffe2b0;
-            self.regs.rsp = 0x7fffffffe790; 
-            self.maps.create_map("linux_dynamic_stack").load_at(0x7ffffffde000);
+            self.regs.rsp = 0x7fffffffe790;
+            self.maps
+                .create_map("linux_dynamic_stack")
+                .load_at(0x7ffffffde000);
             //self.maps.create_map("dso_dyn").load_at(0x7ffff7ffd0000);
             self.maps.create_map("dso_dyn").load_at(0x7ffff7fd0000);
             self.maps.create_map("linker").load_at(0x7ffff7ffe000);
         } else {
             self.regs.rsp = 0x7fffffffe270;
-            self.maps.create_map("linux_static_stack").load_at(0x7ffffffde000);
+            self.maps
+                .create_map("linux_static_stack")
+                .load_at(0x7ffffffde000);
             self.maps.create_map("dso").load_at(0x7ffff7ffd000);
         }
         let tls = self.maps.create_map("tls");
@@ -436,7 +439,7 @@ impl Emu {
             //heap.set_base(0x4b5000);
             let heap = self.maps.create_map("heap");
             heap.set_base(0x4b5b00);
-            heap.set_size(0x4d8000-0x4b5000);
+            heap.set_size(0x4d8000 - 0x4b5000);
         }
 
         self.regs.rbp = 0;
@@ -447,7 +450,6 @@ impl Emu {
         self.fs.insert(0xffffffffffffffa0, 0x4b3980);
         self.fs.insert(0x18, 0);
         self.fs.insert(40, 0x4b27a0);
-
     }
 
     pub fn init_mem32(&mut self) {
@@ -912,7 +914,9 @@ impl Emu {
         //self.maps.create_map("msvcrt_text").load_at(0x7fefef01000);
         self.maps.create_map("advapi32_pe").load_at(0x7fefefa0000);
         self.maps.create_map("advapi32_text").load_at(0x7fefefa1000);
-        self.maps.create_map("advapi32_rdata").load_at(0x7feff00a000);
+        self.maps
+            .create_map("advapi32_rdata")
+            .load_at(0x7feff00a000);
         self.maps.create_map("oleaut32_pe").load_at(0x7feff180000);
         self.maps.create_map("oleaut32_text").load_at(0x7feff181000);
         self.maps
@@ -997,7 +1001,6 @@ impl Emu {
             base
         );*/
 
-
         for i in 0..pe32.num_of_sections() {
             let base: u32;
             if force_base > 0 {
@@ -1036,8 +1039,8 @@ impl Emu {
             }
             if sect.get_name() == ".text" {
                 //map.set_size( (map.size() + 0x1000) as u64 );
-                map.set_size( map.size() as u64 );
-            }  
+                map.set_size(map.size() as u64);
+            }
             map.memcpy(ptr, ptr.len());
 
             /*println!(
@@ -1079,7 +1082,7 @@ impl Emu {
         peb64::dynamic_link_module(base, 0x3c, libname, self);
     }
 
-    pub fn load_pe64(&mut self, filename:&str, set_entry:bool, force_base:u64) -> (u64, u32) {
+    pub fn load_pe64(&mut self, filename: &str, set_entry: bool, force_base: u64) -> (u64, u32) {
         let is_maps = filename.contains("maps64/");
         let mut pe64 = PE64::load(filename);
         let base: u64;
@@ -1105,8 +1108,6 @@ impl Emu {
                     }
                 }
             } else {
-
-
                 if self.maps.overlaps(pe64.opt.image_base, pe64.size()) {
                     base = self.maps.lib64_alloc(pe64.size()).expect("out of memory");
                 } else {
@@ -1119,123 +1120,125 @@ impl Emu {
             }
         }
 
-    /*
-    if force_base > 0 {
-        base = force_base;
-    } else {
-        if is_maps && pe64.is_dll() {
-            base = self.maps.lib64_alloc(pe64.size()).expect("out of memory");
-        } else {
-            base = match self.maps.get_mem_by_addr(pe64.opt.image_base + 0x1000) {
-                Some(_) => self.maps.alloc(pe64.size()).expect("out of memory"),
-                None => pe64.opt.image_base,
-            };
-        }
-    }
-
-    if set_entry && !is_maps && self.cfg.code_base_addr != 0x3c0000 {
-        base = self.cfg.code_base_addr;
-    }
-    */
-
-    let map_name = self.filename_to_mapname(filename);
-
-    if set_entry && !is_maps {
-        pe64.iat_binding(self);
-        pe64.delay_load_binding(self);
-    }
-
-    //TODO: query if this vaddr is already used
-    let pemap = self.maps.create_map(&format!("{}.pe", map_name));
-    pemap.set_base(base.into());
-    pemap.set_size(pe64.opt.size_of_headers.into());
-    pemap.memcpy(pe64.get_headers(), pe64.opt.size_of_headers as usize);
-
-    /*println!("Loaded {}", filename);
-    println!(
-        "\t{} sections, base addr 0x{:x}",
-        pe64.num_of_sections(),
-        base
-    );*/
-
-    for i in 0..pe64.num_of_sections() {
-        /*let base;
+        /*
         if force_base > 0 {
             base = force_base;
         } else {
-            base = pe64.opt.image_base;
-        }*/
-        let ptr = pe64.get_section_ptr(i);
-        let sect = pe64.get_section(i);
-        let map = self.maps.create_map(&format!(
-            "{}{}",
-            map_name,
-            sect.get_name()
-                .replace(" ", "")
-                .replace("\t", "")
-                .replace("\x0a", "")
-                .replace("\x0d", "")
-        ));
-
-        map.set_base(base + sect.virtual_address as u64);
-        if sect.virtual_size > sect.size_of_raw_data {
-            map.set_size(sect.virtual_size as u64);
-        } else {
-            map.set_size(sect.size_of_raw_data as u64);
-        }
-        map.memcpy(ptr, ptr.len());
-
-        /*println!(
-            "\tcreated pe64 map for section `{}` at 0x{:x} size: {}",
-            sect.get_name(),
-            map.get_base(),
-            sect.virtual_size
-        );*/
-
-        if set_entry {
-            if sect.get_name() == ".text" || i == 0 {
-                if pe64.opt.address_of_entry_point == 0 {
-                    self.regs.rip =
-                        base + sect.virtual_address as u64 + sect.pointer_to_raw_data as u64;
-                } else {
-                    self.regs.rip = base + pe64.opt.address_of_entry_point as u64;
-                }
-
-                println!(
-                    "\tentry point at 0x{:x}  0x{:x} ",
-                    self.regs.rip, pe64.opt.address_of_entry_point
-                );
-            } else if sect.get_name() == ".tls" {
-                let tls_off = sect.pointer_to_raw_data;
-                self.tls_callbacks = pe64.get_tls_callbacks(sect.virtual_address);
+            if is_maps && pe64.is_dll() {
+                base = self.maps.lib64_alloc(pe64.size()).expect("out of memory");
+            } else {
+                base = match self.maps.get_mem_by_addr(pe64.opt.image_base + 0x1000) {
+                    Some(_) => self.maps.alloc(pe64.size()).expect("out of memory"),
+                    None => pe64.opt.image_base,
+                };
             }
         }
+
+        if set_entry && !is_maps && self.cfg.code_base_addr != 0x3c0000 {
+            base = self.cfg.code_base_addr;
+        }
+        */
+
+        let map_name = self.filename_to_mapname(filename);
+
+        if set_entry && !is_maps {
+            pe64.iat_binding(self);
+            pe64.delay_load_binding(self);
+        }
+
+        //TODO: query if this vaddr is already used
+        let pemap = self.maps.create_map(&format!("{}.pe", map_name));
+        pemap.set_base(base.into());
+        pemap.set_size(pe64.opt.size_of_headers.into());
+        pemap.memcpy(pe64.get_headers(), pe64.opt.size_of_headers as usize);
+
+        /*println!("Loaded {}", filename);
+        println!(
+            "\t{} sections, base addr 0x{:x}",
+            pe64.num_of_sections(),
+            base
+        );*/
+
+        for i in 0..pe64.num_of_sections() {
+            /*let base;
+            if force_base > 0 {
+                base = force_base;
+            } else {
+                base = pe64.opt.image_base;
+            }*/
+            //println!("id:{} name:{}", i, pe64.sect_hdr[i].get_name());
+            let ptr = pe64.get_section_ptr(i);
+            let sect = pe64.get_section(i);
+            let map = self.maps.create_map(&format!(
+                "{}{}",
+                map_name,
+                sect.get_name()
+                    .replace(" ", "")
+                    .replace("\t", "")
+                    .replace("\x0a", "")
+                    .replace("\x0d", "")
+            ));
+
+            map.set_base(base + sect.virtual_address as u64);
+            if sect.virtual_size > sect.size_of_raw_data {
+                map.set_size(sect.virtual_size as u64);
+            } else {
+                map.set_size(sect.size_of_raw_data as u64);
+            }
+            map.memcpy(ptr, ptr.len());
+
+            /*println!(
+                "\tcreated pe64 map for section `{}` at 0x{:x} size: {}",
+                sect.get_name(),
+                map.get_base(),
+                sect.virtual_size
+            );*/
+
+            if set_entry {
+                if sect.get_name() == ".text" || i == 0 {
+                    if pe64.opt.address_of_entry_point == 0 {
+                        println!("zero entry!!");
+                        self.regs.rip =
+                            base + sect.virtual_address as u64 + sect.pointer_to_raw_data as u64;
+                    } else {
+                        self.regs.rip = base + pe64.opt.address_of_entry_point as u64;
+                    }
+
+                    println!(
+                        "\tentry point at 0x{:x}  0x{:x} ",
+                        self.regs.rip, pe64.opt.address_of_entry_point
+                    );
+                } else if sect.get_name() == ".tls" {
+                    let tls_off = sect.pointer_to_raw_data;
+                    self.tls_callbacks = pe64.get_tls_callbacks(sect.virtual_address);
+                }
+            }
+        }
+
+        let pe_hdr_off = pe64.dos.e_lfanew;
+
+        pe64.clear();
+        return (base, pe_hdr_off);
     }
 
-    let pe_hdr_off = pe64.dos.e_lfanew;
-
-    pe64.clear();
-    return (base, pe_hdr_off);
-}
-
-pub fn set_config(&mut self, cfg: Config) {
-    self.cfg = cfg;
-    if self.cfg.console {
-        self.exp = self.cfg.console_num;
+    pub fn set_config(&mut self, cfg: Config) {
+        self.cfg = cfg;
+        if self.cfg.console {
+            self.exp = self.cfg.console_num;
+        }
+        if self.cfg.nocolors {
+            self.colors.disable();
+        }
     }
-    if self.cfg.nocolors {
-        self.colors.disable();
-    }
-}
 
-pub fn load_code(&mut self, filename: &str) {
-    self.filename = filename.to_string();
-    self.cfg.filename = self.filename.clone();
+    pub fn load_code(&mut self, filename: &str) {
+        self.filename = filename.to_string();
+        self.cfg.filename = self.filename.clone();
 
-    //let map_name = self.filename_to_mapname(filename);
-    //self.cfg.filename = map_name;
+        //let map_name = self.filename_to_mapname(filename);
+        //self.cfg.filename = map_name;
 
-    if Elf32::is_elf32(filename) {
+        if Elf32::is_elf32(filename) {
             self.linux = true;
             self.cfg.is_64bits = false;
 
@@ -1245,11 +1248,9 @@ pub fn load_code(&mut self, filename: &str) {
             self.regs.rip = elf32.elf_hdr.e_entry.into();
             let stack_sz = 0x30000;
             let stack = self.alloc("stack", stack_sz);
-            self.regs.rsp = stack+(stack_sz/2);
+            self.regs.rsp = stack + (stack_sz / 2);
             //unimplemented!("elf32 is not supported for now");
-
-    } else if Elf64::is_elf64(filename) {
-
+        } else if Elf64::is_elf64(filename) {
             self.linux = true;
             self.cfg.is_64bits = true;
             self.maps.clear();
@@ -1258,9 +1259,14 @@ pub fn load_code(&mut self, filename: &str) {
 
             let mut elf64 = Elf64::parse(filename).unwrap();
             let dyn_link = elf64.get_dynamic().len() > 0;
-            elf64.load(&mut self.maps, "elf64", false, dyn_link, self.cfg.code_base_addr);
+            elf64.load(
+                &mut self.maps,
+                "elf64",
+                false,
+                dyn_link,
+                self.cfg.code_base_addr,
+            );
             self.init_linux64(dyn_link);
-
 
             if dyn_link {
                 let mut ld = Elf64::parse("/lib64/ld-linux-x86-64.so.2").unwrap();
@@ -1270,11 +1276,8 @@ pub fn load_code(&mut self, filename: &str) {
                 self.regs.rip = ld.elf_hdr.e_entry + elf64::LD_BASE;
                 self.run(None);
             } else {
-                 self.regs.rip = elf64.elf_hdr.e_entry;
+                self.regs.rip = elf64.elf_hdr.e_entry;
             }
-
-
-
 
             /*
             for lib in elf64.get_dynamic() {
@@ -1296,33 +1299,29 @@ pub fn load_code(&mut self, filename: &str) {
                     None => {}
                 }*/
             }*/
-
-
-
-    } else if !self.cfg.is_64bits && PE32::is_pe32(filename) {
-        println!("PE32 header detected.");
-        let (base, pe_off) = self.load_pe32(filename, true, 0);
-        let ep = self.regs.rip;
-
-        // emulating tls callbacks
-        for i in 0..self.tls_callbacks.len() {
-            self.regs.rip = self.tls_callbacks[i];
-            println!("emulating tls_callback {} at 0x{:x}", i+1, self.regs.rip);
-            self.stack_push32(base);
-            self.run(Some(base as u64));
-        }
-
-        self.regs.rip = ep;
-
-    } else if self.cfg.is_64bits && PE64::is_pe64(filename) {
-        println!("PE64 header detected.");
-        let (base, pe_off) = self.load_pe64(filename, true, 0);
+        } else if !self.cfg.is_64bits && PE32::is_pe32(filename) {
+            println!("PE32 header detected.");
+            let (base, pe_off) = self.load_pe32(filename, true, 0);
             let ep = self.regs.rip;
 
             // emulating tls callbacks
             for i in 0..self.tls_callbacks.len() {
                 self.regs.rip = self.tls_callbacks[i];
-                println!("emulating tls_callback {} at 0x{:x}", i+1, self.regs.rip);
+                println!("emulating tls_callback {} at 0x{:x}", i + 1, self.regs.rip);
+                self.stack_push32(base);
+                self.run(Some(base as u64));
+            }
+
+            self.regs.rip = ep;
+        } else if self.cfg.is_64bits && PE64::is_pe64(filename) {
+            println!("PE64 header detected.");
+            let (base, pe_off) = self.load_pe64(filename, true, 0);
+            let ep = self.regs.rip;
+
+            // emulating tls callbacks
+            for i in 0..self.tls_callbacks.len() {
+                self.regs.rip = self.tls_callbacks[i];
+                println!("emulating tls_callback {} at 0x{:x}", i + 1, self.regs.rip);
                 self.stack_push64(base);
                 self.run(Some(base));
             }
@@ -1399,7 +1398,7 @@ pub fn load_code(&mut self, filename: &str) {
                 Some(n) => n,
                 None => "not mapped".to_string(),
             };
-            println!("\tmem_trace: pos = {} rip = {:x} op = write bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", 
+            println!("\tmem_trace: pos = {} rip = {:x} op = write bits = {} address = 0x{:x} value = 0x{:x} name = '{}'",
                 self.pos, self.regs.rip, 32, self.regs.get_esp(), value, name);
         }
 
@@ -1529,8 +1528,9 @@ pub fn load_code(&mut self, filename: &str) {
 
         if self.cfg.verbose >= 1
             && pop_instruction
-            && self.maps.get_mem("code").inside(value.into()) {
-                println!("/!\\ poping a code address 0x{:x}", value);
+            && self.maps.get_mem("code").inside(value.into())
+        {
+            println!("/!\\ poping a code address 0x{:x}", value);
         }
 
         if self.cfg.trace_mem {
@@ -1595,7 +1595,7 @@ pub fn load_code(&mut self, filename: &str) {
 
         self.regs.rsp += 8;
         Some(value)
-    } 
+    }
 
     // this is not used on the emulation
     pub fn memory_operand_to_address(&mut self, operand: &str) -> u64 {
@@ -1925,10 +1925,8 @@ pub fn load_code(&mut self, filename: &str) {
             self.regs.rip = addr;
             //self.force_break = true;
         } else {
-
             if self.linux {
                 self.regs.rip = addr; // in linux libs are no implemented are emulated
-                        
             } else {
                 if self.cfg.verbose >= 1 {
                     println!("/!\\ changing RIP to {} ", name);
@@ -3153,7 +3151,7 @@ pub fn load_code(&mut self, filename: &str) {
                     con.print("spaced bytes");
                     let sbs = con.cmd();
                     let results = self.maps.search_spaced_bytes_in_all(&sbs);
-                    if results.len() == 0  {
+                    if results.len() == 0 {
                         println!("not found.");
                     } else {
                         if self.cfg.is_64bits {
@@ -3554,14 +3552,17 @@ pub fn load_code(&mut self, filename: &str) {
                             if self.cfg.verbose > 0 {
                                 println!("reading FS[0x{:x}] -> 0", mem_addr);
                             }
-                            return Some(0); //0x7ffff7fff000); 
+                            return Some(0); //0x7ffff7fff000);
                         }
                     }
 
                     let value: u64 = match mem_addr {
                         0xc0 => {
                             if self.cfg.verbose >= 1 {
-                               println!("{} Reading ISWOW64 is 32bits on a 64bits system?", self.pos);
+                                println!(
+                                    "{} Reading ISWOW64 is 32bits on a 64bits system?",
+                                    self.pos
+                                );
                             }
                             if self.cfg.is_64bits {
                                 0
@@ -3675,7 +3676,7 @@ pub fn load_code(&mut self, filename: &str) {
                         }
                         0x1488 => {
                             if self.cfg.verbose >= 1 {
-                                println!("Reading SEH 0x{:x}", self.seh); 
+                                println!("Reading SEH 0x{:x}", self.seh);
                             }
                             self.seh
                         }
@@ -3771,7 +3772,7 @@ pub fn load_code(&mut self, filename: &str) {
                 if self.regs.is_fpu(ins.op_register(noperand)) {
                     self.fpu.set_streg(ins.op_register(noperand), value as f32);
                 } else {
-                    self.regs.set_reg(ins.op_register(noperand), value); 
+                    self.regs.set_reg(ins.op_register(noperand), value);
                 }
             }
 
@@ -3995,7 +3996,6 @@ pub fn load_code(&mut self, filename: &str) {
         noperand: u32,
         do_derref: bool,
     ) -> Option<regs64::U256> {
-
         assert!(ins.op_count() > noperand);
 
         let value: regs64::U256 = match ins.op_kind(noperand) {
@@ -4028,13 +4028,12 @@ pub fn load_code(&mut self, filename: &str) {
                         None => (),
                     }
 
-
                     let bytes = self.maps.read_bytes(mem_addr, 32);
                     let value = regs64::U256::from_little_endian(&bytes);
 
                     value
                 } else {
-                    regs64::U256::from(mem_addr as u64) 
+                    regs64::U256::from(mem_addr as u64)
                 }
             }
             _ => unimplemented!("unimplemented operand type {:?}", ins.op_kind(noperand)),
@@ -4042,9 +4041,13 @@ pub fn load_code(&mut self, filename: &str) {
         Some(value)
     }
 
-    pub fn set_operand_ymm_value_256(&mut self, ins: &Instruction, noperand: u32, value: regs64::U256) {
+    pub fn set_operand_ymm_value_256(
+        &mut self,
+        ins: &Instruction,
+        noperand: u32,
+        value: regs64::U256,
+    ) {
         assert!(ins.op_count() > noperand);
-
 
         match ins.op_kind(noperand) {
             OpKind::Register => self.regs.set_ymm_reg(ins.op_register(noperand), value),
@@ -4067,7 +4070,7 @@ pub fn load_code(&mut self, filename: &str) {
                     None => value_u128,
                 };
 
-                let mut bytes:Vec<u8> = vec![0;32];
+                let mut bytes: Vec<u8> = vec![0; 32];
                 value.to_little_endian(&mut bytes);
                 self.maps.write_bytes(mem_addr, bytes);
             }
@@ -4217,7 +4220,9 @@ pub fn load_code(&mut self, filename: &str) {
 
     pub fn call32(&mut self, addr: u64, args: &[u64]) -> Result<u32, ScemuError> {
         if addr == self.regs.get_eip() {
-            return Err(ScemuError::new("return address reached after starting, change eip."));
+            return Err(ScemuError::new(
+                "return address reached after starting, change eip.",
+            ));
         }
         let orig_stack = self.regs.get_esp();
         for arg in args.iter().rev() {
@@ -4233,7 +4238,9 @@ pub fn load_code(&mut self, filename: &str) {
 
     pub fn call64(&mut self, addr: u64, args: &[u64]) -> Result<u64, ScemuError> {
         if addr == self.regs.rip {
-            return Err(ScemuError::new("return address reached after starting, change rip."));
+            return Err(ScemuError::new(
+                "return address reached after starting, change rip.",
+            ));
         }
 
         let n = args.len();
@@ -4255,7 +4262,7 @@ pub fn load_code(&mut self, filename: &str) {
                 self.stack_push64(*arg);
             }
         }
-    
+
         let ret_addr = self.regs.rip;
         self.stack_push64(ret_addr);
         self.regs.rip = addr;
@@ -4354,7 +4361,6 @@ pub fn load_code(&mut self, filename: &str) {
     ///  RUN ENGINE ///
 
     pub fn run(&mut self, end_addr: Option<u64>) -> Result<u64, ScemuError> {
-
         self.is_running.store(1, atomic::Ordering::Relaxed);
         let is_running2 = Arc::clone(&self.is_running);
 
@@ -4567,11 +4573,7 @@ pub fn load_code(&mut self, filename: &str) {
                                     self.pos,
                                     self.regs.get_eip() as u32
                                 ),
-                                "xmm1" => println!(
-                                    "\t{} xmm1: 0x{:x}",
-                                    self.pos,
-                                    self.regs.xmm1
-                                ),
+                                "xmm1" => println!("\t{} xmm1: 0x{:x}", self.pos, self.regs.xmm1),
                                 _ => panic!("invalid register."),
                             }
                         }
@@ -4662,7 +4664,6 @@ pub fn load_code(&mut self, filename: &str) {
                         self.force_break = false;
                         break;
                     }
-
                 } // end decoder loop
             } // end running loop
 
@@ -4946,7 +4947,6 @@ pub fn load_code(&mut self, filename: &str) {
 
                 if ins.op_count() == 0 {
                     imm = 10;
-
                 } else {
                     imm = match self.get_operand_value(&ins, 0, true) {
                         Some(v) => v,
@@ -4954,7 +4954,7 @@ pub fn load_code(&mut self, filename: &str) {
                     };
                 }
 
-                low = (low + (imm*high)) & 0xff;
+                low = (low + (imm * high)) & 0xff;
                 self.regs.set_al(low);
                 self.regs.set_ah(0);
 
@@ -6340,7 +6340,6 @@ pub fn load_code(&mut self, filename: &str) {
                         println!("/!\\ undefined behavior on BSF with src == 0");
                     }
                 } else {
-
                     self.flags.f_zf = false;
 
                     if !self.set_operand_value(&ins, 0, value1.trailing_zeros() as u64) {
@@ -6543,7 +6542,6 @@ pub fn load_code(&mut self, filename: &str) {
                 let f1 = f32::from_bits(low_val1);
                 let f2 = f32::from_bits(low_val2);
 
-                
                 self.flags.f_zf = false;
                 self.flags.f_pf = false;
                 self.flags.f_cf = false;
@@ -6591,7 +6589,6 @@ pub fn load_code(&mut self, filename: &str) {
                 }
             }
 
-
             Mnemonic::Movss => {
                 self.show_instruction(&self.colors.light_cyan, &ins);
 
@@ -6606,7 +6603,7 @@ pub fn load_code(&mut self, filename: &str) {
 
                 if sz1 == 128 {
                     let val = match self.get_operand_xmm_value_128(&ins, 1, true) {
-                        Some(v) => v, 
+                        Some(v) => v,
                         None => return false,
                     };
 
@@ -6616,7 +6613,6 @@ pub fn load_code(&mut self, filename: &str) {
                     if !self.set_operand_value(&ins, 0, result as u64) {
                         return false;
                     }
-
                 } else if sz0 == 128 && sz1 < 128 {
                     let val = match self.get_operand_value(&ins, 1, true) {
                         Some(v) => v,
@@ -6628,13 +6624,9 @@ pub fn load_code(&mut self, filename: &str) {
                     let xmm_value: u128 = result as u128;
 
                     self.set_operand_xmm_value_128(&ins, 0, xmm_value);
-                
-
-
                 } else {
                     unimplemented!("Movss unimplemented operation");
                 }
-
             }
 
             Mnemonic::Movsxd => {
@@ -7042,9 +7034,9 @@ pub fn load_code(&mut self, filename: &str) {
             }
 
             Mnemonic::Movsd => {
-
-                if ins.op_count() == 2 && (self.get_operand_sz(&ins, 0) == 128 || self.get_operand_sz(&ins, 1) == 128) {
-
+                if ins.op_count() == 2
+                    && (self.get_operand_sz(&ins, 0) == 128 || self.get_operand_sz(&ins, 1) == 128)
+                {
                     self.show_instruction(&self.colors.light_cyan, &ins);
                     let src = match self.get_operand_xmm_value_128(&ins, 1, true) {
                         Some(v) => v & 0xffffffff_ffffffff,
@@ -7059,10 +7051,7 @@ pub fn load_code(&mut self, filename: &str) {
                     dst = (dst & 0xffffffff_ffffffff_00000000_00000000) | src;
 
                     self.set_operand_xmm_value_128(&ins, 0, dst);
-
-                    
                 } else {
-
                     if self.cfg.is_64bits {
                         if ins.has_rep_prefix() {
                             let mut first_iteration = true;
@@ -7829,15 +7818,15 @@ pub fn load_code(&mut self, filename: &str) {
             }
 
             Mnemonic::Stosq => {
-
-                if ins.has_rep_prefix() { 
+                if ins.has_rep_prefix() {
                     let mut first_iteration = true;
                     loop {
                         if first_iteration || self.cfg.verbose >= 3 {
                             self.show_instruction(&self.colors.light_cyan, &ins);
                         }
-                        if !first_iteration { // this is for the diff2.py diffing with gdb that
-                                              // unrolls the reps
+                        if !first_iteration {
+                            // this is for the diff2.py diffing with gdb that
+                            // unrolls the reps
                             if self.cfg.verbose > 2 {
                                 println!("\t{} rip: 0x{:x}", self.pos, self.regs.rip);
                             }
@@ -7863,10 +7852,9 @@ pub fn load_code(&mut self, filename: &str) {
                         }
                         self.pos += 1;
                     }
-
                 } else {
                     self.show_instruction(&self.colors.light_cyan, &ins);
-            
+
                     self.maps.write_qword(self.regs.rdi, self.regs.rax);
 
                     if self.flags.f_df {
@@ -9212,8 +9200,10 @@ pub fn load_code(&mut self, filename: &str) {
                 // TODO: implement 0x40000000 -> get the virtualization vendor
 
                 if self.cfg.verbose >= 1 {
-                    println!("\tcpuid input value: 0x{:x}, 0x{:x}", 
-                        self.regs.rax, self.regs.rcx);
+                    println!(
+                        "\tcpuid input value: 0x{:x}, 0x{:x}",
+                        self.regs.rax, self.regs.rcx
+                    );
                 }
 
                 match self.regs.rax {
@@ -9285,7 +9275,7 @@ pub fn load_code(&mut self, filename: &str) {
                                 self.regs.rcx = 0;
                                 self.regs.rdx = 0;
                             }
-                            5|6|7 => {
+                            5 | 6 | 7 => {
                                 self.regs.rax = 0;
                                 self.regs.rbx = 0;
                                 self.regs.rcx = 0;
@@ -10377,8 +10367,6 @@ pub fn load_code(&mut self, filename: &str) {
             // scalar double: only 54b less significative part.
             // packed: compute all parts.
             // packed double
-
-
             Mnemonic::Por => {
                 self.show_instruction(&self.colors.green, &ins);
 
@@ -10404,7 +10392,6 @@ pub fn load_code(&mut self, filename: &str) {
 
                 self.set_operand_xmm_value_128(&ins, 0, result);
             }
-
 
             Mnemonic::Pxor => {
                 self.show_instruction(&self.colors.green, &ins);
@@ -10438,7 +10425,6 @@ pub fn load_code(&mut self, filename: &str) {
                 assert!(ins.op_count() == 2);
                 let sz0 = self.get_operand_sz(&ins, 0);
                 if sz0 == 128 {
-
                     let value0 = match self.get_operand_xmm_value_128(&ins, 0, true) {
                         Some(v) => v,
                         None => {
@@ -10466,7 +10452,6 @@ pub fn load_code(&mut self, filename: &str) {
                     }
 
                     self.set_operand_xmm_value_128(&ins, 0, result);
-
                 } else {
                     unimplemented!("unimplemented size");
                 }
@@ -10478,7 +10463,6 @@ pub fn load_code(&mut self, filename: &str) {
                 assert!(ins.op_count() == 2);
                 let sz0 = self.get_operand_sz(&ins, 0);
                 if sz0 == 128 {
-
                     let value0 = match self.get_operand_xmm_value_128(&ins, 0, true) {
                         Some(v) => v,
                         None => {
@@ -10503,7 +10487,6 @@ pub fn load_code(&mut self, filename: &str) {
                     }
 
                     self.set_operand_xmm_value_128(&ins, 0, result);
-
                 } else {
                     unimplemented!("unimplemented size");
                 }
@@ -10565,15 +10548,14 @@ pub fn load_code(&mut self, filename: &str) {
                 self.set_operand_xmm_value_128(&ins, 0, result);
             }
 
-/*            Mnemonic::Psubb 
-            | Mnemonic::Psubw 
+            /*            Mnemonic::Psubb
+            | Mnemonic::Psubw
             | Mnemonic::Psubd
             | Mnemonic::Psubq
             | Mnemonic::Psubsb
             | Mnemonic::Psubsw
             | Mnemonic::Psubusb
             | Mnemonic::Psubusw => {*/
-
             Mnemonic::Psubb => {
                 self.show_instruction(&self.colors.cyan, &ins);
 
@@ -10608,7 +10590,6 @@ pub fn load_code(&mut self, filename: &str) {
                 } else {
                     unimplemented!();
                 }
-            
             }
 
             Mnemonic::Psubw => {
@@ -10645,7 +10626,6 @@ pub fn load_code(&mut self, filename: &str) {
                 } else {
                     unimplemented!();
                 }
-            
             }
 
             Mnemonic::Psubd => {
@@ -10682,7 +10662,6 @@ pub fn load_code(&mut self, filename: &str) {
                 } else {
                     unimplemented!();
                 }
-            
             }
 
             Mnemonic::Psubq => {
@@ -10721,11 +10700,8 @@ pub fn load_code(&mut self, filename: &str) {
                 }
             }
 
-
             // movlpd: packed double, movlps: packed simple, cvtsi2sd: int to scalar double 32b to 64b,
             // cvtsi2ss: int to scalar single copy 32b to 32b, movd: doubleword move
-            
-            
             Mnemonic::Movhpd => {
                 // we keep the high part of xmm destination
 
@@ -10743,7 +10719,6 @@ pub fn load_code(&mut self, filename: &str) {
                         }
                     };
                     self.set_operand_xmm_value_128(&ins, 0, value1);
-
                 } else if sz0 == 128 && sz1 == 32 {
                     let value1 = match self.get_operand_value(&ins, 1, true) {
                         Some(v) => v,
@@ -10754,7 +10729,6 @@ pub fn load_code(&mut self, filename: &str) {
                     };
                     unimplemented!("mov 32bits to the 64bits highest part of the xmm1 u128");
                     //self.set_operand_xmm_value_128(&ins, 0, value1 as u128);
-                    
                 } else if sz0 == 32 && sz1 == 128 {
                     let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
                         Some(v) => v,
@@ -10765,7 +10739,6 @@ pub fn load_code(&mut self, filename: &str) {
                     };
                     unimplemented!("mov 32bits to the 64bits highest part of the xmm1 u128");
                     //self.set_operand_value(&ins, 0, value1 as u64);
-
                 } else if sz0 == 128 && sz1 == 64 {
                     let value0 = match self.get_operand_xmm_value_128(&ins, 0, false) {
                         Some(v) => v,
@@ -10789,11 +10762,9 @@ pub fn load_code(&mut self, filename: &str) {
                         }
                     };
 
-                    let result :u128 = (value1 as u128) << 64 | value0 & 0xffffffffffffffff;
-                    
+                    let result: u128 = (value1 as u128) << 64 | value0 & 0xffffffffffffffff;
+
                     self.set_operand_xmm_value_128(&ins, 0, result);
-
-
                 } else if sz0 == 64 && sz1 == 128 {
                     let mut value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
                         Some(v) => v,
@@ -10811,11 +10782,7 @@ pub fn load_code(&mut self, filename: &str) {
                 }
             }
 
-
-            Mnemonic::Movlpd
-            | Mnemonic::Movlps
-            | Mnemonic::Cvtsi2sd
-            | Mnemonic::Cvtsi2ss => {
+            Mnemonic::Movlpd | Mnemonic::Movlps | Mnemonic::Cvtsi2sd | Mnemonic::Cvtsi2ss => {
                 // we keep the high part of xmm destination
 
                 self.show_instruction(&self.colors.cyan, &ins);
@@ -10874,11 +10841,9 @@ pub fn load_code(&mut self, filename: &str) {
                     };
 
                     let mask: u128 = 0xFFFFFFFFFFFFFFFF_0000000000000000;
-                    let result :u128 = (value0 & mask) | (value1 as u128);
-                    
+                    let result: u128 = (value0 & mask) | (value1 as u128);
+
                     self.set_operand_xmm_value_128(&ins, 0, result);
-
-
                 } else if sz0 == 64 && sz1 == 128 {
                     let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
                         Some(v) => v,
@@ -10893,7 +10858,7 @@ pub fn load_code(&mut self, filename: &str) {
                     return false;
                 }
             }
-            
+
             Mnemonic::Movhps => {
                 self.show_instruction(&self.colors.green, &ins);
                 assert!(ins.op_count() == 2);
@@ -10902,7 +10867,6 @@ pub fn load_code(&mut self, filename: &str) {
                 let sz1 = self.get_operand_sz(&ins, 1);
 
                 if sz0 == 128 && sz1 == 64 {
-                    
                     let value0 = match self.get_operand_xmm_value_128(&ins, 0, true) {
                         Some(v) => v,
                         None => {
@@ -10924,10 +10888,7 @@ pub fn load_code(&mut self, filename: &str) {
                     let result = lower_value0 | upper_value1;
 
                     self.set_operand_xmm_value_128(&ins, 0, result);
-
-
                 } else if sz0 == 64 && sz1 == 128 {
-
                     let value1 = match self.get_operand_xmm_value_128(&ins, 0, true) {
                         Some(v) => v,
                         None => {
@@ -10936,13 +10897,10 @@ pub fn load_code(&mut self, filename: &str) {
                         }
                     };
 
-                    let result = (value1 >> 64) as u64;   
-                    
+                    let result = (value1 >> 64) as u64;
+
                     self.set_operand_value(&ins, 0, result);
-
-
                 } else if sz0 == 128 && sz1 == 32 {
-
                     let value0 = match self.get_operand_xmm_value_128(&ins, 0, true) {
                         Some(v) => v,
                         None => {
@@ -10963,13 +10921,10 @@ pub fn load_code(&mut self, filename: &str) {
                     let upper_value1 = (value1 as u128) << 96;
                     let result = lower_value0 | upper_value1;
 
-
                     self.set_operand_xmm_value_128(&ins, 0, result);
-
                 } else {
                     unimplemented!("case of movhps unimplemented {} {}", sz0, sz1);
                 }
-
             }
 
             Mnemonic::Punpcklqdq => {
@@ -10998,12 +10953,10 @@ pub fn load_code(&mut self, filename: &str) {
                     let result = ((value0_low_qword as u128) << 64) | (value1_low_qword as u128);
 
                     self.set_operand_xmm_value_128(&ins, 0, result);
-
                 } else {
                     println!("unimplemented case punpcklqdq {} {}", sz0, sz1);
                     return false;
                 }
-                
             }
 
             Mnemonic::Movq => {
@@ -11012,8 +10965,7 @@ pub fn load_code(&mut self, filename: &str) {
 
                 let sz0 = self.get_operand_sz(&ins, 0);
                 let sz1 = self.get_operand_sz(&ins, 1);
-                let value1:u128;
-
+                let value1: u128;
 
                 if sz1 == 128 {
                     value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
@@ -11035,16 +10987,13 @@ pub fn load_code(&mut self, filename: &str) {
                     unimplemented!("ymm zmm unimplemented on movq");
                 }
 
-
                 if sz0 == 128 {
                     self.set_operand_xmm_value_128(&ins, 0, value1);
-
                 } else if sz0 < 128 {
                     self.set_operand_value(&ins, 0, value1 as u64);
                 } else {
                     unimplemented!("ymm zmm unimplemented on movq");
                 }
-
             }
 
             Mnemonic::Punpckldq => {
@@ -11071,18 +11020,17 @@ pub fn load_code(&mut self, filename: &str) {
                 let dword1_0 = (value1 >> 96) as u32;
                 let dword1_1 = (value1 >> 64) as u32;
 
-                let result: u128 = ((dword0_0 as u128) << 96) 
-                     | ((dword1_0 as u128) << 64) 
-                     | ((dword0_1 as u128) << 32)
-                     |  (dword1_1 as u128);
+                let result: u128 = ((dword0_0 as u128) << 96)
+                    | ((dword1_0 as u128) << 64)
+                    | ((dword0_1 as u128) << 32)
+                    | (dword1_1 as u128);
 
                 self.set_operand_xmm_value_128(&ins, 0, result);
             }
 
-
             Mnemonic::Movd => {
                 // the high part is cleared to zero
-                
+
                 self.show_instruction(&self.colors.cyan, &ins);
 
                 let sz0 = self.get_operand_sz(&ins, 0);
@@ -11131,9 +11079,7 @@ pub fn load_code(&mut self, filename: &str) {
                         }
                     };
 
-                    
                     self.set_operand_xmm_value_128(&ins, 0, value1 as u128);
-
                 } else if sz0 == 64 && sz1 == 128 {
                     let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
                         Some(v) => v,
@@ -11184,7 +11130,6 @@ pub fn load_code(&mut self, filename: &str) {
                     self.maps
                         .write_dword(addr + 8, ((xmm & 0xffffffff_00000000) >> (4 * 8)) as u32);
                     self.maps.write_dword(addr + 12, (xmm & 0xffffffff) as u32);
-
                 } else if sz0 == 128 && sz1 == 32 {
                     let addr = match self.get_operand_value(&ins, 1, false) {
                         Some(v) => v,
@@ -11194,23 +11139,19 @@ pub fn load_code(&mut self, filename: &str) {
                         }
                     };
 
-                    let bytes = self.maps.read_bytes(addr, 16); 
+                    let bytes = self.maps.read_bytes(addr, 16);
                     if bytes.len() != 16 {
                         println!("error reading 16 bytes");
                         return false;
                     }
 
                     let result = u128::from_le_bytes([
-                        bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], 
-                        bytes[5], bytes[6], bytes[7], bytes[8], bytes[9], 
-                        bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15], ]);
+                        bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6],
+                        bytes[7], bytes[8], bytes[9], bytes[10], bytes[11], bytes[12], bytes[13],
+                        bytes[14], bytes[15],
+                    ]);
 
-                    self.set_operand_xmm_value_128(
-                        &ins,
-                        0,
-                        result
-                    );
-
+                    self.set_operand_xmm_value_128(&ins, 0, result);
                 } else if sz0 == 128 && sz1 == 128 {
                     let xmm = match self.get_operand_xmm_value_128(&ins, 1, true) {
                         Some(v) => v,
@@ -11221,13 +11162,11 @@ pub fn load_code(&mut self, filename: &str) {
                     };
 
                     self.set_operand_xmm_value_128(&ins, 0, xmm);
-
                 } else {
                     println!("sz0: {}  sz1: {}\n", sz0, sz1);
                     unimplemented!("movdqa");
                 }
             }
-
 
             Mnemonic::Andpd => {
                 self.show_instruction(&self.colors.green, &ins);
@@ -11690,7 +11629,6 @@ pub fn load_code(&mut self, filename: &str) {
                     let sz0 = self.get_operand_sz(&ins, 0);
 
                     if sz0 == 128 {
-                        
                         let value0 = match self.get_operand_xmm_value_128(&ins, 0, true) {
                             Some(v) => v,
                             None => {
@@ -11714,18 +11652,13 @@ pub fn load_code(&mut self, filename: &str) {
                         result = value0 >> (value1 * 8);
 
                         self.set_operand_xmm_value_128(&ins, 0, result);
-
-
                     } else {
                         unimplemented!("size unimplemented");
                     }
-                    
-
                 } else if ins.op_count() == 3 {
                     let sz0 = self.get_operand_sz(&ins, 0);
 
                     if sz0 == 128 {
-                        
                         let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
                             Some(v) => v,
                             None => {
@@ -11749,17 +11682,12 @@ pub fn load_code(&mut self, filename: &str) {
                         result = value1 >> (value2 * 8);
 
                         self.set_operand_xmm_value_128(&ins, 0, result);
-
-
                     } else {
                         unimplemented!("size unimplemented");
                     }
-                    
-
                 } else {
                     unreachable!();
                 }
-
             }
 
             Mnemonic::Psllw => {
@@ -12067,7 +11995,6 @@ pub fn load_code(&mut self, filename: &str) {
             }
 
             // ymmX registers
-
             Mnemonic::Vzeroupper => {
                 self.show_instruction(&self.colors.green, &ins);
 
@@ -12110,7 +12037,7 @@ pub fn load_code(&mut self, filename: &str) {
                         };
 
                         self.set_operand_xmm_value_128(&ins, 0, source);
-                    },
+                    }
                     256 => {
                         let source = match self.get_operand_ymm_value_256(&ins, 1, true) {
                             Some(v) => v,
@@ -12123,7 +12050,10 @@ pub fn load_code(&mut self, filename: &str) {
                         self.set_operand_ymm_value_256(&ins, 0, source);
                     }
                     _ => {
-                        unimplemented!("unimplemented operand size {}", self.get_operand_sz(ins, 1));
+                        unimplemented!(
+                            "unimplemented operand size {}",
+                            self.get_operand_sz(ins, 1)
+                        );
                     }
                 }
             }
@@ -12147,7 +12077,7 @@ pub fn load_code(&mut self, filename: &str) {
                         };
 
                         self.set_operand_xmm_value_128(&ins, 0, source);
-                    },
+                    }
                     256 => {
                         let source = match self.get_operand_ymm_value_256(&ins, 1, true) {
                             Some(v) => v,
@@ -12192,7 +12122,6 @@ pub fn load_code(&mut self, filename: &str) {
                     }
                 };
 
-
                 match self.get_operand_sz(&ins, 0) {
                     128 => {
                         self.set_operand_xmm_value_128(&ins, 0, value as u128);
@@ -12234,7 +12163,7 @@ pub fn load_code(&mut self, filename: &str) {
             Mnemonic::Vpbroadcastb => {
                 self.show_instruction(&self.colors.green, &ins);
 
-                let byte:u8;
+                let byte: u8;
 
                 match self.get_operand_sz(&ins, 1) {
                     128 => {
@@ -12282,7 +12211,6 @@ pub fn load_code(&mut self, filename: &str) {
                     }
                     _ => unreachable!(""),
                 }
-
             }
 
             Mnemonic::Vpor => {
@@ -12305,9 +12233,8 @@ pub fn load_code(&mut self, filename: &str) {
                                 return false;
                             }
                         };
-                
-                        self.set_operand_xmm_value_128(&ins, 0, source1 | source2);
 
+                        self.set_operand_xmm_value_128(&ins, 0, source1 | source2);
                     }
                     256 => {
                         let source1 = match self.get_operand_ymm_value_256(&ins, 1, true) {
@@ -12325,18 +12252,16 @@ pub fn load_code(&mut self, filename: &str) {
                                 return false;
                             }
                         };
-                
+
                         self.set_operand_ymm_value_256(&ins, 0, source1 | source2);
                     }
                     _ => unreachable!(""),
                 }
-
             }
-
 
             Mnemonic::Vpxor => {
                 self.show_instruction(&self.colors.green, &ins);
-                
+
                 match self.get_operand_sz(&ins, 0) {
                     128 => {
                         let source1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
@@ -12354,7 +12279,7 @@ pub fn load_code(&mut self, filename: &str) {
                                 return false;
                             }
                         };
-                
+
                         self.set_operand_xmm_value_128(&ins, 0, source1 ^ source2);
                     }
                     256 => {
@@ -12373,14 +12298,12 @@ pub fn load_code(&mut self, filename: &str) {
                                 return false;
                             }
                         };
-                
+
                         self.set_operand_ymm_value_256(&ins, 0, source1 ^ source2);
                     }
                     _ => unreachable!(""),
                 }
-
             }
-
 
             Mnemonic::Pcmpeqb => {
                 self.show_instruction(&self.colors.green, &ins);
@@ -12417,7 +12340,7 @@ pub fn load_code(&mut self, filename: &str) {
                         }
 
                         let result = u128::from_le_bytes(result);
-                
+
                         self.set_operand_xmm_value_128(&ins, 0, result);
                     }
                     256 => {
@@ -12437,10 +12360,9 @@ pub fn load_code(&mut self, filename: &str) {
                             }
                         };
 
-
-                        let mut bytes1:Vec<u8> = vec![0;32];
+                        let mut bytes1: Vec<u8> = vec![0; 32];
                         source1.to_little_endian(&mut bytes1);
-                        let mut bytes2:Vec<u8> = vec![0;32];
+                        let mut bytes2: Vec<u8> = vec![0; 32];
                         source2.to_little_endian(&mut bytes2);
 
                         let mut result = [0u8; 32];
@@ -12481,8 +12403,8 @@ pub fn load_code(&mut self, filename: &str) {
                                 return false;
                             }
                         };
-    
-                        let result:u128;
+
+                        let result: u128;
 
                         if value1 >= 16 {
                             result = 0;
@@ -12533,7 +12455,7 @@ pub fn load_code(&mut self, filename: &str) {
                         }
 
                         let result = u128::from_le_bytes(result);
-                
+
                         self.set_operand_xmm_value_128(&ins, 0, result);
                     }
                     256 => {
@@ -12553,10 +12475,9 @@ pub fn load_code(&mut self, filename: &str) {
                             }
                         };
 
-
-                        let mut bytes1:Vec<u8> = vec![0;32];
+                        let mut bytes1: Vec<u8> = vec![0; 32];
                         source1.to_little_endian(&mut bytes1);
-                        let mut bytes2:Vec<u8> = vec![0;32];
+                        let mut bytes2: Vec<u8> = vec![0; 32];
                         source2.to_little_endian(&mut bytes2);
 
                         let mut result = [0u8; 32];
@@ -12576,7 +12497,6 @@ pub fn load_code(&mut self, filename: &str) {
                     _ => unreachable!(""),
                 }
             }
-
 
             Mnemonic::Pmovmskb => {
                 self.show_instruction(&self.colors.green, &ins);
@@ -12599,7 +12519,6 @@ pub fn load_code(&mut self, filename: &str) {
                             result |= msb << i;
                         }
 
-                
                         self.set_operand_value(&ins, 0, result as u64);
                     }
                     256 => {
@@ -12625,7 +12544,6 @@ pub fn load_code(&mut self, filename: &str) {
                     }
                     _ => unreachable!(""),
                 }
-
             }
 
             Mnemonic::Vpmovmskb => {
@@ -12649,7 +12567,6 @@ pub fn load_code(&mut self, filename: &str) {
                             result |= msb << i;
                         }
 
-                
                         self.set_operand_value(&ins, 0, result as u64);
                     }
                     256 => {
@@ -12675,9 +12592,8 @@ pub fn load_code(&mut self, filename: &str) {
                     }
                     _ => unreachable!(""),
                 }
-
             }
-    
+
             Mnemonic::Vpminub => {
                 self.show_instruction(&self.colors.green, &ins);
 
@@ -12726,10 +12642,9 @@ pub fn load_code(&mut self, filename: &str) {
                             }
                         };
 
-
-                        let mut bytes1:Vec<u8> = vec![0;32];
+                        let mut bytes1: Vec<u8> = vec![0; 32];
                         source1.to_little_endian(&mut bytes1);
-                        let mut bytes2:Vec<u8> = vec![0;32];
+                        let mut bytes2: Vec<u8> = vec![0; 32];
                         source2.to_little_endian(&mut bytes2);
 
                         let mut result = [0u8; 32];
@@ -12744,11 +12659,9 @@ pub fn load_code(&mut self, filename: &str) {
                     }
                     _ => unreachable!(""),
                 }
-
             }
 
             // end SSE
-            
             Mnemonic::Tzcnt => {
                 self.show_instruction(&self.colors.green, &ins);
 
@@ -12758,8 +12671,8 @@ pub fn load_code(&mut self, filename: &str) {
                 };
 
                 let sz = self.get_operand_sz(&ins, 0) as u64;
-                let mut temp:u64 = 0;
-                let mut dest:u64 = 0;
+                let mut temp: u64 = 0;
+                let mut dest: u64 = 0;
 
                 while temp < sz && get_bit!(value1, temp) == 0 {
                     temp += 1;
@@ -12771,7 +12684,7 @@ pub fn load_code(&mut self, filename: &str) {
 
                 self.set_operand_value(&ins, 1, dest);
             }
-            
+
             Mnemonic::Xgetbv => {
                 self.show_instruction(&self.colors.green, &ins);
 

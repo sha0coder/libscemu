@@ -1,6 +1,6 @@
 // use std::arch::asm;
 
-// this unsafe blocks are used only on --test mode
+// this unsafe blocks are disabled
 
 pub fn or(a: u64, b: u64) -> u64 {
     let r: u64 = a;

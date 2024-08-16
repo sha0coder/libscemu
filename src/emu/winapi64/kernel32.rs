@@ -2,10 +2,9 @@ use crate::emu;
 use crate::emu::console;
 use crate::emu::constants;
 use crate::emu::peb64;
+use crate::emu::structures;
 use crate::emu::winapi32::helper;
 use std::time::{SystemTime, UNIX_EPOCH};
-use crate::emu::structures;
-
 
 use crate::emu::context64;
 use lazy_static::lazy_static;
@@ -646,7 +645,6 @@ fn VirtualAlloc(emu: &mut emu::Emu) {
     let typ = emu.regs.r8;
     let prot = emu.regs.r9;
 
-
     if size == 0 {
         println!(
             "{}** {} kernel32!VirtualAlloc addr: 0x{:x} sz: {} = 0 {}",
@@ -654,17 +652,15 @@ fn VirtualAlloc(emu: &mut emu::Emu) {
         );
         emu.regs.rax = 0
     } else {
-        let base = emu
-            .maps
-            .alloc(size)
-            .expect("kernel32!VirtualAlloc out of memory");
-
+        let base = emu.maps.alloc(size).expect(&format!(
+            "kernel32!VirtualAlloc out of memory size:{}",
+            size
+        ));
 
         println!(
             "{}** {} kernel32!VirtualAlloc addr: 0x{:x} sz: {} = 0x{:x} {}",
             emu.colors.light_red, emu.pos, addr, size, base, emu.colors.nc
         );
-
 
         let alloc = emu.maps.create_map(format!("alloc_{:x}", base).as_str());
         alloc.set_base(base);
@@ -1626,7 +1622,7 @@ fn InitializeCriticalSectionAndSpinCount(emu: &mut emu::Emu) {
     let crit_sect = emu.regs.rcx;
     let spin_count = emu.regs.rdx;
 
-    println!("{}** {} kernel32!InitializeCriticalSectionAndSpinCount crit_sect: 0x{:x} spin_count: {} {}", emu.colors.light_red, 
+    println!("{}** {} kernel32!InitializeCriticalSectionAndSpinCount crit_sect: 0x{:x} spin_count: {} {}", emu.colors.light_red,
         emu.pos, crit_sect, spin_count, emu.colors.nc);
 
     emu.regs.rax = 1;
@@ -2232,7 +2228,6 @@ fn HeapCreate(emu: &mut emu::Emu) {
         emu.colors.light_red, emu.pos, maxSZ, emu.colors.nc
     );
 
-
     let uri = format!("HeapCreate://{}", maxSZ);
     emu.regs.rax = helper::handler_create(&uri);
 }
@@ -2241,11 +2236,11 @@ fn lstrcpyn(emu: &mut emu::Emu) {
     let out_str1 = emu.regs.rcx;
     let in_str2 = emu.regs.rdx;
     let len = emu.regs.r8 as usize;
- 
+
     let mut s = emu.maps.read_string(in_str2);
-    if s.len()-1 > len {
+    if s.len() - 1 > len {
         s = s.chars().take(len).collect();
-    } 
+    }
     emu.maps.memset(out_str1, 0, len);
     emu.maps.write_string(out_str1, &s);
 
@@ -2275,13 +2270,12 @@ fn GetModuleFileNameA(emu: &mut emu::Emu) {
     );
 }
 
-
 fn GetLocalTime(emu: &mut emu::Emu) {
     let ptr = emu.regs.rcx;
 
-    let duration = SystemTime::now().duration_since(UNIX_EPOCH)
+    let duration = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
         .expect("error getting the localtime");
-
 
     let seconds = duration.as_secs();
     let seconds_since_midnight = seconds % 86400;
@@ -2298,12 +2292,9 @@ fn GetLocalTime(emu: &mut emu::Emu) {
 
     println!(
         "{}** {} kernel32!GetLocalTime  {}",
-        emu.colors.light_red, emu.pos,  emu.colors.nc
+        emu.colors.light_red, emu.pos, emu.colors.nc
     );
 }
-
-
-
 
 fn SystemTimeToFileTime(emu: &mut emu::Emu) {
     let in_ptr = emu.regs.rcx;
@@ -2314,7 +2305,7 @@ fn SystemTimeToFileTime(emu: &mut emu::Emu) {
 
     println!(
         "{}** {} kernel32!SystemTimeToFileTime  {}",
-        emu.colors.light_red, emu.pos,  emu.colors.nc
+        emu.colors.light_red, emu.pos, emu.colors.nc
     );
 }
 
@@ -2328,7 +2319,6 @@ fn GetNativeSystemInfo(emu: &mut emu::Emu) {
         "{}** {} kernel32!GetNativeSysteminfo 0x{:x}  {}",
         emu.colors.light_red, emu.pos, ptr_sysinfo, emu.colors.nc
     );
-
 }
 
 fn lstrcpyW(emu: &mut emu::Emu) {
@@ -2337,7 +2327,7 @@ fn lstrcpyW(emu: &mut emu::Emu) {
 
     let s = emu.maps.read_wide_string(src);
     emu.maps.write_wide_string(dst, &s);
-    emu.maps.write_byte(dst+(s.len() as u64 * 2), 0);
+    emu.maps.write_byte(dst + (s.len() as u64 * 2), 0);
 
     println!(
         "{}** {} kernel32!lstrcpyW 0x{:x} 0x{:x} {}  {}",
@@ -2357,7 +2347,7 @@ fn lstrcpy(emu: &mut emu::Emu) {
 
     let s = emu.maps.read_string(src);
     emu.maps.write_string(dst, &s);
-    emu.maps.write_byte(dst+(s.len() as u64), 0);
+    emu.maps.write_byte(dst + (s.len() as u64), 0);
 
     println!(
         "{}** {} kernel32!lstrcpy 0x{:x} 0x{:x} {}  {}",
@@ -2370,4 +2360,3 @@ fn lstrcpy(emu: &mut emu::Emu) {
         emu.regs.rax = dst;
     }
 }
-

@@ -326,10 +326,10 @@ impl ImageSectionHeader {
     }
 
     pub fn set_name(&mut self, newname: &str) {
-        if newname.len()+1 > IMAGE_SIZEOF_SHORT_NAME {
+        if newname.len() + 1 > IMAGE_SIZEOF_SHORT_NAME {
             panic!("fixing a name bigger than IMAGE_SIZEOF_SHORT_NAME");
         }
-        let mut vname: Vec<u8> = newname.as_bytes().to_vec();    
+        let mut vname: Vec<u8> = newname.as_bytes().to_vec();
         vname.push(0);
         for (i, &item) in vname.iter().enumerate() {
             self.name[i] = item;
@@ -526,13 +526,13 @@ impl DelayLoadDirectory {
     pub fn load(raw: &Vec<u8>, off: usize) -> DelayLoadDirectory {
         DelayLoadDirectory {
             attributes: read_u32_le!(raw, off),
-            name_ptr: read_u32_le!(raw, off+4),
-            handle: read_u32_le!(raw, off+8),
-            address_table: read_u32_le!(raw, off+12),
-            name_table: read_u32_le!(raw, off+16),
-            bound_delay_import_table: read_u32_le!(raw, off+20),
-            unload_delay_import_table: read_u32_le!(raw, off+24),
-            tstamp: read_u32_le!(raw, off+28),
+            name_ptr: read_u32_le!(raw, off + 4),
+            handle: read_u32_le!(raw, off + 8),
+            address_table: read_u32_le!(raw, off + 12),
+            name_table: read_u32_le!(raw, off + 16),
+            bound_delay_import_table: read_u32_le!(raw, off + 20),
+            unload_delay_import_table: read_u32_le!(raw, off + 24),
+            tstamp: read_u32_le!(raw, off + 28),
             name: String::new(),
         }
     }
@@ -549,19 +549,15 @@ impl DelayLoadIAT {
     fn load(raw: &Vec<u8>, off: usize) -> DelayLoadIAT {
         DelayLoadIAT {
             name_ptr: read_u32_le!(raw, off),
-            iat_addr: read_u32_le!(raw, off+4),
-            bound_iat: read_u32_le!(raw, off+8),
+            iat_addr: read_u32_le!(raw, off + 4),
+            bound_iat: read_u32_le!(raw, off + 8),
         }
     }
 }
 
-
-
-
 //
 // https://docs.microsoft.com/en-us/windows/win32/debug/pe-format#import-directory-table
 //
-
 
 #[derive(Debug)]
 pub struct ImageImportDirectory {
@@ -631,18 +627,18 @@ pub struct HintNameItem {
 
 impl HintNameItem {
     pub fn load(raw: &Vec<u8>, off: usize) -> HintNameItem {
-        let func_name_addr:u32;
+        let func_name_addr: u32;
 
-        if raw.len() <= off+4 {
+        if raw.len() <= off + 4 {
             return HintNameItem {
                 is_ordinal: false,
                 func_name_addr: 0,
-            }
+            };
         } else {
             return HintNameItem {
                 is_ordinal: raw[off] & 0b10000000 == 0b10000000,
-                func_name_addr: read_u32_le!(raw, off),    // & 0b01111111_11111111_11111111_11111111;
-            }
+                func_name_addr: read_u32_le!(raw, off), // & 0b01111111_11111111_11111111_11111111;
+            };
         }
     }
 
@@ -821,7 +817,8 @@ impl PE32 {
         let opt = ImageOptionalHeader::load(&raw, dos.e_lfanew as usize + 24);
         let mut sect: Vec<ImageSectionHeader> = Vec::new();
 
-        let mut off = dos.e_lfanew as usize + 248;
+        //let mut off = dos.e_lfanew as usize + 248;
+        let mut off = dos.e_lfanew as usize + 24 + fh.size_of_optional_header as usize;
         for i in 0..fh.number_of_sections {
             let s = ImageSectionHeader::load(&raw, off);
             sect.push(s);
@@ -844,14 +841,14 @@ impl PE32 {
             delay_load_off = PE32::vaddr_to_off(&sect, delay_load_va) as usize;
             if delay_load_off > 0 {
                 loop {
-                   let mut delay_load = DelayLoadDirectory::load(&raw, delay_load_off);
-                   if delay_load.handle == 0 || delay_load.name_ptr == 0 {
-                       break;
-                   }
-                   let libname = PE32::read_string(&raw, off);
-                   delay_load.name = libname.to_string();
-                   delay_load_dir.push(delay_load);
-                   delay_load_off += DelayLoadDirectory::size();
+                    let mut delay_load = DelayLoadDirectory::load(&raw, delay_load_off);
+                    if delay_load.handle == 0 || delay_load.name_ptr == 0 {
+                        break;
+                    }
+                    let libname = PE32::read_string(&raw, off);
+                    delay_load.name = libname.to_string();
+                    delay_load_dir.push(delay_load);
+                    delay_load_off += DelayLoadDirectory::size();
                 }
             }
         }
@@ -919,13 +916,12 @@ impl PE32 {
 
     pub fn vaddr_to_off(sections: &Vec<ImageSectionHeader>, vaddr: u32) -> u32 {
         for sect in sections {
-            if vaddr >= sect.virtual_address && 
-                vaddr < sect.virtual_address + sect.virtual_size {
-                    /*
-                    println!("{:x} = vaddr:{:x} - sect.vaddr:{:x} + sect.ptr2rawdata:{:x}", 
-                        (vaddr - sect.virtual_address + sect.pointer_to_raw_data),
-                        vaddr, sect.virtual_address, sect.pointer_to_raw_data); */
-                    return vaddr - sect.virtual_address + sect.pointer_to_raw_data;
+            if vaddr >= sect.virtual_address && vaddr < sect.virtual_address + sect.virtual_size {
+                /*
+                println!("{:x} = vaddr:{:x} - sect.vaddr:{:x} + sect.ptr2rawdata:{:x}",
+                    (vaddr - sect.virtual_address + sect.pointer_to_raw_data),
+                    vaddr, sect.virtual_address, sect.pointer_to_raw_data); */
+                return vaddr - sect.virtual_address + sect.pointer_to_raw_data;
             }
         }
 
@@ -960,7 +956,7 @@ impl PE32 {
             //println!("/!\\ warning: raw sz:{} off:{} sz:{}  off+sz:{}", self.raw.len(), off, sz, off+sz);
             sz = self.raw.len() - off - 1;
         }
-        if sz == 0 || off > self.raw.len() || off+sz > self.raw.len() {
+        if sz == 0 || off > self.raw.len() || off + sz > self.raw.len() {
             return &[];
         }
 
@@ -973,7 +969,7 @@ impl PE32 {
     }
 
     pub fn get_tls_callbacks(&self, vaddr: u32) -> Vec<u64> {
-        let tls_off; 
+        let tls_off;
         let mut callbacks: Vec<u64> = Vec::new();
 
         if self.opt.data_directory.len() < IMAGE_DIRECTORY_ENTRY_TLS {
@@ -986,7 +982,7 @@ impl PE32 {
         let align = self.opt.file_alignment;
 
         tls_off = PE32::vaddr_to_off(&self.sect_hdr, entry_tls) as usize;
-        
+
         println!("raw {:x} off {:x}", self.raw.len(), tls_off);
         let tls = TlsDirectory32::load(&self.raw, tls_off);
         tls.print();
@@ -994,7 +990,6 @@ impl PE32 {
         let mut cb_off; // = PE32::vaddr_to_off(&self.sect_hdr, tls.tls_callbacks) as usize;
 
         cb_off = (tls.tls_callbacks - self.opt.image_base - 0xf000 + 0xa400) as usize;
-
 
         println!("cb_off {:x}", cb_off);
         //cb_off = (tls.tls_callbacks - iat - self.opt.image_base - align) as usize;
@@ -1025,10 +1020,11 @@ impl PE32 {
             }
 
             let mut off_name = PE32::vaddr_to_off(&self.sect_hdr, dld.name_table) as usize;
-            let mut off_addr = PE32::vaddr_to_off(&self.sect_hdr, dld.bound_delay_import_table) as usize;
+            let mut off_addr =
+                PE32::vaddr_to_off(&self.sect_hdr, dld.bound_delay_import_table) as usize;
 
             loop {
-                if self.raw.len() <= off_name+4 || self.raw.len() <= off_addr+4 {
+                if self.raw.len() <= off_name + 4 || self.raw.len() <= off_addr + 4 {
                     break;
                 }
 
@@ -1059,7 +1055,6 @@ impl PE32 {
                 off_name += HintNameItem::size();
                 off_addr += 4;
             }
-                
         }
         println!("delay load bound!");
     }
@@ -1075,7 +1070,7 @@ impl PE32 {
                 println!("import: {}", iim.name);
             }
 
-            if iim.name.len() == 0 { 
+            if iim.name.len() == 0 {
                 continue;
             }
 
@@ -1090,7 +1085,7 @@ impl PE32 {
             let mut off_addr = PE32::vaddr_to_off(&self.sect_hdr, iim.first_thunk) as usize;
 
             loop {
-                if self.raw.len() <= off_name+4 || self.raw.len() <= off_addr+4 {
+                if self.raw.len() <= off_name + 4 || self.raw.len() <= off_addr + 4 {
                     break;
                 }
                 let hint = HintNameItem::load(&self.raw, off_name);
