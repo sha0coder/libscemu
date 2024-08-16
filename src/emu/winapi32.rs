@@ -34,20 +34,19 @@ pub fn gateway(addr: u32, name: String, emu: &mut emu::Emu) {
         "oleaut32_text" => oleaut32::gateway(addr, emu),
         "kernelbase_text" => kernelbase::gateway(addr, emu),
         "libgcc_s_dw2-1.text" => libgcc::gateway(addr, emu),
-        _ => panic!("/!\\ trying to execute on {} at 0x{:x}", name, addr),
+        _ => {
+            println!("/!\\ trying to execute on {} at 0x{:x}", name, addr);
+            name
+        }
     };
 
     if unimplemented_api.len() > 0 {
-        if emu.cfg.skip_unimplemented {
-            let params = emu.banzai.get_params(&unimplemented_api);
-            println!("{} {} parameters", unimplemented_api, params);
+        let params = emu.banzai.get_params(&unimplemented_api);
+        println!("{} {} parameters", unimplemented_api, params);
 
-            for _ in 0..params {
-                emu.stack_pop32(false);
-            }
-            emu.regs.rax = 1;
-        } else {
-            panic!("function is not in emulation list.");
+        for _ in 0..params {
+            emu.stack_pop32(false);
         }
+        emu.regs.rax = 1;
     }
 }
