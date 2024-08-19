@@ -38,7 +38,6 @@ fn StartServiceCtrlDispatcherA(emu: &mut emu::Emu) {
         .read_dword((service_table_entry_ptr + 4) as u64)
         .expect("advapi32!StartServiceCtrlDispatcherA error reading service_name");
 
-    emu.stack_pop32(false);
     emu.regs.set_eax(1);
 }
 
@@ -48,7 +47,6 @@ fn StartServiceCtrlDispatcherW(emu: &mut emu::Emu) {
         .read_dword(emu.regs.get_esp())
         .expect("advapi32!StartServiceCtrlDispatcherW error reading service_table_entry pointer");
 
-    emu.stack_pop32(false);
     emu.regs.set_eax(1);
 }
 
@@ -65,7 +63,8 @@ fn RegOpenKeyExA(emu: &mut emu::Emu) {
         emu.colors.light_red, emu.pos, subkey, emu.colors.nc
     );
 
-    emu.maps.write_qword(result, helper::handler_create(&subkey));
+    emu.maps
+        .write_qword(result, helper::handler_create(&subkey));
     emu.regs.rax = constants::ERROR_SUCCESS;
 }
 
@@ -87,8 +86,14 @@ fn RegQueryValueExA(emu: &mut emu::Emu) {
     let value_ptr = emu.regs.rdx;
     let reserved = emu.regs.r8;
     let typ_out = emu.regs.r9;
-    let data_out = emu.maps.read_qword(emu.regs.rsp).expect("error reading api aparam");
-    let datasz_out = emu.maps.read_qword(emu.regs.rsp+8).expect("error reading api param");
+    let data_out = emu
+        .maps
+        .read_qword(emu.regs.rsp)
+        .expect("error reading api aparam");
+    let datasz_out = emu
+        .maps
+        .read_qword(emu.regs.rsp + 8)
+        .expect("error reading api param");
 
     let value = emu.maps.read_string(value_ptr);
 
@@ -101,4 +106,3 @@ fn RegQueryValueExA(emu: &mut emu::Emu) {
     emu.maps.write_qword(datasz_out, 24);
     emu.regs.rax = constants::ERROR_SUCCESS;
 }
-

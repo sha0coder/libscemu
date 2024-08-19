@@ -3,6 +3,7 @@ mod comctl64;
 mod dnsapi;
 pub mod kernel32;
 mod ntdll;
+mod shell32;
 mod user32;
 mod winhttp;
 mod wininet;
@@ -22,6 +23,7 @@ pub fn gateway(addr: u64, name: String, emu: &mut emu::Emu) {
         "winhttp_text" => winhttp::gateway(addr, emu),
         "dnsapi_text" => dnsapi::gateway(addr, emu),
         "comctl32.text" => comctl64::gateway(addr, emu),
+        "shell32.text" => shell32::gateway(addr, emu),
         _ => panic!("/!\\ trying to execute on {} at 0x{:x}", name, addr),
     };
 

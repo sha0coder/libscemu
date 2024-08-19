@@ -1,7 +1,7 @@
 use crate::emu;
 //use crate::emu::endpoint;
-use crate::emu::winapi32::helper;
 use crate::emu::structures::*;
+use crate::emu::winapi32::helper;
 
 use lazy_static::lazy_static;
 use std::sync::Mutex;
@@ -65,10 +65,6 @@ fn WsaSocketA(emu: &mut emu::Emu) {
         "{}** {} ws2_32!WsaSocketA {}",
         emu.colors.light_red, emu.pos, emu.colors.nc
     );
-
-    for _ in 0..2 {
-        emu.stack_pop64(false);
-    }
 
     emu.regs.rax = helper::socket_create();
 }
@@ -373,8 +369,6 @@ fn setsockopt(emu: &mut emu::Emu) {
         emu.colors.light_red, emu.pos, level, optname, val, emu.colors.nc
     );
 
-    emu.stack_pop64(false);
-
     if !helper::socket_exist(sock) {
         println!("\tinvalid socket.");
         emu.regs.rax = 1;
@@ -399,8 +393,6 @@ fn getsockopt(emu: &mut emu::Emu) {
         "{}** {} ws2_32!getsockopt  lvl: {} opt: {} {}",
         emu.colors.light_red, emu.pos, level, optname, emu.colors.nc
     );
-
-    emu.stack_pop64(false);
 
     if !helper::socket_exist(sock) {
         println!("\tinvalid socket.");
@@ -427,8 +419,6 @@ fn WsaAccept(emu: &mut emu::Emu) {
         emu.colors.light_red, emu.pos, bytes, callback, emu.colors.nc
     );
 
-    emu.stack_pop64(false);
-
     if !helper::socket_exist(sock) {
         println!("\tinvalid socket.");
         emu.regs.rax = 1;
@@ -453,7 +443,6 @@ fn GetSockName(emu: &mut emu::Emu) {
     emu.regs.rax = 0;
 }
 
-
 fn gethostbyname(emu: &mut emu::Emu) {
     let domain_name_ptr = emu.regs.rcx;
     let domain_name = emu.maps.read_string(domain_name_ptr);
@@ -463,28 +452,23 @@ fn gethostbyname(emu: &mut emu::Emu) {
         emu.colors.light_red, emu.pos, domain_name, emu.colors.nc
     );
 
-
     let addr = emu.maps.alloc(1024).expect("low memory");
     let map = emu.maps.create_map("hostent");
-    let str_addr = addr+1024-100;
-
+    let str_addr = addr + 1024 - 100;
 
     map.set_base(addr);
     map.set_size(1024);
     map.write_dword(addr, 0x04030201);
-    map.write_qword(addr+8, addr);
-    map.write_qword(addr+16, 0);
+    map.write_qword(addr + 8, addr);
+    map.write_qword(addr + 16, 0);
     map.write_string(str_addr, &domain_name);
 
     let mut hostent = Hostent::new();
     hostent.hname = str_addr;
     hostent.alias_list = 0;
     hostent.length = 4;
-    hostent.addr_list = addr+8;
-    hostent.save(addr+30, &mut emu.maps);
+    hostent.addr_list = addr + 8;
+    hostent.save(addr + 30, &mut emu.maps);
 
-    emu.regs.rax = addr+30;
+    emu.regs.rax = addr + 30;
 }
-
-
-

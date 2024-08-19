@@ -2597,7 +2597,9 @@ impl Emu {
         }
 
         let con = Console::new();
-        self.pos -= 1;
+        if self.pos > 0 {
+            self.pos -= 1;
+        }
         loop {
             let cmd = con.cmd();
             match cmd.as_str() {

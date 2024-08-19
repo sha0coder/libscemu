@@ -112,10 +112,6 @@ fn NtAllocateVirtualMemory(emu: &mut emu::Emu) {
     }
 
     emu.regs.rax = emu::constants::STATUS_SUCCESS;
-
-    for _ in 0..2 {
-        emu.stack_pop64(false);
-    }
 }
 
 fn stricmp(emu: &mut emu::Emu) {
@@ -160,9 +156,7 @@ fn NtQueryVirtualMemory(emu: &mut emu::Emu) {
             "/!\\ ntdll!NtQueryVirtualMemory: querying non maped addr: 0x{:x}",
             addr
         );
-        for _ in 0..2 {
-            emu.stack_pop64(false);
-        }
+
         emu.regs.rax = emu::constants::STATUS_INVALID_PARAMETER;
         return;
     }
@@ -176,10 +170,6 @@ fn NtQueryVirtualMemory(emu: &mut emu::Emu) {
     mem_info.state = constants::MEM_COMMIT;
     mem_info.typ = constants::MEM_PRIVATE;
     mem_info.save(out_meminfo_ptr, &mut emu.maps);
-
-    for _ in 0..2 {
-        emu.stack_pop64(false);
-    }
 
     emu.regs.rax = constants::STATUS_SUCCESS;
 }
@@ -292,7 +282,6 @@ fn ZwQueueApcThread(emu: &mut emu::Emu) {
         emu.colors.nc
     );
 
-    emu.stack_pop64(false);
     emu.regs.rax = constants::STATUS_SUCCESS;
 }
 
@@ -314,24 +303,22 @@ fn RtlAllocateHeap(emu: &mut emu::Emu) {
     } else {
     */
 
-        if size < 1024 {
-            size = 1024
-        }
-        alloc_addr = match emu.maps.alloc(size) {
-            Some(a) => a,
-            None => panic!("/!\\ out of memory cannot allocate ntdll!RtlAllocateHeap"),
-        };
-        let alloc = emu.maps.create_map(&map_name);
-        alloc.set_base(alloc_addr);
-        alloc.set_size(size);
+    if size < 1024 {
+        size = 1024
+    }
+    alloc_addr = match emu.maps.alloc(size) {
+        Some(a) => a,
+        None => panic!("/!\\ out of memory cannot allocate ntdll!RtlAllocateHeap"),
+    };
+    let alloc = emu.maps.create_map(&map_name);
+    alloc.set_base(alloc_addr);
+    alloc.set_size(size);
     //}
-
 
     println!(
         "{}** {} ntdll!RtlAllocateHeap  hndl: {:x} sz: {}   =addr: 0x{:x} {}",
         emu.colors.light_red, emu.pos, handle, size, alloc_addr, emu.colors.nc
     );
-
 
     emu.regs.rax = alloc_addr;
 }
@@ -547,10 +534,6 @@ fn NtCreateFile(emu: &mut emu::Emu) {
         .read_qword(emu.regs.rsp + 48)
         .expect("ntdll!NtCreateFile error reading ea_len param");
 
-    for _ in 0..7 {
-        emu.stack_pop64(false);
-    }
-
     let obj_name_ptr = emu
         .maps
         .read_dword(oattrib + 8)
@@ -619,8 +602,6 @@ fn NtQueryInformationFile(emu: &mut emu::Emu) {
         emu.colors.light_red, emu.pos, emu.colors.nc
     );
 
-    emu.stack_pop64(false);
-
     emu.regs.rax = constants::STATUS_SUCCESS;
 }
 
@@ -656,10 +637,6 @@ fn NtReadFile(emu: &mut emu::Emu) {
         "{}** {} ntdll!NtReadFile {} buff: 0x{:x} sz: {} off_var: 0x{:x} {}",
         emu.colors.light_red, emu.pos, file, buff, len, off, emu.colors.nc
     );
-
-    for _ in 0..5 {
-        emu.stack_pop64(false);
-    }
 
     emu.maps.memset(buff, 0x90, len);
     emu.regs.rax = constants::STATUS_SUCCESS;
@@ -708,8 +685,6 @@ fn NtProtectVirtualMemory(emu: &mut emu::Emu) {
         "{}** {} ntdll!NtProtectVirtualMemory sz: {} {} {}",
         emu.colors.light_red, emu.pos, sz, prot, emu.colors.nc
     );
-
-    emu.stack_pop64(false);
 
     emu.regs.rax = constants::STATUS_SUCCESS
 }
@@ -791,7 +766,6 @@ fn RtlCopyMemory(emu: &mut emu::Emu) {
         "{}** {} ntdll!RtlCopyMemory {} {}",
         emu.colors.light_red, emu.pos, s, emu.colors.nc
     );
-
 }
 
 fn RtlReAllocateHeap(emu: &mut emu::Emu) {
@@ -802,7 +776,7 @@ fn RtlReAllocateHeap(emu: &mut emu::Emu) {
     let mapname = format!("valloc_{:x}", hndl);
     emu.regs.rax = match emu.maps.get_map_by_name_mut(&mapname) {
         Some(mem) => {
-            mem.set_size(sz+1024);
+            mem.set_size(sz + 1024);
             mem.get_base()
         }
         None => 0,
@@ -812,7 +786,6 @@ fn RtlReAllocateHeap(emu: &mut emu::Emu) {
         "{}** {} ntdll!RtlReAllocateHeap hndl: {:x} sz: {} {}",
         emu.colors.light_red, emu.pos, hndl, sz, emu.colors.nc
     );
-
 }
 
 fn NtFlushInstructionCache(emu: &mut emu::Emu) {
@@ -825,7 +798,6 @@ fn NtFlushInstructionCache(emu: &mut emu::Emu) {
         emu.colors.light_red, emu.pos, proc_hndl, addr, sz, emu.colors.nc
     );
 
-
     emu.regs.rax = 0;
 }
 
@@ -835,14 +807,16 @@ fn LdrGetDllHandleEx(emu: &mut emu::Emu) {
     let path_ptr = emu.regs.rdx;
     let characteristics = emu.regs.r8;
     let dll_name_ptr = emu.regs.r9;
-    let out_hndl = emu.maps.read_qword(emu.regs.rsp).expect("ntdll!LdrGetDllHandleEx error reading out_hdl");
+    let out_hndl = emu
+        .maps
+        .read_qword(emu.regs.rsp)
+        .expect("ntdll!LdrGetDllHandleEx error reading out_hdl");
 
     let dll_name = emu.maps.read_wide_string(dll_name_ptr);
 
-    
     println!(
         "{}** {} ntdll!LdrGetDllHandleEx {} {}",
-        emu.colors.light_red, emu.pos, dll_name ,emu.colors.nc
+        emu.colors.light_red, emu.pos, dll_name, emu.colors.nc
     );
 
     emu.maps.memcpy(path_ptr, dll_name_ptr, dll_name.len());
@@ -852,5 +826,3 @@ fn LdrGetDllHandleEx(emu: &mut emu::Emu) {
 
     emu.regs.rax = 1;
 }
-
-

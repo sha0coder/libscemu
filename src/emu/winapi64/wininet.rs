@@ -64,8 +64,6 @@ pub fn InternetOpenA(emu: &mut emu::Emu) {
         emu.colors.light_red, emu.pos, uagent, proxy, proxy_bypass, emu.colors.nc
     );
 
-    emu.stack_pop64(false);
-
     /*
     if emu.cfg.endpoint {
         // endpoint mode
@@ -106,8 +104,6 @@ pub fn InternetOpenW(emu: &mut emu::Emu) {
         "{}** {} wininet!InternetOpenW uagent: {} proxy: {} {} {}",
         emu.colors.light_red, emu.pos, uagent, proxy, proxy_bypass, emu.colors.nc
     );
-
-    emu.stack_pop64(false);
 
     /*
     if emu.cfg.endpoint {
@@ -170,10 +166,6 @@ pub fn InternetConnectA(emu: &mut emu::Emu) {
         endpoint::http_set_serverport(&server, port as u16);
     }*/
 
-    for _ in 0..4 {
-        emu.stack_pop64(false);
-    }
-
     let uri = format!("InternetConnectA://{}:{}", server, port);
     emu.regs.rax = helper::handler_create(&uri); // connect handle
 }
@@ -227,10 +219,6 @@ pub fn InternetConnectW(emu: &mut emu::Emu) {
     if emu.cfg.endpoint {
         endpoint::http_set_serverport(&server.replace("\x00", ""), port as u16);
     }*/
-
-    for _ in 0..4 {
-        emu.stack_pop64(false);
-    }
 
     let uri = format!("InternetConnectW://{}:{}", server, port);
     emu.regs.rax = helper::handler_create(&uri); // connect handle
@@ -311,10 +299,6 @@ fn HttpOpenRequestA(emu: &mut emu::Emu) {
         }
     }*/
 
-    for _ in 0..4 {
-        emu.stack_pop64(false);
-    }
-
     let uri = format!("HttpOpenRequestA://{}", path);
     emu.regs.rax = helper::handler_create(&uri); // request handle
 }
@@ -388,10 +372,6 @@ fn HttpOpenRequestW(emu: &mut emu::Emu) {
             endpoint::http_set_method("get");
         }
     }*/
-
-    for _ in 0..4 {
-        emu.stack_pop64(false);
-    }
 
     let uri = format!("HttpOpenRequestW://{}", path);
     emu.regs.rax = helper::handler_create(&uri); // request handle
@@ -473,8 +453,6 @@ fn HttpSendRequestA(emu: &mut emu::Emu) {
         endpoint::http_send_request();
     }*/
 
-    emu.stack_pop64(false);
-
     emu.regs.rax = 1; // true
 }
 
@@ -505,8 +483,6 @@ fn HttpSendRequestW(emu: &mut emu::Emu) {
         endpoint::http_set_headers_str(&hdrs.replace("\x00", ""));
         endpoint::http_send_request();
     }*/
-
-    emu.stack_pop64(false);
 
     emu.regs.rax = 1; // true
 }

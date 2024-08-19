@@ -695,7 +695,6 @@ fn VirtualAllocEx(emu: &mut emu::Emu) {
     alloc.set_size(size);
 
     emu.regs.rax = base;
-    emu.stack_pop64(false);
 }
 
 fn WriteProcessMemory(emu: &mut emu::Emu) {
@@ -732,8 +731,6 @@ fn WriteProcessMemory(emu: &mut emu::Emu) {
             println!("kernel32!WriteProcessMemory cannot write on written_ptr");
         }
     }
-
-    emu.stack_pop64(false);
 }
 
 fn Thread32First(emu: &mut emu::Emu) {
@@ -889,10 +886,6 @@ fn CreateThread(emu: &mut emu::Emu) {
         emu.colors.light_red, emu.pos, code, param, emu.colors.nc
     );
 
-    for _ in 0..2 {
-        emu.stack_pop64(false);
-    }
-
     if flags == constants::CREATE_SUSPENDED {
         println!("\tcreated suspended!");
     }
@@ -1004,10 +997,6 @@ fn CreateRemoteThread(emu: &mut emu::Emu) {
 
     emu.maps.write_dword(out_tid, 0x123);
     emu.regs.rax = helper::handler_create("tid://0x123");
-
-    emu.stack_pop64(false);
-    emu.stack_pop64(false);
-    emu.stack_pop64(false);
 }
 
 fn CreateNamedPipeA(emu: &mut emu::Emu) {
@@ -1038,10 +1027,6 @@ fn CreateNamedPipeA(emu: &mut emu::Emu) {
         "{}** {} kernel32!CreateNamedPipeA  name:{} in: 0x{:x} out: 0x{:x} {}",
         emu.colors.light_red, emu.pos, name, in_buff_sz, out_buff_sz, emu.colors.nc
     );
-
-    for _ in 0..4 {
-        emu.stack_pop64(false);
-    }
 
     emu.regs.rax = helper::handler_create(&name);
 }
@@ -1074,10 +1059,6 @@ fn CreateNamedPipeW(emu: &mut emu::Emu) {
         "{}** {} kernel32!CreateNamedPipeA  name:{} in: 0x{:x} out: 0x{:x} {}",
         emu.colors.light_red, emu.pos, name, in_buff_sz, out_buff_sz, emu.colors.nc
     );
-
-    for _ in 0..4 {
-        emu.stack_pop64(false);
-    }
 
     emu.regs.rax = helper::handler_create(&name);
 }
@@ -1149,8 +1130,6 @@ fn ReadFile(emu: &mut emu::Emu) {
     if !helper::handler_exist(file_hndl) {
         println!("\tinvalid handle.")
     }
-
-    emu.stack_pop64(false);
 }
 
 fn WriteFile(emu: &mut emu::Emu) {
@@ -1177,7 +1156,6 @@ fn WriteFile(emu: &mut emu::Emu) {
         println!("\tinvalid handle.")
     }
 
-    emu.stack_pop64(false);
     emu.regs.rax = 1;
 }
 
@@ -1261,7 +1239,6 @@ fn ReadProcessMemory(emu: &mut emu::Emu) {
     emu.maps.write_qword(bytes, size);
     emu.maps.memset(buff, 0x90, size as usize);
 
-    emu.stack_pop64(false);
     emu.regs.rax = 1;
 }
 
@@ -1323,7 +1300,6 @@ fn VirtualProtectEx(emu: &mut emu::Emu) {
         emu.colors.light_red, emu.pos, hproc, addr, size, new_prot, emu.colors.nc
     );
 
-    emu.stack_pop64(false);
     emu.regs.rax = 1;
 }
 
@@ -1605,7 +1581,6 @@ fn MapViewOfFile(emu: &mut emu::Emu) {
         println!("the non-zero offset is not implemented for now");
     }
 
-    emu.stack_pop64(false);
     emu.regs.rax = addr;
 }
 
@@ -1709,8 +1684,6 @@ fn VirtualAllocExNuma(emu: &mut emu::Emu) {
     let alloc = emu.maps.create_map(format!("alloc_{:x}", base).as_str());
     alloc.set_base(base);
     alloc.set_size(size);
-
-    emu.stack_pop64(false);
 
     emu.regs.rax = base;
 }
@@ -1822,8 +1795,6 @@ fn CreateFileMappingA(emu: &mut emu::Emu) {
         emu.regs.get_eax(),
         emu.colors.nc
     );
-    emu.stack_pop64(false);
-    emu.stack_pop64(false);
 }
 
 fn CreateFileMappingW(emu: &mut emu::Emu) {
@@ -1854,8 +1825,6 @@ fn CreateFileMappingW(emu: &mut emu::Emu) {
         emu.regs.get_eax(),
         emu.colors.nc
     );
-    emu.stack_pop64(false);
-    emu.stack_pop64(false);
 }
 
 fn GetSystemTime(emu: &mut emu::Emu) {
@@ -2151,9 +2120,6 @@ fn MultiByteToWideChar(emu: &mut emu::Emu) {
         .maps
         .read_qword(emu.regs.rsp + 8)
         .expect("kernel32!MultiByteToWideChar cannot read cchWideChar");
-
-    emu.stack_pop64(false);
-    emu.stack_pop64(false);
 
     let utf8 = emu.maps.read_string(utf8_ptr);
     let mut wide = String::new();
