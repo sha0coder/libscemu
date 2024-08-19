@@ -989,6 +989,9 @@ impl PE32 {
 
         let mut cb_off; // = PE32::vaddr_to_off(&self.sect_hdr, tls.tls_callbacks) as usize;
 
+        if tls.tls_callbacks < self.opt.image_base - 0xf000 + 0xa400 {
+            panic!("error loading tls callbacks");
+        }
         cb_off = (tls.tls_callbacks - self.opt.image_base - 0xf000 + 0xa400) as usize;
 
         println!("cb_off {:x}", cb_off);

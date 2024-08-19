@@ -403,10 +403,6 @@ impl Emu {
 
         // loading banzai on 32bits
         if !self.cfg.is_64bits {
-            println!(
-                "loading banzai {} ...",
-                &format!("{}/banzai.csv", self.cfg.maps_folder)
-            );
             let mut rdr = ReaderBuilder::new()
                 .from_path(&format!("{}/banzai.csv", self.cfg.maps_folder))
                 .expect("banzai.csv not found on maps folder, please download last scemu maps");
@@ -418,7 +414,6 @@ impl Emu {
 
                 self.banzai.add(api, params);
             }
-            println!("loaded!");
         }
         //self.init_tests();
     }
