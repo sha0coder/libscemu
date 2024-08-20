@@ -9941,6 +9941,17 @@ impl Emu {
                 }
             }
 
+            Mnemonic::Fsubrp => {
+                self.show_instruction(&self.colors.green, &ins);
+
+                let st0 = self.fpu.get_st(0);
+                let st1 = self.fpu.get_st(1);
+                let result = st1 - st0;
+
+                self.fpu.set_st(1, result);
+                self.fpu.pop();
+            }
+
             Mnemonic::Fstp => {
                 self.show_instruction(&self.colors.green, &ins);
 
@@ -10402,9 +10413,71 @@ impl Emu {
             // scalar double: only 54b less significative part.
             // packed: compute all parts.
             // packed double
-            Mnemonic::Por => {
+            Mnemonic::Punpckhbw => {
                 self.show_instruction(&self.colors.green, &ins);
 
+                let value0 = match self.get_operand_xmm_value_128(&ins, 0, true) {
+                    Some(v) => v,
+                    None => return false,
+                };
+
+                let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                    Some(v) => v,
+                    None => return false,
+                };
+
+                let bytes0 = value0.to_le_bytes();
+                let bytes1 = value1.to_le_bytes();
+
+                let mut result_bytes = [0u8; 16];
+                result_bytes[0] = bytes0[8];
+                result_bytes[1] = bytes1[8];
+                result_bytes[2] = bytes0[9];
+                result_bytes[3] = bytes1[9];
+                result_bytes[4] = bytes0[10];
+                result_bytes[5] = bytes1[10];
+                result_bytes[6] = bytes0[11];
+                result_bytes[7] = bytes1[11];
+                result_bytes[8] = bytes0[12];
+                result_bytes[9] = bytes1[12];
+                result_bytes[10] = bytes0[13];
+                result_bytes[11] = bytes1[13];
+                result_bytes[12] = bytes0[14];
+                result_bytes[13] = bytes1[14];
+                result_bytes[14] = bytes0[15];
+                result_bytes[15] = bytes1[15];
+
+                let result = u128::from_le_bytes(result_bytes);
+                self.set_operand_xmm_value_128(&ins, 0, result);
+            }
+
+            Mnemonic::Pand => {
+                self.show_instruction(&self.colors.green, &ins);
+                assert!(ins.op_count() == 2);
+
+                let value0 = match self.get_operand_xmm_value_128(&ins, 0, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting xmm value0");
+                        return false;
+                    }
+                };
+                let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting xmm value1");
+                        return false;
+                    }
+                };
+
+                let result: u128 = value0 & value1;
+                self.flags.calc_flags(result as u64, 32);
+
+                self.set_operand_xmm_value_128(&ins, 0, result);
+            }
+
+            Mnemonic::Por => {
+                self.show_instruction(&self.colors.green, &ins);
                 assert!(ins.op_count() == 2);
 
                 let value0 = match self.get_operand_xmm_value_128(&ins, 0, true) {
@@ -12694,6 +12767,264 @@ impl Emu {
                     }
                     _ => unreachable!(""),
                 }
+            }
+
+            Mnemonic::Fdecstp => {
+                self.show_instruction(&self.colors.green, &ins);
+                self.fpu.dec_top();
+            }
+
+            Mnemonic::Ftst => {
+                self.show_instruction(&self.colors.green, &ins);
+
+                let st0 = self.fpu.get_st(0);
+                self.fpu.f_c0 = st0 < 0.0;
+                self.fpu.f_c2 = st0.is_nan();
+                self.fpu.f_c3 = st0 == 0.0;
+            }
+
+            Mnemonic::Emms => {
+                self.show_instruction(&self.colors.green, &ins);
+            }
+
+            Mnemonic::Fxam => {
+                self.show_instruction(&self.colors.green, &ins);
+
+                let st0: f32 = self.fpu.get_st(0);
+
+                if st0 < 0f32 {
+                    self.fpu.f_c0 = true;
+                } else {
+                    self.fpu.f_c0 = false;
+                }
+
+                self.fpu.f_c1 = false;
+
+                if st0.is_nan() {
+                    self.fpu.f_c2 = true;
+                    self.fpu.f_c3 = true;
+                } else {
+                    self.fpu.f_c2 = false;
+                    self.fpu.f_c3 = false;
+                }
+            }
+
+            Mnemonic::Pcmpgtw => {
+                self.show_instruction(&self.colors.green, &ins);
+                assert!(ins.op_count() == 2);
+                assert!(self.get_operand_sz(&ins, 0) == 128);
+                assert!(self.get_operand_sz(&ins, 1) == 128);
+
+                let value0 = match self.get_operand_xmm_value_128(&ins, 0, true) {
+                    Some(v) => v,
+                    None => return false,
+                };
+                let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                    Some(v) => v,
+                    None => return false,
+                };
+
+                let mut result = 0u128;
+
+                for i in 0..8 {
+                    let shift = i * 16;
+                    let word0 = (value0 >> shift) & 0xFFFF;
+                    let word1 = (value1 >> shift) & 0xFFFF;
+
+                    let cmp_result = if word0 > word1 {
+                        0xFFFFu128
+                    } else {
+                        0x0000u128
+                    };
+
+                    result |= cmp_result << shift;
+                }
+
+                self.set_operand_xmm_value_128(&ins, 0, result);
+            }
+
+            Mnemonic::Pcmpgtb => {
+                self.show_instruction(&self.colors.green, &ins);
+                assert!(ins.op_count() == 2);
+                assert!(self.get_operand_sz(&ins, 0) == 128);
+                assert!(self.get_operand_sz(&ins, 1) == 128);
+
+                let value0 = match self.get_operand_xmm_value_128(&ins, 0, true) {
+                    Some(v) => v,
+                    None => return false,
+                };
+                let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                    Some(v) => v,
+                    None => return false,
+                };
+
+                let mut result = 0u128;
+
+                for i in 0..16 {
+                    let shift = i * 8;
+                    let byte0 = (value0 >> shift) & 0xFF;
+                    let byte1 = (value1 >> shift) & 0xFF;
+
+                    let cmp_result = if byte0 > byte1 { 0xFFu128 } else { 0x00u128 };
+
+                    result |= cmp_result << shift;
+                }
+
+                self.set_operand_xmm_value_128(&ins, 0, result);
+            }
+
+            Mnemonic::Pcmpeqw => {
+                self.show_instruction(&self.colors.green, &ins);
+
+                match self.get_operand_sz(ins, 0) {
+                    128 => {
+                        let source1 = match self.get_operand_xmm_value_128(&ins, 0, true) {
+                            Some(v) => v,
+                            None => {
+                                println!("error reading memory xmm 1 source operand");
+                                return false;
+                            }
+                        };
+
+                        let source2 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                            Some(v) => v,
+                            None => {
+                                println!("error reading memory xmm 2 source operand");
+                                return false;
+                            }
+                        };
+
+                        let a_words = source1.to_le_bytes();
+                        let b_words = source2.to_le_bytes();
+
+                        let mut result = [0u8; 16];
+
+                        for i in 0..8 {
+                            let word_a = u16::from_le_bytes([a_words[2 * i], a_words[2 * i + 1]]);
+                            let word_b = u16::from_le_bytes([b_words[2 * i], b_words[2 * i + 1]]);
+                            let cmp_result: u16 = if word_a == word_b { 0xFFFF } else { 0x0000 };
+                            let [low, high] = cmp_result.to_le_bytes();
+                            result[2 * i] = low;
+                            result[2 * i + 1] = high;
+                        }
+                        let result = u128::from_le_bytes(result);
+                        self.set_operand_xmm_value_128(&ins, 0, result);
+                    }
+                    256 => {
+                        let source1 = match self.get_operand_ymm_value_256(&ins, 0, true) {
+                            Some(v) => v,
+                            None => {
+                                println!("error reading memory ymm 1 source operand");
+                                return false;
+                            }
+                        };
+
+                        let source2 = match self.get_operand_ymm_value_256(&ins, 1, true) {
+                            Some(v) => v,
+                            None => {
+                                println!("error reading memory ymm 2 source operand");
+                                return false;
+                            }
+                        };
+
+                        let mut bytes1: Vec<u8> = vec![0; 32];
+                        source1.to_little_endian(&mut bytes1);
+                        let mut bytes2: Vec<u8> = vec![0; 32];
+                        source2.to_little_endian(&mut bytes2);
+                        let mut result = [0u8; 32];
+
+                        for i in 0..16 {
+                            let word1 = u16::from_le_bytes([bytes1[2 * i], bytes1[2 * i + 1]]);
+                            let word2 = u16::from_le_bytes([bytes2[2 * i], bytes2[2 * i + 1]]);
+                            let cmp_result = if word1 == word2 { 0xFFFFu16 } else { 0x0000u16 };
+                            let [low, high] = cmp_result.to_le_bytes();
+
+                            result[2 * i] = low;
+                            result[2 * i + 1] = high;
+                        }
+
+                        let result256: regs64::U256 = regs64::U256::from_little_endian(&result);
+                        self.set_operand_ymm_value_256(&ins, 0, result256);
+                    }
+                    _ => unreachable!(""),
+                }
+            }
+
+            Mnemonic::Fnclex => {
+                self.show_instruction(&self.colors.green, &ins);
+                self.fpu.stat &= !(0b10000011_11111111);
+            }
+
+            Mnemonic::Fcom => {
+                self.show_instruction(&self.colors.green, &ins);
+                let st0 = self.fpu.get_st(0);
+
+                let value1 = match self.get_operand_value(&ins, 1, false) {
+                    Some(v1) => v1,
+                    None => 0,
+                };
+
+                let st4 = self.fpu.get_st(value1 as usize);
+
+                if st0.is_nan() || st4.is_nan() {
+                    self.fpu.f_c0 = false;
+                    self.fpu.f_c2 = true;
+                    self.fpu.f_c3 = false;
+                } else {
+                    self.fpu.f_c0 = st0 < st4;
+                    self.fpu.f_c2 = false;
+                    self.fpu.f_c3 = st0 == st4;
+                }
+            }
+
+            Mnemonic::Fmul => {
+                self.show_instruction(&self.colors.green, &ins);
+                let st0 = self.fpu.get_st(0);
+
+                let value1 = match self.get_operand_value(&ins, 1, false) {
+                    Some(v1) => v1,
+                    None => 0,
+                };
+
+                let stn = self.fpu.get_st(value1 as usize);
+                self.fpu.set_st(0, st0 * stn);
+            }
+
+            Mnemonic::Fdiv => {
+                self.show_instruction(&self.colors.green, &ins);
+                let st0 = self.fpu.get_st(0);
+
+                let value1 = match self.get_operand_value(&ins, 1, false) {
+                    Some(v1) => v1,
+                    None => 0,
+                };
+
+                let stn = self.fpu.get_st(value1 as usize);
+                self.fpu.set_st(0, st0 / stn);
+            }
+
+            Mnemonic::Fprem => {
+                self.show_instruction(&self.colors.green, &ins);
+
+                let st0 = self.fpu.get_st(0);
+                let st1 = self.fpu.get_st(1);
+
+                let quotient = (st0 / st1).floor();
+                let result = st0 - quotient * st1;
+
+                self.fpu.set_st(0, result);
+            }
+
+            Mnemonic::Fprem1 => {
+                self.show_instruction(&self.colors.green, &ins);
+
+                let st0 = self.fpu.get_st(0);
+                let st1 = self.fpu.get_st(1);
+
+                let quotient = (st0 / st1).round();
+                let remainder = st0 - quotient * st1;
+
+                self.fpu.set_st(0, remainder);
             }
 
             // end SSE

@@ -4,7 +4,7 @@ use iced_x86::Register;
 pub struct FPU {
     st: Vec<f32>,
     tag: u16,
-    stat: u16,
+    pub stat: u16,
     ctrl: u16,
     ip: u64,
     err_off: u32,
@@ -79,16 +79,14 @@ impl FPU {
     }
 
     pub fn inc_top(&mut self) {
-        self.top += 1;
-        if self.top > 7 {
-            self.top = 0;
-        }
+        self.top = (self.top + 1) % 8;
     }
 
     pub fn dec_top(&mut self) {
-        self.top -= 1;
-        if self.top < 0 {
+        if self.top == 0 {
             self.top = 7;
+        } else {
+            self.top -= 1;
         }
     }
 

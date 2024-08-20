@@ -1,7 +1,7 @@
 use crate::emu::maps::Maps;
-use uint::construct_uint;
 use iced_x86::Register;
 use rand;
+use uint::construct_uint;
 
 macro_rules! set_reg32 {
     ($reg:expr, $val:expr) => {
@@ -61,7 +61,6 @@ macro_rules! get_reg8h {
 }
 
 //  https://wiki.osdev.org/CPU_Registers_x86-64
-
 
 construct_uint! {
     pub struct U256(4);
@@ -268,7 +267,6 @@ impl Regs64 {
             fs: 0,
         }
     }
-
 
     pub fn diff(rip: u64, pos: u64, a: Regs64, b: Regs64) {
         let mut output = format!("\tdiff_reg: pos = {} rip = {:x} ", pos, rip);
@@ -1315,7 +1313,6 @@ impl Regs64 {
         };
     }
 
-
     // ymm
 
     pub fn is_ymm(&self, reg: Register) -> bool {
@@ -1472,6 +1469,16 @@ impl Regs64 {
             Register::DIL => self.get_dil(),
             Register::BPL => self.get_bpl(),
             Register::SPL => self.get_spl(),
+
+            Register::ST0 => 0,
+            Register::ST1 => 1,
+            Register::ST2 => 2,
+            Register::ST3 => 3,
+            Register::ST4 => 4,
+            Register::ST5 => 5,
+            Register::ST6 => 6,
+            Register::ST7 => 7,
+
             // segmets
             Register::DS => 0,
             Register::CS => 0,
@@ -1901,7 +1908,6 @@ impl Regs64 {
         }
     }
 
-
     pub fn set_by_name(&mut self, reg_name: &str, value: u64) {
         match reg_name {
             // 64bits
@@ -2286,12 +2292,11 @@ impl Regs64 {
         match reg {
             "rax" | "rbx" | "rcx" | "rdx" | "rsi" | "rdi" | "rbp" | "rsp" | "rip" | "r8" | "r9"
             | "r10" | "r11" | "r12" | "eax" | "ebx" | "ecx" | "edx" | "esi" | "edi" | "esp"
-            | "ebp" | "eip"  
-            | "r8d" | "r9d" | "r10d" | "r11d" | "r12d" | "r13d" | "r14d" | "r15d" | "ax" | "bx" | "cx"
-            | "dx" | "bp" | "sp" | "r8w" | "r9w" | "r10w" | "r11w" | "r12w" | "r13w" | "r14w" | "r15w"
-            | "si" | "di" | "al" | "ah" | "bl" | "bh" | "cl" | "ch" | "dl" | "dh" | "r8l" | "r9l" 
-            | "r10l" | "r11l" | "r12l" | "r13l" | "r14l" | "r15l" | "sil" | "dil" | "bpl" | "spl" 
-            => true,
+            | "ebp" | "eip" | "r8d" | "r9d" | "r10d" | "r11d" | "r12d" | "r13d" | "r14d"
+            | "r15d" | "ax" | "bx" | "cx" | "dx" | "bp" | "sp" | "r8w" | "r9w" | "r10w"
+            | "r11w" | "r12w" | "r13w" | "r14w" | "r15w" | "si" | "di" | "al" | "ah" | "bl"
+            | "bh" | "cl" | "ch" | "dl" | "dh" | "r8l" | "r9l" | "r10l" | "r11l" | "r12l"
+            | "r13l" | "r14l" | "r15l" | "sil" | "dil" | "bpl" | "spl" => true,
             &_ => false,
         }
     }
