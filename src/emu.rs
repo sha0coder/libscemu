@@ -1995,7 +1995,11 @@ impl Emu {
                 println!("/!\\ alert, jumping the barrier 0x{:x} name:{} map_name:{} filename:{}",
                          addr, name, map_name, &self.filename);
             }*/
-            //println!("entra map:`{}` map_name:`{}` filename:`{}` !!!", name, map_name, &self.filename);
+            /*
+            println!(
+                "entra map:`{}` map_name:`{}` filename:`{}` !!!",
+                name, map_name, &self.filename
+            );*/
             self.regs.set_eip(addr);
         } else {
             if self.cfg.verbose >= 1 {
@@ -3413,9 +3417,9 @@ impl Emu {
             None => true,
         };
 
-        if !handle_exception {
+        /*if !handle_exception {
             return;
-        }
+        }*/
 
         if self.veh > 0 {
             addr = self.veh;
@@ -4869,12 +4873,12 @@ impl Emu {
                     ret_addr = match self.stack_pop64(false) {
                         Some(v) => v as u64,
                         None => return false,
-                    }; // return false address
+                    };
                 } else {
                     ret_addr = match self.stack_pop32(false) {
                         Some(v) => v as u64,
                         None => return false,
-                    }; // return false address
+                    };
                 }
 
                 self.show_instruction_ret(&self.colors.yellow, &ins, ret_addr);
@@ -4920,7 +4924,7 @@ impl Emu {
 
                 if self.eh_ctx != 0 {
                     exception::exit(self);
-                    return false;
+                    return true;
                 }
 
                 if self.cfg.is_64bits {
@@ -9193,7 +9197,7 @@ impl Emu {
                 self.show_instruction(&self.colors.red, &ins);
                 println!("/!\\ int 3 sigtrap!!!!");
                 self.exception();
-                return false;
+                return true;
             }
 
             Mnemonic::Nop => {
@@ -9602,6 +9606,13 @@ impl Emu {
                         0x29 => {
                             println!("int 0x21: __fastfail {}", self.regs.rcx);
                             std::process::exit(1);
+                        }
+
+                        0x03 => {
+                            self.show_instruction(&self.colors.red, &ins);
+                            println!("/!\\ int 0x3 sigtrap!!!!");
+                            self.exception();
+                            return false;
                         }
 
                         _ => {
