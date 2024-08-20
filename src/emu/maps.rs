@@ -83,11 +83,11 @@ impl Maps {
         }
 
         for i in 0..8 {
-            if !self.write_byte(addr+i, ((value >> (i * 8)) & 0xff) as u8) {
+            if !self.write_byte(addr + i, ((value >> (i * 8)) & 0xff) as u8) {
                 return false;
             }
         }
-    
+
         true
     }
 
@@ -104,11 +104,11 @@ impl Maps {
         }
 
         for i in 0..4 {
-            if !self.write_byte(addr+i, ((value >> (i * 8)) & 0xff) as u8) {
+            if !self.write_byte(addr + i, ((value >> (i * 8)) & 0xff) as u8) {
                 return false;
             }
         }
-    
+
         true
     }
 
@@ -121,11 +121,11 @@ impl Maps {
         }
 
         for i in 0..2 {
-            if !self.write_byte(addr+i, ((value >> (i * 8)) & 0xff) as u8) {
+            if !self.write_byte(addr + i, ((value >> (i * 8)) & 0xff) as u8) {
                 return false;
             }
         }
-    
+
         true
     }
 
@@ -190,13 +190,13 @@ impl Maps {
 
         let mut n: u128 = 0;
         for i in 0..16 {
-            let v = match self.read_byte(addr+i) {
+            let v = match self.read_byte(addr + i) {
                 Some(v) => v,
                 None => return None,
             };
             n |= (v as u128) << ((15 - i) * 8);
         }
-   
+
         Some(n)
     }
 
@@ -230,13 +230,13 @@ impl Maps {
 
         let mut n: u128 = 0;
         for i in 0..16 {
-            let v = match self.read_byte(addr+i) {
+            let v = match self.read_byte(addr + i) {
                 Some(v) => v,
                 None => return None,
             };
-            n |= (v as u128) << (i*8);
+            n |= (v as u128) << (i * 8);
         }
-   
+
         Some(n)
     }
 
@@ -257,11 +257,11 @@ impl Maps {
 
         let mut n: u64 = 0;
         for i in 0..8 {
-            let v = match self.read_byte(addr+i) {
+            let v = match self.read_byte(addr + i) {
                 Some(v) => v,
                 None => return None,
             };
-            n |= (v as u64) << (i*8);
+            n |= (v as u64) << (i * 8);
         }
 
         Some(n)
@@ -280,11 +280,11 @@ impl Maps {
 
         let mut n: u32 = 0;
         for i in 0..4 {
-            let v = match self.read_byte(addr+i) {
+            let v = match self.read_byte(addr + i) {
                 Some(v) => v,
                 None => return None,
             };
-            n |= (v as u32) << (i*8);
+            n |= (v as u32) << (i * 8);
         }
 
         Some(n)
@@ -299,11 +299,11 @@ impl Maps {
 
         let mut n: u16 = 0;
         for i in 0..2 {
-            let v = match self.read_byte(addr+i) {
+            let v = match self.read_byte(addr + i) {
                 Some(v) => v,
                 None => return None,
             };
-            n |= (v as u16) << (i*8);
+            n |= (v as u16) << (i * 8);
         }
 
         Some(n)
@@ -327,6 +327,7 @@ impl Maps {
         panic!("incorrect memory map name");
     }
 
+    // deprecated
     pub fn get_mem(&mut self, name: &str) -> &mut Mem64 {
         for mem in self.maps.iter_mut() {
             if mem.get_name() == name {
@@ -334,6 +335,15 @@ impl Maps {
             }
         }
         panic!("incorrect memory map name {}", name);
+    }
+
+    pub fn get_mem2(&mut self, name: &str) -> Option<&mut Mem64> {
+        for mem in self.maps.iter_mut() {
+            if mem.get_name() == name {
+                return Some(mem);
+            }
+        }
+        None
     }
 
     pub fn get_mem_by_addr(&mut self, addr: u64) -> Option<&mut Mem64> {
@@ -501,12 +511,12 @@ impl Maps {
         false
     }
 
-    pub fn show_addr_names(&self, addr: u64) {  
+    pub fn show_addr_names(&self, addr: u64) {
         for mem in self.maps.iter() {
-            if mem.inside(addr) { 
-                println!("{}", mem.get_name());                                                                  
+            if mem.inside(addr) {
+                println!("{}", mem.get_name());
             }
-        }  
+        }
     }
 
     pub fn get_addr_name(&self, addr: u64) -> Option<String> {
@@ -1000,7 +1010,6 @@ impl Maps {
         }
     }
 
-
     pub fn lib64_alloc(&self, sz: u64) -> Option<u64> {
         // super simple memory allocator
         let mut addr: u64 = constants::LIB64_BARRIER;
@@ -1014,7 +1023,7 @@ impl Maps {
 
             for mem in self.maps.iter() {
                 if addr >= mem.get_base() && addr <= mem.get_bottom() {
-                    continue
+                    continue;
                 }
             }
 

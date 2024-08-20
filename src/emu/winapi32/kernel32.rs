@@ -161,7 +161,6 @@ pub fn gateway(addr: u32, emu: &mut emu::Emu) -> String {
         0x75e91181 => GetLongPathNameW(emu),
         0x75e8d9d0 => FreeLibrary(emu),
 
-
         _ => {
             let apiname = guess_api_name(emu, addr);
             println!(
@@ -224,7 +223,6 @@ pub fn resolve_api_addr_to_name(emu: &mut emu::Emu, addr: u64) -> String {
                 if flink.pe_hdr == 0 {
                     continue;
                 }
-
 
                 let ordinal = flink.get_function_ordinal(emu, i);
                 if ordinal.func_va == addr {
@@ -502,6 +500,11 @@ fn LoadLibraryExW(emu: &mut emu::Emu) {
     );
 
     emu.regs.rax = load_library(emu, &libname);
+
+    /*
+    if emu.regs.rax == 0 {
+        emu.regs.rax = 1;
+    }*/
 
     emu.stack_pop32(false);
     emu.stack_pop32(false);
@@ -1975,11 +1978,10 @@ fn HeapDestroy(emu: &mut emu::Emu) {
     );
 
     helper::handler_close(hndl);
-    
+
     emu.regs.rax = hndl;
     emu.stack_pop32(false);
 }
-
 
 fn HeapCreate(emu: &mut emu::Emu) {
     let opts = emu
@@ -2019,11 +2021,19 @@ fn GetModuleHandleA(emu: &mut emu::Emu) {
         mod_name = "self".to_string();
         emu.regs.rax = match emu.maps.get_base() {
             Some(base) => base,
-            None => helper::handler_create(&mod_name)
+            None => helper::handler_create(&mod_name),
         }
     } else {
-        mod_name = emu.maps.read_string(mod_name_ptr);
-        emu.regs.rax = helper::handler_create(&mod_name);
+        mod_name = emu.maps.read_string(mod_name_ptr).to_lowercase();
+        let mod_mem = match emu.maps.get_mem2(&mod_name) {
+            Some(m) => m,
+            None => {
+                emu.regs.rax = 0;
+                return;
+            }
+        };
+
+        emu.regs.rax = mod_mem.get_base();
     }
 
     println!(
@@ -2039,7 +2049,26 @@ fn GetModuleHandleW(emu: &mut emu::Emu) {
         .maps
         .read_dword(emu.regs.get_esp())
         .expect("kernel32!GetModuleHandleW cannot read mod_name_ptr") as u64;
-    let mod_name = emu.maps.read_wide_string(mod_name_ptr);
+
+    let mod_name: String;
+
+    if mod_name_ptr == 0 {
+        mod_name = "self".to_string();
+        emu.regs.rax = match emu.maps.get_base() {
+            Some(base) => base,
+            None => helper::handler_create(&mod_name),
+        }
+    } else {
+        mod_name = emu.maps.read_wide_string(mod_name_ptr).to_lowercase();
+        let mod_mem = match emu.maps.get_mem2(&mod_name) {
+            Some(m) => m,
+            None => {
+                emu.regs.rax = 0;
+                return;
+            }
+        };
+        emu.regs.rax = mod_mem.get_base();
+    }
 
     println!(
         "{}** {} kernel32!GetModuleHandleW '{}' {}",
@@ -2047,8 +2076,6 @@ fn GetModuleHandleW(emu: &mut emu::Emu) {
     );
 
     emu.stack_pop32(false);
-
-    emu.regs.rax = helper::handler_create(&mod_name);
 }
 
 fn TlsAlloc(emu: &mut emu::Emu) {
@@ -2301,7 +2328,7 @@ fn UnhandledExceptionFilter(emu: &mut emu::Emu) {
     );
 
     emu.stack_pop32(false);
-    emu.regs.rax = constants::EXCEPTION_EXECUTE_HANDLER; 
+    emu.regs.rax = constants::EXCEPTION_EXECUTE_HANDLER;
     // a debugger would had answered EXCEPTION_CONTINUE_SEARCH
 }
 
@@ -2546,7 +2573,6 @@ fn CreateFileMappingA(emu: &mut emu::Emu) {
     for _ in 0..6 {
         emu.stack_pop32(false);
     }
-
 }
 
 fn CreateFileMappingW(emu: &mut emu::Emu) {
@@ -2686,7 +2712,7 @@ fn GetSystemDirectoryA(emu: &mut emu::Emu) {
         .read_dword(emu.regs.get_esp() + 4)
         .expect("kernel32!GetSystemDirectoryA cannot read size param");
 
-    emu.maps.write_string(out_buff_ptr, "C:\\Windows\\");
+    emu.maps.write_string(out_buff_ptr, "C:\\Windows\\\x00");
 
     println!(
         "{}** {} kernel32!GetSystemDirectoryA  {}",
@@ -2709,7 +2735,8 @@ fn GetSystemDirectoryW(emu: &mut emu::Emu) {
         .read_dword(emu.regs.get_esp() + 4)
         .expect("kernel32!GetSystemDirectoryW cannot read size param");
 
-    emu.maps.write_wide_string(out_buff_ptr, "C:\\Windows\\");
+    emu.maps
+        .write_wide_string(out_buff_ptr, "C:\\Windows\\\x00\x00");
 
     println!(
         "{}** {} kernel32!GetSystemDirectoryW  {}",
@@ -2719,7 +2746,7 @@ fn GetSystemDirectoryW(emu: &mut emu::Emu) {
     emu.stack_pop32(false);
     emu.stack_pop32(false);
 
-    emu.regs.rax = 11 * 2;
+    emu.regs.rax = 11; // * 2;
 }
 
 fn GetStartupInfoA(emu: &mut emu::Emu) {
@@ -3003,7 +3030,6 @@ fn MultiByteToWideChar(emu: &mut emu::Emu) {
         "{}** {} kernel32!MultiByteToWideChar '{}' dst:0x{:x} {}",
         emu.colors.light_red, emu.pos, utf8, wide_ptr, emu.colors.nc
     );
-
 
     if cchWideChar > 0 {
         emu.maps.write_string(wide_ptr, &wide);
@@ -3589,17 +3615,26 @@ fn VirtualQueryEx(emu: &mut emu::Emu) {
 }
 
 fn InterlockedIncrement(emu: &mut emu::Emu) {
-    let addend = emu.maps.read_dword(emu.regs.get_esp())
+    let addend = emu
+        .maps
+        .read_dword(emu.regs.get_esp())
         .expect("kernel32!InterlockedIncrement cannot read addend");
 
-    let prev = emu.maps.read_dword(addend as u64)
+    let prev = emu
+        .maps
+        .read_dword(addend as u64)
         .expect("kernel32!InterlockedIncrement  error derreferencing addend");
 
-    emu.maps.write_dword(addend as u64, prev+1);
+    emu.maps.write_dword(addend as u64, prev + 1);
 
     println!(
         "{}** {} kernel32!InterlockedIncrement 0x{:x} {}->{} {}",
-        emu.colors.light_red, emu.pos, addend, prev, prev+1, emu.colors.nc
+        emu.colors.light_red,
+        emu.pos,
+        addend,
+        prev,
+        prev + 1,
+        emu.colors.nc
     );
 
     emu.stack_pop32(false);
@@ -3621,12 +3656,15 @@ fn GetEnvironmentStringsW(emu: &mut emu::Emu) {
         emu.colors.light_red, emu.pos, emu.colors.nc
     );
     let addr = emu.alloc("environment", 1024);
-    emu.maps.write_wide_string(addr, "PATH=c:\\Windows\\System32");
+    emu.maps
+        .write_wide_string(addr, "PATH=c:\\Windows\\System32");
     emu.regs.rax = addr;
 }
 
 fn GetStdHandle(emu: &mut emu::Emu) {
-    let nstd = emu.maps.read_dword(emu.regs.rsp)
+    let nstd = emu
+        .maps
+        .read_dword(emu.regs.rsp)
         .expect("kernel32!GetStdHandle error reading nstd param");
 
     println!(
@@ -3639,7 +3677,9 @@ fn GetStdHandle(emu: &mut emu::Emu) {
 }
 
 fn GetFileType(emu: &mut emu::Emu) {
-    let hndl = emu.maps.read_dword(emu.regs.rsp)
+    let hndl = emu
+        .maps
+        .read_dword(emu.regs.rsp)
         .expect("kernel32!GetFileType error getting hndl param");
 
     println!(
@@ -3660,7 +3700,9 @@ fn GetFileType(emu: &mut emu::Emu) {
 }
 
 fn SetHandleCount(emu: &mut emu::Emu) {
-    let num =  emu.maps.read_dword(emu.regs.rsp)
+    let num = emu
+        .maps
+        .read_dword(emu.regs.rsp)
         .expect("kernel32!SetHandleCount error getting num param");
 
     println!(
@@ -3673,7 +3715,9 @@ fn SetHandleCount(emu: &mut emu::Emu) {
 }
 
 fn IsValidCodePage(emu: &mut emu::Emu) {
-    let codepage = emu.maps.read_dword(emu.regs.rsp)
+    let codepage = emu
+        .maps
+        .read_dword(emu.regs.rsp)
         .expect("kernel32!IsValidCodePage error geting codepage param");
 
     println!(
@@ -3685,11 +3729,14 @@ fn IsValidCodePage(emu: &mut emu::Emu) {
     emu.regs.rax = 1;
 }
 
-
 fn GetCPInfo(emu: &mut emu::Emu) {
-    let codepage = emu.maps.read_dword(emu.regs.rsp)
+    let codepage = emu
+        .maps
+        .read_dword(emu.regs.rsp)
         .expect("kernel32!GetCPInfo error reading codepage param");
-    let info_ptr = emu.maps.read_dword(emu.regs.rsp+4)
+    let info_ptr = emu
+        .maps
+        .read_dword(emu.regs.rsp + 4)
         .expect("kernel32!GetCPInfo error reading inmfo_ptr param");
 
     println!(
@@ -3704,15 +3751,22 @@ fn GetCPInfo(emu: &mut emu::Emu) {
     // https://learn.microsoft.com/en-us/windows/win32/api/winnls/ns-winnls-cpinfo
 }
 
-
 fn GetStringTypeW(emu: &mut emu::Emu) {
-    let info_type = emu.maps.read_dword(emu.regs.rsp)
+    let info_type = emu
+        .maps
+        .read_dword(emu.regs.rsp)
         .expect("kernel32!GetStringTypeW error reading info_type param");
-    let str_ptr = emu.maps.read_dword(emu.regs.rsp+4)
+    let str_ptr = emu
+        .maps
+        .read_dword(emu.regs.rsp + 4)
         .expect("kernel32!GetStringTypeW error reading str_ptr param") as u64;
-    let sz = emu.maps.read_dword(emu.regs.rsp+8)
+    let sz = emu
+        .maps
+        .read_dword(emu.regs.rsp + 8)
         .expect("kernel32!GetStringTypeW error reading sz param");
-    let char_type = emu.maps.read_dword(emu.regs.rsp+12)
+    let char_type = emu
+        .maps
+        .read_dword(emu.regs.rsp + 12)
         .expect("kernel32!GetStringTypeW error reading char_type param");
 
     let ustr = emu.maps.read_wide_string(str_ptr);
@@ -3730,31 +3784,42 @@ fn GetStringTypeW(emu: &mut emu::Emu) {
 }
 
 fn LCMapStringW(emu: &mut emu::Emu) {
-    let locale = emu.maps.read_dword(emu.regs.rsp)
+    let locale = emu
+        .maps
+        .read_dword(emu.regs.rsp)
         .expect("kernel32!LCMapStringW error reading param");
-    let flags = emu.maps.read_dword(emu.regs.rsp+4)
+    let flags = emu
+        .maps
+        .read_dword(emu.regs.rsp + 4)
         .expect("kernel32!LCMapStringW error reading param");
-    let src_ptr = emu.maps.read_dword(emu.regs.rsp+8)
+    let src_ptr = emu
+        .maps
+        .read_dword(emu.regs.rsp + 8)
         .expect("kernel32!LCMapStringW error reading param") as u64;
-    let src_sz = emu.maps.read_dword(emu.regs.rsp+12)
+    let src_sz = emu
+        .maps
+        .read_dword(emu.regs.rsp + 12)
         .expect("kernel32!LCMapStringW error reading param");
-    let dest_ptr = emu.maps.read_dword(emu.regs.rsp+16)
+    let dest_ptr = emu
+        .maps
+        .read_dword(emu.regs.rsp + 16)
         .expect("kernel32!LCMapStringW error reading param") as u64;
-    let dest_sz = emu.maps.read_dword(emu.regs.rsp+20)
+    let dest_sz = emu
+        .maps
+        .read_dword(emu.regs.rsp + 20)
         .expect("kernel32!LCMapStringW error reading param");
 
     let s = emu.maps.read_wide_string(src_ptr);
 
-
     println!(
         "{}** {} kernel32!LCMapStringW `{}` dst:0x{:x} sz:{}->{} {}",
         emu.colors.light_red, emu.pos, s, dest_ptr, src_sz, dest_sz, emu.colors.nc
-    ); 
+    );
 
     if dest_ptr > 0 {
         emu.maps.write_wide_string(dest_ptr, &s);
     }
-    
+
     for _ in 0..6 {
         emu.stack_pop32(false);
     }
@@ -3762,40 +3827,59 @@ fn LCMapStringW(emu: &mut emu::Emu) {
 }
 
 fn WideCharToMultiByte(emu: &mut emu::Emu) {
-    let codepage = emu.maps.read_dword(emu.regs.rsp)
+    let codepage = emu
+        .maps
+        .read_dword(emu.regs.rsp)
         .expect("kernel32!WideCharToMultiByte error reading param");
-    let flags = emu.maps.read_dword(emu.regs.rsp+4)
+    let flags = emu
+        .maps
+        .read_dword(emu.regs.rsp + 4)
         .expect("kernel32!WideCharToMultiByte error reading param");
-    let wstr_ptr = emu.maps.read_dword(emu.regs.rsp+8)
+    let wstr_ptr = emu
+        .maps
+        .read_dword(emu.regs.rsp + 8)
         .expect("kernel32!WideCharToMultiByte error reading param") as u64;
-    let wstr_sz = emu.maps.read_dword(emu.regs.rsp+12)
+    let wstr_sz = emu
+        .maps
+        .read_dword(emu.regs.rsp + 12)
         .expect("kernel32!WideCharToMultiByte error reading param");
-    let mbytestr_ptr = emu.maps.read_dword(emu.regs.rsp+16)
+    let mbytestr_ptr = emu
+        .maps
+        .read_dword(emu.regs.rsp + 16)
         .expect("kernel32!WideCharToMultiByte error reading param") as u64;
-    let mbytestr_sz = emu.maps.read_dword(emu.regs.rsp+20)
+    let mbytestr_sz = emu
+        .maps
+        .read_dword(emu.regs.rsp + 20)
         .expect("kernel32!WideCharToMultiByte error reading param");
-    let in_default_char = emu.maps.read_dword(emu.regs.rsp+24)
-        .expect("kernel32!WideCharToMultiByte error reading param") as u64;
-    let out_default_char = emu.maps.read_dword(emu.regs.rsp+28)
-        .expect("kernel32!WideCharToMultiByte error reading param") as u64;
+    let in_default_char =
+        emu.maps
+            .read_dword(emu.regs.rsp + 24)
+            .expect("kernel32!WideCharToMultiByte error reading param") as u64;
+    let out_default_char =
+        emu.maps
+            .read_dword(emu.regs.rsp + 28)
+            .expect("kernel32!WideCharToMultiByte error reading param") as u64;
 
-   
     //println!("default_char_ptr 0x{:x}", in_default_char);
     //let default_char = emu.maps.read_byte(in_default_char)
-    //    .expect("kernel32!WideCharToMultiByte error reading default char"); 
-    
-    //emu.maps.write_byte(out_default_char, 0);
+    //    .expect("kernel32!WideCharToMultiByte error reading default char");
 
+    //emu.maps.write_byte(out_default_char, 0);
 
     let s = emu.maps.read_wide_string(wstr_ptr);
     emu.maps.write_string(mbytestr_ptr, &s);
 
     println!(
         "{}** {} kernel32!WideCharToMultiByte `{}` sz:{}->{} ={} {}",
-        emu.colors.light_red, emu.pos, s, wstr_sz, mbytestr_sz, s.len(), 
+        emu.colors.light_red,
+        emu.pos,
+        s,
+        wstr_sz,
+        mbytestr_sz,
+        s.len(),
         emu.colors.nc,
     );
-    
+
     for _ in 0..8 {
         emu.stack_pop32(false);
     }
@@ -3803,17 +3887,26 @@ fn WideCharToMultiByte(emu: &mut emu::Emu) {
 }
 
 fn CryptCreateHash(emu: &mut emu::Emu) {
-    let hprov = emu.maps.read_dword(emu.regs.rsp) 
+    let hprov = emu
+        .maps
+        .read_dword(emu.regs.rsp)
         .expect("kernel32!CryptCreateHash error reading param");
-    let algid = emu.maps.read_dword(emu.regs.rsp+4) 
+    let algid = emu
+        .maps
+        .read_dword(emu.regs.rsp + 4)
         .expect("kernel32!CryptCreateHash error reading param");
-    let hkey = emu.maps.read_dword(emu.regs.rsp+8) 
+    let hkey = emu
+        .maps
+        .read_dword(emu.regs.rsp + 8)
         .expect("kernel32!CryptCreateHash error reading param");
-    let flags = emu.maps.read_dword(emu.regs.rsp+12) 
+    let flags = emu
+        .maps
+        .read_dword(emu.regs.rsp + 12)
         .expect("kernel32!CryptCreateHash error reading param");
-    let ptr_hash = emu.maps.read_dword(emu.regs.rsp+16) 
+    let ptr_hash = emu
+        .maps
+        .read_dword(emu.regs.rsp + 16)
         .expect("kernel32!CryptCreateHash error reading param") as u64;
-
 
     let alg_name = constants::get_cryptoalgorithm_name(algid);
 
@@ -3826,20 +3919,30 @@ fn CryptCreateHash(emu: &mut emu::Emu) {
         emu.stack_pop32(false);
     }
 
-    emu.maps.write_dword(ptr_hash, helper::handler_create(&format!("alg://{}", alg_name)) as u32);
+    emu.maps.write_dword(
+        ptr_hash,
+        helper::handler_create(&format!("alg://{}", alg_name)) as u32,
+    );
     emu.regs.rax = 1;
 }
 
 fn HeapSetInformation(emu: &mut emu::Emu) {
-    let hndl = emu.maps.read_dword(emu.regs.rsp) 
+    let hndl = emu
+        .maps
+        .read_dword(emu.regs.rsp)
         .expect("kernel32!HeapSetInformation error reading param");
-    let hinfocls = emu.maps.read_dword(emu.regs.rsp+4) 
+    let hinfocls = emu
+        .maps
+        .read_dword(emu.regs.rsp + 4)
         .expect("kernel32!HeapSetInformation error reading param");
-    let hinfo = emu.maps.read_dword(emu.regs.rsp+8) 
+    let hinfo = emu
+        .maps
+        .read_dword(emu.regs.rsp + 8)
         .expect("kernel32!HeapSetInformation error reading param");
-    let hinfo_sz = emu.maps.read_dword(emu.regs.rsp+12) 
+    let hinfo_sz = emu
+        .maps
+        .read_dword(emu.regs.rsp + 12)
         .expect("kernel32!HeapSetInformation error reading param");
-
 
     println!(
         "{}** {} kernel32!HeapSetInformation {}",
@@ -3853,7 +3956,9 @@ fn HeapSetInformation(emu: &mut emu::Emu) {
 }
 
 fn FreeEnvironmentStringsW(emu: &mut emu::Emu) {
-    let env = emu.maps.read_dword(emu.regs.rsp) 
+    let env = emu
+        .maps
+        .read_dword(emu.regs.rsp)
         .expect("kernel32!FreeEnvironmentStringsW error reading param");
 
     println!(
@@ -3865,11 +3970,17 @@ fn FreeEnvironmentStringsW(emu: &mut emu::Emu) {
 }
 
 fn OpenProcessToken(emu: &mut emu::Emu) {
-    let hndl = emu.maps.read_dword(emu.regs.rsp) 
+    let hndl = emu
+        .maps
+        .read_dword(emu.regs.rsp)
         .expect("kernel32!OpenProcessToken error reading param");
-    let access = emu.maps.read_dword(emu.regs.rsp+4) 
+    let access = emu
+        .maps
+        .read_dword(emu.regs.rsp + 4)
         .expect("kernel32!OpenProcessToken error reading param");
-    let ptr_token = emu.maps.read_dword(emu.regs.rsp+8) 
+    let ptr_token = emu
+        .maps
+        .read_dword(emu.regs.rsp + 8)
         .expect("kernel32!OpenProcessToken error reading param") as u64;
 
     println!(
@@ -3877,7 +3988,10 @@ fn OpenProcessToken(emu: &mut emu::Emu) {
         emu.colors.light_red, emu.pos, hndl, access, emu.colors.nc,
     );
 
-    emu.maps.write_dword(ptr_token, helper::handler_create(&format!("token://{}", hndl)) as u32);
+    emu.maps.write_dword(
+        ptr_token,
+        helper::handler_create(&format!("token://{}", hndl)) as u32,
+    );
 
     emu.stack_pop32(false);
     emu.stack_pop32(false);
@@ -3886,17 +4000,24 @@ fn OpenProcessToken(emu: &mut emu::Emu) {
 }
 
 fn CreateEventA(emu: &mut emu::Emu) {
-    let ev_attr_ptr = emu.maps.read_dword(emu.regs.rsp)
+    let ev_attr_ptr = emu
+        .maps
+        .read_dword(emu.regs.rsp)
         .expect("kernel32!CreateEventA error reading param") as u64;
-    let bManualReset = emu.maps.read_dword(emu.regs.rsp+4)
+    let bManualReset = emu
+        .maps
+        .read_dword(emu.regs.rsp + 4)
         .expect("kernel32!CreateEventA error reading param");
-    let bInitialState = emu.maps.read_dword(emu.regs.rsp+8)
+    let bInitialState = emu
+        .maps
+        .read_dword(emu.regs.rsp + 8)
         .expect("kernel32!CreateEventA error reading param");
-    let name_ptr = emu.maps.read_dword(emu.regs.rsp+12)
+    let name_ptr = emu
+        .maps
+        .read_dword(emu.regs.rsp + 12)
         .expect("kernel32!CreateEventA error reading param") as u64;
 
     let name = emu.maps.read_string(name_ptr);
-
 
     println!(
         "{}** {} kernel32!CreateEventA `{}` {}",
@@ -3909,7 +4030,6 @@ fn CreateEventA(emu: &mut emu::Emu) {
     emu.stack_pop32(false);
     emu.regs.rax = 1;
 }
-
 
 fn AddVectoredExceptionHandler(emu: &mut emu::Emu) {
     let p1 = emu
@@ -3947,7 +4067,6 @@ fn GetLongPathNameW(emu: &mut emu::Emu) {
         .read_dword(emu.regs.get_esp() + 8)
         .expect("kernel32!GetLongPathNameW: error reading param") as u64;
 
-
     let short = emu.maps.read_wide_string(short_path_ptr);
 
     println!(
@@ -3973,7 +4092,6 @@ fn FreeLibrary(emu: &mut emu::Emu) {
         .maps
         .read_dword(emu.regs.get_esp())
         .expect("kernel32!FreeLibrary: error reading param") as u64;
-
 
     println!(
         "{}** {} kernel32!FreeLibrary   {:x} {}",
