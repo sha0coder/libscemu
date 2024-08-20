@@ -3425,7 +3425,11 @@ impl Emu {
             addr = self.veh;
 
             exception::enter(self);
-            self.set_eip(addr, false);
+            if self.cfg.is_64bits {
+                self.set_rip(addr, false);
+            } else {
+                self.set_eip(addr, false);
+            }
         } else {
             if self.seh == 0 {
                 println!("exception without any SEH handler nor vector configured.");
@@ -3459,7 +3463,11 @@ impl Emu {
             if cmd == "y" {
                 self.seh = next;
                 exception::enter(self);
-                self.set_eip(addr, false);
+                if self.cfg.is_64bits {
+                    self.set_rip(addr, false);
+                } else {
+                    self.set_eip(addr, false);
+                }
             }
         }
     }
