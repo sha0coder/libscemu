@@ -10196,6 +10196,34 @@ impl Emu {
                 self.fpu.set_ip(self.regs.rip);
             }
 
+            Mnemonic::Fsqrt => {
+                self.show_instruction(&self.colors.green, &ins);
+
+                self.fpu.set_st(0, self.fpu.get_st(0).sqrt());
+            }
+
+            Mnemonic::Fchs => {
+                self.show_instruction(&self.colors.green, &ins);
+
+                self.fpu.set_st(0, self.fpu.get_st(0) * -1f32);
+            }
+
+            Mnemonic::Fptan => {
+                self.show_instruction(&self.colors.green, &ins);
+
+                self.fpu.set_st(0, self.fpu.get_st(0).tan());
+                self.fpu.push(1.0);
+            }
+
+            Mnemonic::Fsubr => {
+                self.show_instruction(&self.colors.green, &ins);
+                let value0 = self.get_operand_value(&ins, 0, false).unwrap_or(0) as usize;
+                let value1 = self.get_operand_value(&ins, 1, false).unwrap_or(0) as usize;
+                let result = self.fpu.get_st(value1) - self.fpu.get_st(value0);
+
+                self.fpu.set_st(value1, result);
+            }
+
             Mnemonic::Fadd => {
                 self.show_instruction(&self.colors.green, &ins);
                 //assert!(ins.op_count() == 2); there are with 1 operand
@@ -11104,7 +11132,7 @@ impl Emu {
                 }
             }
 
-            Mnemonic::Punpckldq => {
+            Mnemonic::Punpckhdq => {
                 self.show_instruction(&self.colors.cyan, &ins);
 
                 let value0 = match self.get_operand_xmm_value_128(&ins, 0, true) {
@@ -11127,6 +11155,38 @@ impl Emu {
                 let dword0_1 = (value0 >> 64) as u32;
                 let dword1_0 = (value1 >> 96) as u32;
                 let dword1_1 = (value1 >> 64) as u32;
+
+                let result: u128 = ((dword0_0 as u128) << 96)
+                    | ((dword1_0 as u128) << 64)
+                    | ((dword0_1 as u128) << 32)
+                    | (dword1_1 as u128);
+
+                self.set_operand_xmm_value_128(&ins, 0, result);
+            }
+
+            Mnemonic::Punpckldq => {
+                self.show_instruction(&self.colors.cyan, &ins);
+
+                let value0 = match self.get_operand_xmm_value_128(&ins, 0, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting xmm value1");
+                        return false;
+                    }
+                };
+
+                let value1 = match self.get_operand_xmm_value_128(&ins, 1, true) {
+                    Some(v) => v,
+                    None => {
+                        println!("error getting xmm value1");
+                        return false;
+                    }
+                };
+
+                let dword0_0 = (value0 & 0xFFFFFFFF) as u32;
+                let dword0_1 = ((value0 >> 32) & 0xFFFFFFFF) as u32;
+                let dword1_0 = (value1 & 0xFFFFFFFF) as u32;
+                let dword1_1 = ((value1 >> 32) & 0xFFFFFFFF) as u32;
 
                 let result: u128 = ((dword0_0 as u128) << 96)
                     | ((dword1_0 as u128) << 64)
@@ -12871,6 +12931,15 @@ impl Emu {
                 }
 
                 self.set_operand_xmm_value_128(&ins, 0, result);
+            }
+
+            Mnemonic::Faddp => {
+                self.show_instruction(&self.colors.green, &ins);
+
+                let st0 = self.fpu.pop();
+                let st1 = self.fpu.pop();
+
+                self.fpu.push(st0 + st1);
             }
 
             Mnemonic::Pcmpeqw => {
