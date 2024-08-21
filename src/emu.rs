@@ -10206,20 +10206,24 @@ impl Emu {
 
             Mnemonic::Fsqrt => {
                 self.show_instruction(&self.colors.green, &ins);
+                let st0 = self.fpu.get_st(0);
 
-                self.fpu.set_st(0, self.fpu.get_st(0).sqrt());
+                self.fpu.set_st(0, st0.sqrt());
             }
 
             Mnemonic::Fchs => {
                 self.show_instruction(&self.colors.green, &ins);
+                let st0 = self.fpu.get_st(0);
 
-                self.fpu.set_st(0, self.fpu.get_st(0) * -1f64);
+                self.fpu.set_st(0, st0 * -1f64);
+                self.fpu.f_c0 = false;
             }
 
             Mnemonic::Fptan => {
                 self.show_instruction(&self.colors.green, &ins);
+                let st0 = self.fpu.get_st(0);
 
-                self.fpu.set_st(0, self.fpu.get_st(0).tan());
+                self.fpu.set_st(0, st0.tan());
                 self.fpu.push(1.0);
             }
 
@@ -13538,17 +13542,20 @@ impl Emu {
 
             Mnemonic::Fabs => {
                 self.show_instruction(&self.colors.green, &ins);
-                self.fpu.set_st(0, self.fpu.get_st(0).abs());
+                let st0 = self.fpu.get_st(0);
+                self.fpu.set_st(0, st0.abs());
             }
 
             Mnemonic::Fsin => {
                 self.show_instruction(&self.colors.green, &ins);
-                self.fpu.set_st(0, self.fpu.get_st(0).sin());
+                let st0 = self.fpu.get_st(0);
+                self.fpu.set_st(0, st0.sin());
             }
 
             Mnemonic::Fcos => {
                 self.show_instruction(&self.colors.green, &ins);
-                self.fpu.set_st(0, self.fpu.get_st(0).cos());
+                let st0 = self.fpu.get_st(0);
+                self.fpu.set_st(0, st0.cos());
             }
 
             Mnemonic::Fdiv => {

@@ -3,6 +3,7 @@ use iced_x86::Register;
 #[derive(Clone)]
 pub struct FPU {
     st: Vec<f64>,
+    st_depth: u8,
     tag: u16,
     pub stat: u16,
     ctrl: u16,
@@ -16,16 +17,18 @@ pub struct FPU {
     reserved2: [u8; 96],
     xmm: [u64; 16],
     top: i8,
-    pub f_c0: bool,
-    pub f_c1: bool,
-    pub f_c2: bool,
-    pub f_c3: bool,
+    pub f_c0: bool, // overflow
+    pub f_c1: bool, // underflow
+    pub f_c2: bool, // div by zero
+    pub f_c3: bool, // precission
+    pub f_c4: bool, // stack fault
 }
 
 impl FPU {
     pub fn new() -> FPU {
         FPU {
             st: vec![0.0; 8],
+            st_depth: 0,
             tag: 0xffff,
             stat: 0,
             ctrl: 0x027f,
@@ -39,15 +42,17 @@ impl FPU {
             reserved2: [0; 96],
             xmm: [0; 16],
             top: 0,
-            f_c0: false,
-            f_c1: false,
-            f_c2: false,
-            f_c3: false,
+            f_c0: false, // overflow
+            f_c1: false, // underflow
+            f_c2: false, // div by zero
+            f_c3: false, // precision
+            f_c4: false, // stack fault
         }
     }
 
     pub fn clear(&mut self) {
         self.st.clear();
+        self.st_depth = 0;
         self.st = vec![0.0; 8];
         self.tag = 0xffff;
         self.stat = 0;
@@ -128,7 +133,12 @@ impl FPU {
         self.st[i] = value;
     }
 
-    pub fn get_st(&self, i: usize) -> f64 {
+    pub fn get_st(&mut self, i: usize) -> f64 {
+        if self.st_depth == 0 {
+            self.f_c4 = true;
+        } else {
+            self.f_c4 = false;
+        }
         return self.st[i].clone();
     }
 
@@ -155,6 +165,12 @@ impl FPU {
     }
 
     pub fn push(&mut self, value: f64) {
+        if self.st_depth >= 8 {
+            self.f_c0 = true; // overflow
+        } else {
+            self.st_depth += 1;
+            self.f_c0 = false;
+        }
         self.st[7] = self.st[6];
         self.st[6] = self.st[5];
         self.st[5] = self.st[4];
@@ -166,6 +182,12 @@ impl FPU {
     }
 
     pub fn pop(&mut self) -> f64 {
+        if self.st_depth == 0 {
+            self.f_c1 = true;
+        } else {
+            self.st_depth -= 1;
+            self.f_c1 = false;
+        }
         let result = self.st[0];
         self.st[0] = self.st[1];
         self.st[1] = self.st[2];
