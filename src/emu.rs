@@ -12788,6 +12788,243 @@ impl Emu {
                 self.fpu.pop();
             }
 
+            Mnemonic::Psrlq => {
+                self.show_instruction(&self.colors.green, &ins);
+
+                let destination = self.get_operand_xmm_value_128(&ins, 0, true).unwrap_or(0);
+                let shift_amount = self.get_operand_xmm_value_128(&ins, 1, true).unwrap_or(0);
+                let result = destination.wrapping_shr(shift_amount as u32);
+
+                self.set_operand_xmm_value_128(&ins, 0, result);
+            }
+
+            Mnemonic::Psubsw => {
+                self.show_instruction(&self.colors.green, &ins);
+
+                // Obtener los valores de los registros XMM (128 bits cada uno)
+                let value0 = self.get_operand_xmm_value_128(&ins, 0, true).unwrap_or(0); // xmm6
+                let value1 = self.get_operand_xmm_value_128(&ins, 1, true).unwrap_or(0); // xmm5
+                let mut result = 0u128;
+
+                for i in 0..8 {
+                    let mask = 0xFFFFu128;
+                    let shift = i * 16;
+                    let word0 = ((value0 >> shift) & mask) as i16;
+                    let word1 = ((value1 >> shift) & mask) as i16;
+                    let diff = word0.saturating_sub(word1);
+
+                    result |= (diff as u128 & mask) << shift;
+                }
+
+                self.set_operand_xmm_value_128(&ins, 0, result);
+            }
+
+            Mnemonic::Fsincos => {
+                self.show_instruction(&self.colors.green, &ins);
+
+                let st0 = self.fpu.get_st(0);
+                let sin_value = st0.sin();
+                let cos_value = st0.cos();
+
+                self.fpu.set_st(0, sin_value);
+                self.fpu.push(cos_value);
+            }
+
+            Mnemonic::Packuswb => {
+                self.show_instruction(&self.colors.green, &ins);
+
+                let value0 = self.get_operand_xmm_value_128(&ins, 0, true).unwrap_or(0);
+                let value1 = self.get_operand_xmm_value_128(&ins, 1, true).unwrap_or(0);
+                let mut result = 0u128;
+
+                for i in 0..8 {
+                    let mask = 0xFFFFu128;
+                    let shift = i * 16;
+                    let word0 = ((value0 >> shift) & mask) as i16;
+                    let word1 = ((value1 >> shift) & mask) as i16;
+                    let byte0 = if word0 > 255 {
+                        255
+                    } else if word0 < 0 {
+                        0
+                    } else {
+                        word0 as u8
+                    };
+                    let byte1 = if word1 > 255 {
+                        255
+                    } else if word1 < 0 {
+                        0
+                    } else {
+                        word1 as u8
+                    };
+
+                    result |= (byte0 as u128) << (i * 8);
+                    result |= (byte1 as u128) << ((i + 8) * 8);
+                }
+
+                self.set_operand_xmm_value_128(&ins, 0, result);
+            }
+
+            Mnemonic::Pandn => {
+                self.show_instruction(&self.colors.green, &ins);
+
+                let value0 = self.get_operand_xmm_value_128(&ins, 0, true).unwrap_or(0); // xmm1
+                let value1 = self.get_operand_xmm_value_128(&ins, 1, true).unwrap_or(0); // xmm5
+                let result = (!value0) & value1;
+
+                self.set_operand_xmm_value_128(&ins, 0, result);
+            }
+
+            Mnemonic::Psrld => {
+                self.show_instruction(&self.colors.green, &ins);
+
+                let value = self.get_operand_xmm_value_128(&ins, 0, true).unwrap_or(0);
+                let shift_amount =
+                    self.get_operand_xmm_value_128(&ins, 1, true).unwrap_or(0) as u32;
+                let mut result = 0u128;
+
+                for i in 0..4 {
+                    let mask = 0xFFFFFFFFu128;
+                    let shift = i * 32;
+                    let dword = ((value >> shift) & mask) as u32;
+                    let shifted = dword.wrapping_shr(shift_amount);
+
+                    result |= (shifted as u128 & mask) << shift;
+                }
+
+                self.set_operand_xmm_value_128(&ins, 0, result);
+            }
+
+            Mnemonic::Punpckhwd => {
+                self.show_instruction(&self.colors.green, &ins);
+
+                let value0 = self.get_operand_xmm_value_128(&ins, 0, true).unwrap_or(0);
+                let value1 = self.get_operand_xmm_value_128(&ins, 1, true).unwrap_or(0);
+
+                let mut result = 0u128;
+
+                for i in 0..4 {
+                    let mask = 0xFFFFu128;
+                    let shift = i * 16;
+
+                    let word0 = ((value0 >> (shift + 48)) & mask) as u16;
+                    let word1 = ((value1 >> (shift + 48)) & mask) as u16;
+
+                    result |= (word0 as u128) << (i * 32);
+                    result |= (word1 as u128) << (i * 32 + 16);
+                }
+
+                self.set_operand_xmm_value_128(&ins, 0, result);
+            }
+
+            Mnemonic::Psraw => {
+                self.show_instruction(&self.colors.green, &ins);
+
+                let value1 = self.get_operand_xmm_value_128(&ins, 0, true).unwrap_or(0);
+                let value6 = self.get_operand_xmm_value_128(&ins, 1, true).unwrap_or(0);
+                let mut result = 0u128;
+                let shift_amount = (value6 & 0xFF) as u32;
+
+                for i in 0..8 {
+                    let mask = 0xFFFFu128;
+                    let shift = i * 16;
+
+                    let word = ((value1 >> shift) & mask) as i16;
+                    let shifted_word = (word as i32 >> shift_amount) as i16;
+
+                    result |= (shifted_word as u128) << shift;
+                }
+
+                self.set_operand_xmm_value_128(&ins, 0, result);
+            }
+
+            Mnemonic::Frndint => {
+                self.show_instruction(&self.colors.green, &ins);
+
+                let value = self.fpu.get_st(0);
+                let rounded_value = value.round();
+
+                self.fpu.set_st(0, rounded_value);
+            }
+
+            Mnemonic::Psrlw => {
+                self.show_instruction(&self.colors.green, &ins);
+
+                if self.get_operand_sz(&ins, 1) < 128 {
+                    let value = self.get_operand_xmm_value_128(&ins, 0, true).unwrap_or(0);
+
+                    let shift_amount = match self.get_operand_value(&ins, 1, false) {
+                        Some(v) => (v & 0xFF) as u32,
+                        None => 0,
+                    };
+
+                    let mut result = 0u128;
+
+                    for i in 0..8 {
+                        let mask = 0xFFFFu128;
+                        let shift = i * 16;
+                        let word = ((value >> shift) & mask) as u16;
+                        let shifted_word = (word as u32 >> shift_amount) as u16;
+
+                        result |= (shifted_word as u128) << shift;
+                    }
+
+                    self.set_operand_xmm_value_128(&ins, 0, result);
+                } else {
+                    let value = self.get_operand_xmm_value_128(&ins, 0, true).unwrap_or(0);
+
+                    let shift_amount = match self.get_operand_xmm_value_128(&ins, 1, false) {
+                        Some(v) => (v & 0xFF) as u32,
+                        None => 0,
+                    };
+
+                    let mut result = 0u128;
+
+                    for i in 0..8 {
+                        let mask = 0xFFFFu128;
+                        let shift = i * 16;
+                        let word = ((value >> shift) & mask) as u16;
+                        let shifted_word = (word as u32 >> shift_amount) as u16;
+
+                        result |= (shifted_word as u128) << shift;
+                    }
+
+                    self.set_operand_xmm_value_128(&ins, 0, result);
+                }
+            }
+
+            Mnemonic::Paddd => {
+                self.show_instruction(&self.colors.green, &ins);
+
+                let value0 = self.get_operand_xmm_value_128(&ins, 0, true).unwrap_or(0);
+                let value1 = self.get_operand_xmm_value_128(&ins, 1, true).unwrap_or(0);
+
+                let mut result = 0u128;
+
+                for i in 0..4 {
+                    let mask = 0xFFFFFFFFu128;
+                    let shift = i * 32;
+                    let word0 = ((value0 >> shift) & mask) as u32;
+                    let word1 = ((value1 >> shift) & mask) as u32;
+                    let sum = word0.wrapping_add(word1);
+
+                    result |= (sum as u128) << shift;
+                }
+
+                self.set_operand_xmm_value_128(&ins, 0, result);
+            }
+
+            Mnemonic::Fscale => {
+                self.show_instruction(&self.colors.green, &ins);
+
+                let st0 = self.fpu.get_st(0);
+                let st1 = self.fpu.get_st(1);
+
+                let scale_factor = 2.0f64.powf(st1.trunc());
+                let result = st0 * scale_factor;
+
+                self.fpu.set_st(0, result);
+            }
+
             Mnemonic::Vpcmpeqb => {
                 self.show_instruction(&self.colors.green, &ins);
 
@@ -13309,6 +13546,11 @@ impl Emu {
                 self.fpu.set_st(0, self.fpu.get_st(0).sin());
             }
 
+            Mnemonic::Fcos => {
+                self.show_instruction(&self.colors.green, &ins);
+                self.fpu.set_st(0, self.fpu.get_st(0).cos());
+            }
+
             Mnemonic::Fdiv => {
                 self.show_instruction(&self.colors.green, &ins);
                 let st0 = self.fpu.get_st(0);
@@ -13328,6 +13570,19 @@ impl Emu {
                 let value1 = self.get_operand_value(&ins, 1, false).unwrap_or(0);
                 let stn = self.fpu.get_st(value1 as usize);
                 self.fpu.set_st(0, stn / st0);
+            }
+
+            Mnemonic::Fdivrp => {
+                self.show_instruction(&self.colors.green, &ins);
+                let value0 = self.get_operand_value(&ins, 0, false).unwrap_or(0) as usize;
+                let value1 = self.get_operand_value(&ins, 1, false).unwrap_or(0) as usize;
+                let st0 = self.fpu.get_st(value0);
+                let st7 = self.fpu.get_st(value1);
+
+                let result = st7 / st0;
+
+                self.fpu.set_st(value1, result);
+                self.fpu.pop();
             }
 
             Mnemonic::Fpatan => {
@@ -13362,6 +13617,57 @@ impl Emu {
                 let remainder = st0 - quotient * st1;
 
                 self.fpu.set_st(0, remainder);
+            }
+
+            Mnemonic::Pcmpgtd => {
+                self.show_instruction(&self.colors.green, &ins);
+
+                let value0 = self.get_operand_xmm_value_128(&ins, 0, true).unwrap_or(0);
+                let value1 = self.get_operand_xmm_value_128(&ins, 1, true).unwrap_or(0);
+
+                let mut result = 0u128;
+
+                for i in 0..4 {
+                    let shift = i * 32;
+                    let word0 = ((value0 >> shift) & 0xFFFFFFFFu128) as u32;
+                    let word1 = ((value1 >> shift) & 0xFFFFFFFFu128) as u32;
+                    let comparison_result = if word0 > word1 {
+                        0xFFFFFFFFu32
+                    } else {
+                        0x00000000u32
+                    };
+
+                    result |= (comparison_result as u128) << shift;
+                }
+
+                self.set_operand_xmm_value_128(&ins, 0, result);
+            }
+
+            Mnemonic::Pmaddwd => {
+                self.show_instruction(&self.colors.green, &ins);
+
+                let src0 = self.get_operand_xmm_value_128(&ins, 0, true).unwrap_or(0);
+                let src1 = self.get_operand_xmm_value_128(&ins, 1, true).unwrap_or(0);
+
+                let mut result = [0i32; 2];
+
+                for i in 0..4 {
+                    let shift = i * 16;
+                    let a = ((src0 >> shift) & 0xFFFF) as i16 as i32;
+                    let b = ((src1 >> shift) & 0xFFFF) as i16 as i32;
+
+                    let product = a * b;
+
+                    if i < 2 {
+                        result[0] += product;
+                    } else {
+                        result[1] += product;
+                    }
+                }
+
+                let final_result = ((result[1] as u64) << 32) | (result[0] as u64);
+
+                self.set_operand_xmm_value_128(&ins, 0, final_result as u128);
             }
 
             // end SSE
