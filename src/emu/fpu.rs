@@ -9,7 +9,6 @@ pub struct FPU {
     ip: u64,
     err_off: u32,
     err_sel: u32,
-    stack: Vec<f32>,
     code_segment: u16,
     data_segment: u16,
     operand_ptr: u64,
@@ -33,7 +32,6 @@ impl FPU {
             ip: 0,
             err_off: 0,
             err_sel: 0,
-            stack: Vec::new(),
             code_segment: 0,
             data_segment: 0,
             operand_ptr: 0,
@@ -57,7 +55,6 @@ impl FPU {
         self.ip = 0;
         self.err_off = 0;
         self.err_sel = 0;
-        self.stack.clear();
         self.code_segment = 0;
         self.data_segment = 0;
         self.operand_ptr = 0;
@@ -158,11 +155,27 @@ impl FPU {
     }
 
     pub fn push(&mut self, value: f32) {
-        self.stack.push(value);
+        self.st[7] = self.st[6];
+        self.st[6] = self.st[5];
+        self.st[5] = self.st[4];
+        self.st[4] = self.st[3];
+        self.st[3] = self.st[2];
+        self.st[2] = self.st[1];
+        self.st[1] = self.st[0];
+        self.st[0] = value;
     }
 
     pub fn pop(&mut self) -> f32 {
-        return self.stack.pop().unwrap_or(0.0);
+        let result = self.st[0];
+        self.st[0] = self.st[1];
+        self.st[1] = self.st[2];
+        self.st[2] = self.st[3];
+        self.st[3] = self.st[4];
+        self.st[4] = self.st[5];
+        self.st[5] = self.st[6];
+        self.st[6] = self.st[7];
+        self.st[7] = 0.0;
+        return result;
     }
 
     pub fn fyl2x(&mut self) {
