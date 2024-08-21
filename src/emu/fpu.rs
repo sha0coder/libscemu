@@ -2,7 +2,7 @@ use iced_x86::Register;
 
 #[derive(Clone)]
 pub struct FPU {
-    st: Vec<f32>,
+    st: Vec<f64>,
     tag: u16,
     pub stat: u16,
     ctrl: u16,
@@ -124,11 +124,11 @@ impl FPU {
         println!("--------");
     }
 
-    pub fn set_st(&mut self, i: usize, value: f32) {
+    pub fn set_st(&mut self, i: usize, value: f64) {
         self.st[i] = value;
     }
 
-    pub fn get_st(&self, i: usize) -> f32 {
+    pub fn get_st(&self, i: usize) -> f64 {
         return self.st[i].clone();
     }
 
@@ -154,7 +154,7 @@ impl FPU {
         self.st[i] = self.st[i] + self.st[j];
     }
 
-    pub fn push(&mut self, value: f32) {
+    pub fn push(&mut self, value: f64) {
         self.st[7] = self.st[6];
         self.st[6] = self.st[5];
         self.st[5] = self.st[4];
@@ -165,7 +165,7 @@ impl FPU {
         self.st[0] = value;
     }
 
-    pub fn pop(&mut self) -> f32 {
+    pub fn pop(&mut self) -> f64 {
         let result = self.st[0];
         self.st[0] = self.st[1];
         self.st[1] = self.st[2];
@@ -190,7 +190,7 @@ impl FPU {
 
     pub fn check_pending_exceptions(self) {}
 
-    pub fn set_streg(&mut self, reg: Register, value: f32) {
+    pub fn set_streg(&mut self, reg: Register, value: f64) {
         match reg {
             Register::ST0 => self.st[0] = value,
             Register::ST1 => self.st[1] = value,
@@ -201,6 +201,17 @@ impl FPU {
             Register::ST6 => self.st[6] = value,
             Register::ST7 => self.st[7] = value,
             _ => unreachable!(),
+        }
+    }
+
+    pub fn frexp(&self, value: f64) -> (f64, i32) {
+        if value == 0.0 {
+            (0.0, 0)
+        } else {
+            let exponent = value.abs().log2().floor() as i32 + 1;
+            let mantissa = value / (2f64.powi(exponent));
+
+            (mantissa, exponent)
         }
     }
 }

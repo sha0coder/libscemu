@@ -3798,7 +3798,7 @@ impl Emu {
         match ins.op_kind(noperand) {
             OpKind::Register => {
                 if self.regs.is_fpu(ins.op_register(noperand)) {
-                    self.fpu.set_streg(ins.op_register(noperand), value as f32);
+                    self.fpu.set_streg(ins.op_register(noperand), value as f64);
                 } else {
                     self.regs.set_reg(ins.op_register(noperand), value);
                 }
@@ -9838,7 +9838,7 @@ impl Emu {
                 };
 
                 //println!("{} {}", value, value as f32);
-                self.fpu.set_st(0, value as f32);
+                self.fpu.set_st(0, value as f64);
             }
 
             Mnemonic::Fldcw => {
@@ -9899,35 +9899,35 @@ impl Emu {
             Mnemonic::Fldpi => {
                 self.show_instruction(&self.colors.green, &ins);
 
-                self.fpu.push(std::f32::consts::PI);
+                self.fpu.push(std::f64::consts::PI);
                 self.fpu.set_ip(self.regs.rip);
             }
 
             Mnemonic::Fldl2t => {
                 self.show_instruction(&self.colors.green, &ins);
 
-                self.fpu.push(10f32.log2());
+                self.fpu.push(10f64.log2());
                 self.fpu.set_ip(self.regs.rip);
             }
 
             Mnemonic::Fldlg2 => {
                 self.show_instruction(&self.colors.green, &ins);
 
-                self.fpu.push(2f32.log10());
+                self.fpu.push(2f64.log10());
                 self.fpu.set_ip(self.regs.rip);
             }
 
             Mnemonic::Fldln2 => {
                 self.show_instruction(&self.colors.green, &ins);
 
-                self.fpu.push(2f32.log(std::f32::consts::E));
+                self.fpu.push(2f64.log(std::f64::consts::E));
                 self.fpu.set_ip(self.regs.rip);
             }
 
             Mnemonic::Fldl2e => {
                 self.show_instruction(&self.colors.green, &ins);
 
-                self.fpu.push(std::f32::consts::E.log2());
+                self.fpu.push(std::f64::consts::E.log2());
                 self.fpu.set_ip(self.regs.rip);
             }
 
@@ -9980,7 +9980,7 @@ impl Emu {
 
                 //println!("operands: {}", ins.op_count());
                 let value1 = match self.get_operand_value(&ins, 0, true) {
-                    Some(v) => v as i32 as f32,
+                    Some(v) => v as i64 as f64,
                     None => return false,
                 };
 
@@ -9998,6 +9998,14 @@ impl Emu {
                     _ => return false,
                 };
                 self.set_operand_value(&ins, 0, value2);
+            }
+
+            Mnemonic::Fxtract => {
+                self.show_instruction(&self.colors.green, &ins);
+                let st0 = self.fpu.get_st(0);
+                let (mantissa, exponent) = self.fpu.frexp(st0);
+                self.fpu.set_st(0, mantissa);
+                self.fpu.push(exponent as f64);
             }
 
             Mnemonic::Fistp => {
@@ -10205,7 +10213,7 @@ impl Emu {
             Mnemonic::Fchs => {
                 self.show_instruction(&self.colors.green, &ins);
 
-                self.fpu.set_st(0, self.fpu.get_st(0) * -1f32);
+                self.fpu.set_st(0, self.fpu.get_st(0) * -1f64);
             }
 
             Mnemonic::Fptan => {
@@ -10213,6 +10221,36 @@ impl Emu {
 
                 self.fpu.set_st(0, self.fpu.get_st(0).tan());
                 self.fpu.push(1.0);
+            }
+
+            Mnemonic::Fmulp => {
+                self.show_instruction(&self.colors.green, &ins);
+                let value0 = self.get_operand_value(&ins, 0, false).unwrap_or(0) as usize;
+                let value1 = self.get_operand_value(&ins, 1, false).unwrap_or(0) as usize;
+                let result = self.fpu.get_st(value1) * self.fpu.get_st(value0);
+
+                self.fpu.set_st(value1, result);
+                self.fpu.pop();
+            }
+
+            Mnemonic::Fdivp => {
+                self.show_instruction(&self.colors.green, &ins);
+                let value0 = self.get_operand_value(&ins, 0, false).unwrap_or(0) as usize;
+                let value1 = self.get_operand_value(&ins, 1, false).unwrap_or(0) as usize;
+                let result = self.fpu.get_st(value1) / self.fpu.get_st(value0);
+
+                self.fpu.set_st(value1, result);
+                self.fpu.pop();
+            }
+
+            Mnemonic::Fsubp => {
+                self.show_instruction(&self.colors.green, &ins);
+                let value0 = self.get_operand_value(&ins, 0, false).unwrap_or(0) as usize;
+                let value1 = 0;
+                let result = self.fpu.get_st(value0) - self.fpu.get_st(value1);
+
+                self.fpu.set_st(value0, result);
+                self.fpu.pop();
             }
 
             Mnemonic::Fsubr => {
@@ -10441,6 +10479,53 @@ impl Emu {
             // scalar double: only 54b less significative part.
             // packed: compute all parts.
             // packed double
+            Mnemonic::Pcmpeqd => {
+                self.show_instruction(&self.colors.green, &ins);
+                if self.get_operand_sz(&ins, 0) != 128 || self.get_operand_sz(&ins, 1) != 128 {
+                    println!("unimplemented");
+                    return false;
+                }
+
+                let value0 = self.get_operand_xmm_value_128(&ins, 0, true).unwrap_or(0);
+                let value1 = self.get_operand_xmm_value_128(&ins, 1, true).unwrap_or(0);
+                let mut result = 0u128;
+
+                for i in 0..4 {
+                    let mask = 0xFFFFFFFFu128;
+                    let shift = i * 32;
+
+                    let dword0 = (value0 >> shift) & mask;
+                    let dword1 = (value1 >> shift) & mask;
+
+                    if dword0 == dword1 {
+                        result |= mask << shift;
+                    }
+                }
+
+                self.set_operand_xmm_value_128(&ins, 0, result);
+            }
+
+            Mnemonic::Psubusb => {
+                self.show_instruction(&self.colors.green, &ins);
+                if self.get_operand_sz(&ins, 0) != 128 || self.get_operand_sz(&ins, 1) != 128 {
+                    println!("unimplemented");
+                    return false;
+                }
+
+                let value0 = self.get_operand_xmm_value_128(&ins, 0, true).unwrap_or(0);
+                let value1 = self.get_operand_xmm_value_128(&ins, 1, true).unwrap_or(0);
+                let mut result = 0u128;
+                for i in 0..16 {
+                    let byte0 = ((value0 >> (i * 8)) & 0xFF) as u8;
+                    let byte1 = ((value1 >> (i * 8)) & 0xFF) as u8;
+                    let res_byte = byte0.saturating_sub(byte1);
+
+                    result |= (res_byte as u128) << (i * 8);
+                }
+
+                self.set_operand_xmm_value_128(&ins, 0, result);
+            }
+
             Mnemonic::Punpckhbw => {
                 self.show_instruction(&self.colors.green, &ins);
 
@@ -12850,9 +12935,9 @@ impl Emu {
             Mnemonic::Fxam => {
                 self.show_instruction(&self.colors.green, &ins);
 
-                let st0: f32 = self.fpu.get_st(0);
+                let st0: f64 = self.fpu.get_st(0);
 
-                if st0 < 0f32 {
+                if st0 < 0f64 {
                     self.fpu.f_c0 = true;
                 } else {
                     self.fpu.f_c0 = false;
