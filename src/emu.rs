@@ -2927,8 +2927,12 @@ impl Emu {
                     let name = match self.maps.get_addr_name(addr) {
                         Some(n) => n,
                         None => {
-                            println!("address not found on any map");
-                            continue;
+                            if !self.cfg.skip_unimplemented {
+                                println!("address not found on any map");
+                                continue;
+                            }
+
+                            "code".to_string()
                         }
                     };
 
@@ -3855,42 +3859,74 @@ impl Emu {
                     match sz {
                         64 => {
                             if !self.maps.write_qword(mem_addr, value2) {
-                                println!(
-                                    "/!\\ exception dereferencing bad address. 0x{:x}",
-                                    mem_addr
-                                );
-                                self.exception();
-                                return false;
+                                if self.cfg.skip_unimplemented {
+                                    let map = self.maps.create_map("banzai");
+                                    map.set_base(mem_addr);
+                                    map.set_size(8);
+                                    map.write_qword(mem_addr, value2);
+                                    return true;
+                                } else {
+                                    println!(
+                                        "/!\\ exception dereferencing bad address. 0x{:x}",
+                                        mem_addr
+                                    );
+                                    self.exception();
+                                    return false;
+                                }
                             }
                         }
                         32 => {
                             if !self.maps.write_dword(mem_addr, to32!(value2)) {
-                                println!(
-                                    "/!\\ exception dereferencing bad address. 0x{:x}",
-                                    mem_addr
-                                );
-                                self.exception();
-                                return false;
+                                if self.cfg.skip_unimplemented {
+                                    let map = self.maps.create_map("banzai");
+                                    map.set_base(mem_addr);
+                                    map.set_size(4);
+                                    map.write_dword(mem_addr, to32!(value2));
+                                    return true;
+                                } else {
+                                    println!(
+                                        "/!\\ exception dereferencing bad address. 0x{:x}",
+                                        mem_addr
+                                    );
+                                    self.exception();
+                                    return false;
+                                }
                             }
                         }
                         16 => {
                             if !self.maps.write_word(mem_addr, value2 as u16) {
-                                println!(
-                                    "/!\\ exception dereferencing bad address. 0x{:x}",
-                                    mem_addr
-                                );
-                                self.exception();
-                                return false;
+                                if self.cfg.skip_unimplemented {
+                                    let map = self.maps.create_map("banzai");
+                                    map.set_base(mem_addr);
+                                    map.set_size(2);
+                                    map.write_word(mem_addr, value2 as u16);
+                                    return true;
+                                } else {
+                                    println!(
+                                        "/!\\ exception dereferencing bad address. 0x{:x}",
+                                        mem_addr
+                                    );
+                                    self.exception();
+                                    return false;
+                                }
                             }
                         }
                         8 => {
                             if !self.maps.write_byte(mem_addr, value2 as u8) {
-                                println!(
-                                    "/!\\ exception dereferencing bad address. 0x{:x}",
-                                    mem_addr
-                                );
-                                self.exception();
-                                return false;
+                                if self.cfg.skip_unimplemented {
+                                    let map = self.maps.create_map("banzai");
+                                    map.set_base(mem_addr);
+                                    map.set_size(1);
+                                    map.write_byte(mem_addr, value2 as u8);
+                                    return true;
+                                } else {
+                                    println!(
+                                        "/!\\ exception dereferencing bad address. 0x{:x}",
+                                        mem_addr
+                                    );
+                                    self.exception();
+                                    return false;
+                                }
                             }
                         }
                         _ => unimplemented!("weird size"),
