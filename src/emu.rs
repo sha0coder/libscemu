@@ -12,7 +12,7 @@ pub mod constants;
 pub mod context32;
 pub mod context64;
 pub mod eflags;
-mod err;
+pub mod err;
 //pub mod endpoint;
 mod elf32;
 mod elf64;
@@ -33,6 +33,7 @@ pub mod syscall32;
 pub mod syscall64;
 mod winapi32;
 mod winapi64;
+mod ntapi32;
 
 use crate::config::Config;
 use atty::Stream;
@@ -472,7 +473,7 @@ impl Emu {
         self.maps.create_map("20000");
         self.maps.create_map("stack");
         self.maps.create_map("code");
-        //self.maps.create_map("peb");
+        self.maps.create_map("peb");
         self.maps.create_map("teb");
         self.maps.create_map("ntdll");
         self.maps.create_map("ntdll_text");
@@ -576,9 +577,16 @@ impl Emu {
         reserved.load("reserved.bin");
         assert!(reserved.read_byte(0x2c31a0) != 0);
 
-        /*let peb = self.maps.get_mem("peb");
+        let peb = self.maps.get_mem("peb");
         peb.set_base(0x7ffdf000);
-        peb.load("peb.bin");*/
+        peb.load("peb.bin");
+
+        let peb = self.maps.get_mem("peb");
+        peb.write_byte(peb.get_base() + 2, 0);
+
+        //let peb = peb32::init_peb(self, space_addr, base);
+        //self.maps.write_dword(peb + 8, base);
+
 
         let teb = self.maps.get_mem("teb");
         teb.set_base(0x7ffde000);
@@ -1990,10 +1998,20 @@ impl Emu {
         };
 
         let map_name = self.filename_to_mapname(&self.filename);
-        if name == "code" || addr < constants::LIBS_BARRIER || name.starts_with(&map_name) {
-            /*if self.cfg.verbose >= 1 && addr >= constants::LIBS_BARRIER {
+        if name == "code" || addr < constants::LIBS_BARRIER || 
+            (map_name != "" && name.starts_with(&map_name)) {
+
+            /*
+            if  addr >= constants::LIBS_BARRIER {
                 println!("/!\\ alert, jumping the barrier 0x{:x} name:{} map_name:{} filename:{}",
                          addr, name, map_name, &self.filename);
+                if name == "code" {
+                    println!("warning the name is code");
+                }
+                if name.starts_with(&map_name) {
+                    println!("alert {} start with {}", name, map_name);
+                }
+                self.spawn_console();
             }*/
             /*
             println!(
@@ -9659,6 +9677,10 @@ impl Emu {
                             return false;
                         }
 
+                        0xdc => {
+                            println!("/!\\ direct syscall: NtAlpcSendWaitReceivePort");
+                        }
+
                         _ => {
                             println!("unimplemented interrupt {}", interrupt);
                             return false;
@@ -10528,15 +10550,11 @@ impl Emu {
             }
 
             Mnemonic::Sysenter => {
-                println!(
-                    "{}{} 0x{:x}: {}{}",
-                    self.colors.red,
-                    self.pos,
-                    ins.ip(),
-                    self.out,
-                    self.colors.nc
-                );
-                return false;
+                if self.cfg.is_64bits {
+                    unimplemented!("ntapi64 not implemented yet");
+                } else {
+                    ntapi32::gateway(self.regs.get_eax(), self.regs.get_edx(), self);
+                }
             }
 
             //// SSE XMM ////

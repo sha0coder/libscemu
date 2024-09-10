@@ -5,6 +5,7 @@ use crate::emu::structures::PEB;
 
 pub fn init_peb(emu: &mut emu::Emu, first_entry: u64, bin_base: u32) -> u64 {
     let peb_addr = 0x7ffdf000;
+    // comprobar si existe ya de antes, verificar con el de 64bits y el load_pe32
     let mut peb_map = emu.maps.create_map("peb");
     peb_map.set_base(peb_addr); //TODO: use allocator
     peb_map.set_size(PEB::size() as u64);

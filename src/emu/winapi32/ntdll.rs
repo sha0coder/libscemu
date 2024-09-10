@@ -39,6 +39,7 @@ pub fn gateway(addr: u32, emu: &mut emu::Emu) -> String {
         0x77593030 => VerSetConditionMask(emu),
         0x775a53d0 => strcat(emu),
         0x775a4cc0 => memcpy(emu), 
+        0x775d22bd => LdrLoadDll_gul(emu),
 
         _ => {
             let apiname = kernel32::guess_api_name(emu, addr);
@@ -249,6 +250,69 @@ fn LdrLoadDll(emu: &mut emu::Emu) {
     emu.regs.rax = emu::constants::STATUS_SUCCESS;
 }
 
+fn LdrLoadDll_gul(emu: &mut emu::Emu) {
+
+
+
+    let path_to_file_ptr = emu
+        .maps
+        .read_dword(emu.regs.get_esp())
+        .expect("LdrLoadDll: error reading lib base") as u64;
+    let libname_ptr = emu
+        .maps
+        .read_dword(emu.regs.get_esp() + 8)
+        .expect("LdrLoadDll: error reading lib name") as u64;
+    let libaddr_ptr = emu
+        .maps
+        .read_dword(emu.regs.get_esp() + 12)
+        .expect("LdrLoadDll: error reading lib base") as u64;
+
+    let libname = emu.maps.read_wide_string(libname_ptr);
+    let path = emu.maps.read_wide_string(path_to_file_ptr);
+
+    println!(
+        "{}** {} ntdll!LdrLoadDll_gul   lib: {} {} ->{:x} {}",
+        emu.colors.light_red, emu.pos, libname, path, libaddr_ptr, emu.colors.nc
+    );
+
+
+    if libname == "user32.dll" {
+        let user32 = emu.maps.create_map("user32");
+        user32.set_base(0x773b0000);
+        user32.load("maps32/user32.bin");
+        let user32_text = emu.maps.create_map("user32_text");
+        user32_text.set_base(0x773b1000);
+        user32_text.load("maps32/user32_text.bin");
+
+        if !emu.maps.write_dword(libaddr_ptr, 0x773b0000) {
+            panic!("ntdll!LdrLoadDll: cannot write in addr param");
+        }
+    } /*else {
+        emu.maps.write_dword(libaddr_ptr, 0x77570000); // ntdll by default
+    }*/
+
+    for _ in 0..4 {
+        emu.stack_pop32(false);
+    }
+
+    /*
+     undo prolog implemented on guloader
+        mov   esp, ebp  
+        pop   ebp  
+    */
+
+    emu.regs.set_esp(emu.regs.get_ebp());
+    let ebp = emu.stack_pop32(false).unwrap() as u64;
+    emu.regs.set_ebp(ebp);
+
+    emu.regs.rax = emu::constants::STATUS_SUCCESS;
+
+    emu.maps.write_dword(emu.regs.get_ebp() + 0x168, 0x77570000);
+    emu.regs.rip = 0x682e5e2;
+
+}
+
+
 fn RtlVectoredExceptionHandler(emu: &mut emu::Emu) {
     let p1 = emu
         .maps
@@ -297,6 +361,7 @@ fn NtGetContextThread(emu: &mut emu::Emu) {
     emu.stack_pop32(false);
     emu.stack_pop32(false);
 }
+
 
 fn RtlExitUserThread(emu: &mut emu::Emu) {
     println!(
