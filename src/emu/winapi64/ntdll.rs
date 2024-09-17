@@ -201,8 +201,8 @@ fn LdrLoadDll(emu: &mut emu::Emu) {
         if !emu.maps.write_qword(libaddr_ptr, 0x773b0000) {
             panic!("ntdll_LdrLoadDll: cannot write in addr param");
         }
-    }
-
+    } 
+    
     emu.regs.rax = emu::constants::STATUS_SUCCESS;
 }
 
