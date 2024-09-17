@@ -226,6 +226,7 @@ impl Emu {
     pub fn spawn_console_at_addr(&mut self, addr: u64) {
         self.cfg.console2 = true;
         self.cfg.console_addr = addr;
+        self.cfg.console_enabled = true;
     }
 
     pub fn get_base_addr(&self) -> Option<u64> {
