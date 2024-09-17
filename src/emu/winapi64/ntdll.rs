@@ -834,7 +834,7 @@ fn NtTerminateThread(emu: &mut emu::Emu) {
 
     println!(
         "{}** {} ntdll!NtTerminateThread {:x} {} {}",
-        emu.colors.light_red, emu.pos, handle, exit_status emu.colors.nc
+        emu.colors.light_red, emu.pos, handle, exit_status, emu.colors.nc
     );
 
     emu.regs.rax = 0;
