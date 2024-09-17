@@ -40,6 +40,7 @@ pub fn gateway(addr: u64, emu: &mut emu::Emu) -> String {
         0x77003f20 => RtlReAllocateHeap(emu),
         0x77021f60 => NtFlushInstructionCache(emu),
         0x770295d0 => LdrGetDllHandleEx(emu),
+        0x77021840 => NtTerminateThread(emu),
 
         _ => {
             let apiname = kernel32::guess_api_name(emu, addr);
@@ -826,3 +827,17 @@ fn LdrGetDllHandleEx(emu: &mut emu::Emu) {
 
     emu.regs.rax = 1;
 }
+
+fn NtTerminateThread(emu: &mut emu::Emu) {
+    let handle = emu.regs.rcx;
+    let exit_status = emu.regs.rdx;
+
+    println!(
+        "{}** {} ntdll!NtTerminateThread {:x} {} {}",
+        emu.colors.light_red, emu.pos, handle, exit_status emu.colors.nc
+    );
+
+    emu.regs.rax = 0;
+}
+
+
