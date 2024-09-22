@@ -9428,33 +9428,16 @@ impl Emu {
                 let cycles: u64 = elapsed.as_nanos() as u64;
                 self.regs.rax = (cycles & 0xffffffff) as u64;
                 self.regs.rdx = (cycles >> 32) as u64;
+            }
 
-                if self.cfg.is_64bits {
-                    /*
-                    let rax:u64;
-                    let rdx:u64;
-                    unsafe {
-                        asm!(
-                            "rdtsc",
-                            "mov {}, rax",
-                            "mov {}, rdx",
-                            out(reg) rax,
-                            out(reg) rdx
-                        );
-                    }
-                    self.regs.rax = rax;
-                    self.regs.rdx = rdx;
-                    */
-                } else { // 32bits
+            Mnemonic::Rdtscp => {
+                self.show_instruction(&self.colors.red, &ins);
 
-                    /*
-                    // TODO: actually mock a timestamp?
-                    self.regs.rdx = 0x1BC2B;
-                    self.regs.rax = 0xE6668424;
-                    self.flags.f_pf = true;
-                    self.flags.f_af = false;
-                    */
-                }
+                let elapsed = self.now.elapsed();
+                let cycles: u64 = elapsed.as_nanos() as u64;
+                self.regs.rax = (cycles & 0xffffffff) as u64;
+                self.regs.rdx = (cycles >> 32) as u64;
+                self.regs.rcx = 1; // core id
             }
 
             Mnemonic::Loop => {
