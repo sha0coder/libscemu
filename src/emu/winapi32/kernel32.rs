@@ -3638,7 +3638,7 @@ fn InterlockedIncrement(emu: &mut emu::Emu) {
     );
 
     emu.stack_pop32(false);
-    emu.regs.rax = prev+1;
+    emu.regs.rax = prev as u64 +1;
 }
 
 fn GetEnvironmentStrings(emu: &mut emu::Emu) {
