@@ -3,17 +3,23 @@ use crate::emu::structures::LdrDataTableEntry64;
 use crate::emu::structures::OrdinalTable;
 use crate::emu::structures::PEB64;
 
-pub fn init_peb(emu: &mut emu::Emu) {
+pub fn init_peb(emu: &mut emu::Emu, first_entry: u64, bin_base: u64) -> u64 {
+    let peb_addr = 0x7fffffdf000; //0x7ffdf000;
     let mut peb_map = emu.maps.create_map("peb");
-    peb_map.set_base(0x7fffffdf000); //TODO: use allocator.
+    peb_map.set_base(peb_addr); //TODO: use allocator.
     peb_map.set_size(PEB64::size() as u64);
 
     let ldr = 0x77102640;
-    let image_base_address = 0x400000; // TODO: pass this value on parameter
+    let image_base_address = bin_base; // TODO: pass this value on parameter
     let process_parameters = 0x521e20; // TODO: write params and point there.
 
     let peb = PEB64::new(image_base_address, ldr, process_parameters);
     peb.save(&mut peb_map);
+
+    emu.maps.write_qword(ldr + 0x30, first_entry);
+    emu.maps.write_byte(peb_addr + 2, 0); // not being_debugged
+    emu.maps.write_qword(peb_addr + 8, bin_base);
+    return peb_addr;
 }
 
 #[derive(Debug)]
@@ -79,6 +85,11 @@ impl Flink {
             .expect("error reading mod_addr");
     }
 
+    pub fn set_mod_base(&mut self, base: u64, emu: &mut emu::Emu) {
+        self.mod_base = base;
+        emu.maps.write_qword(self.flink_addr + 0x30, base);
+    }
+
     pub fn get_mod_name(&mut self, emu: &mut emu::Emu) {
         let mod_name_ptr = emu
             .maps
@@ -108,10 +119,12 @@ impl Flink {
 
         //println!("mod_base 0x{:x} pe_hdr 0x{:x}", self.mod_base, self.pe_hdr);
 
-        self.export_table_rva = emu
+        self.export_table_rva = match emu
             .maps
-            .read_dword(self.mod_base + self.pe_hdr + 0x88)
-            .expect("error reading export_table_rva") as u64;
+            .read_dword(self.mod_base + self.pe_hdr + 0x88) {
+            Some(rva) => rva as u64,
+            None => 0,
+        };
 
         if self.export_table_rva == 0 {
             return;
@@ -249,6 +262,15 @@ pub fn show_linked_modules(emu: &mut emu::Emu) {
     }
 }
 
+pub fn update_ldr_entry_base(libname: &str, base: u64, emu: &mut emu::Emu) {
+    let mut flink = Flink::new(emu);
+    flink.load(emu);
+    while flink.mod_name.to_lowercase() != libname.to_lowercase() {
+        flink.next(emu);
+    }
+    flink.set_mod_base(base, emu);
+}
+
 pub fn dynamic_unlink_module(libname: &str, emu: &mut emu::Emu) {
     let mut prev_flink: u64 = 0;
     let next_flink: u64;
@@ -299,7 +321,8 @@ pub fn dynamic_link_module(base: u64, pe_off: u32, libname: &str, emu: &mut emu:
     //println!("last: {} {:x}", flink.mod_name, next_flink);
 
     //let space_addr = create_ldr_entry(emu, base, pe_off, libname, last_flink, first_flink);
-    let space_addr = create_ldr_entry(emu, base, pe_off, libname, last_flink, first_flink);
+    let space_addr = create_ldr_entry(emu, base, pe_off.into(), libname, last_flink, first_flink);
+    //TODO: pe_off is entry point
 
     // point previous flink to this ldr
     //let repl1 = emu.maps.read_qword(next_flink).unwrap();
@@ -314,7 +337,7 @@ pub fn dynamic_link_module(base: u64, pe_off: u32, libname: &str, emu: &mut emu:
 pub fn create_ldr_entry(
     emu: &mut emu::Emu,
     base: u64,
-    pe_off: u32,
+    entry_point: u64,
     libname: &str,
     next_flink: u64,
     prev_flink: u64,
@@ -347,8 +370,8 @@ pub fn create_ldr_entry(
     //mem.write_dword(space_addr, next_flink as u32);
     mem.write_qword(space_addr, prev_flink); //0x2c18c0);
     mem.write_qword(space_addr + 8, next_flink);
-    mem.write_qword(space_addr + 0x30, base);
-    mem.write_qword(space_addr + 0x38, pe_off as u64); // entry point, not pe_off
+    mem.write_qword(space_addr + 0x30, base); // dll_Base
+    mem.write_qword(space_addr + 0x38, entry_point); // entry point, not pe_off
                                                        //mem.write_dword(space_addr+0x40, image_size);
     mem.write_qword(space_addr + 0x48, space_addr + 0x68);
     mem.write_qword(space_addr + 0x58, space_addr + 0x68);

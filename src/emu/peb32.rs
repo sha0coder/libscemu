@@ -59,7 +59,8 @@ pub fn init_peb(emu: &mut emu::Emu, first_entry: u64, bin_base: u32) -> u64 {
         }
     }
 
-    peb_addr
+    emu.maps.write_byte(peb_addr + 2, 0); // not being_debugged
+    return peb_addr;
 }
 
 #[derive(Debug)]
@@ -125,6 +126,10 @@ impl Flink {
             .maps
             .read_dword(self.flink_addr + 0x10)
             .expect("error reading mod_addr") as u64;
+    }
+
+    pub fn set_mod_base(&mut self, base: u64, emu: &mut emu::Emu) {
+        emu.maps.write_dword(self.flink_addr + 0x10, base as u32);
     }
 
     pub fn get_mod_name(&mut self, emu: &mut emu::Emu) {
@@ -395,4 +400,13 @@ pub fn create_ldr_entry(
     mem.write_word(space_addr + 0x26, libname.len() as u16 * 2 + 2); // undocumented field used on a cobalt strike sample.
 
     space_addr
+}
+
+pub fn update_ldr_entry_base(libname: &str, base: u64, emu: &mut emu::Emu) {
+    let mut flink = Flink::new(emu);
+    flink.load(emu);
+    while flink.mod_name.to_lowercase() != libname.to_lowercase() {
+        flink.next(emu);
+    }
+    flink.set_mod_base(base, emu);
 }

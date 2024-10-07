@@ -270,6 +270,14 @@ impl Emu {
         self.banzai.add(name, nparams);
     }
 
+    pub fn update_ldr_entry_base(&mut self, libname: &str, base: u64) {
+        if self.cfg.is_64bits {
+            peb64::update_ldr_entry_base(libname, base, self);
+        } else {
+            peb32::update_ldr_entry_base(libname, base, self);
+        }
+    }
+
     pub fn api_addr_to_name(&mut self, addr: u64) -> String {
         let name: String;
         if self.cfg.is_64bits {
@@ -582,7 +590,7 @@ impl Emu {
         peb.set_base(0x7ffdf000);
         peb.load("peb.bin");
 
-        let peb = self.maps.get_mem("peb");
+        //let peb = self.maps.get_mem("peb");
         peb.write_byte(peb.get_base() + 2, 0);
 
         //let peb = peb32::init_peb(self, space_addr, base);
@@ -769,14 +777,6 @@ impl Emu {
 
         let (base, pe_hdr) = self.load_pe32("nsi.dll", false, 0x776c0000);
 
-        //let nsi = self.maps.create_map("NSI.dll");
-        //nsi.set_base(0x776c0000);
-        //nsi.load("nsi.dll");
-
-        // xloader initial state hack
-        //self.memory_write("dword ptr [esp + 4]", 0x22a00);
-        //self.maps.get_mem("kernel32_xloader").set_base(0x75e40000)
-
         std::env::set_current_dir(orig_path);
     }
 
@@ -854,14 +854,11 @@ impl Emu {
         self.maps.create_map("m520000").load_at(0x520000);
         self.maps.create_map("m53b000").load_at(0x53b000);
         //self.maps.create_map("exe_pe").load_at(0x400000);
-        //self.maps.create_map("calc").load_at(0x400000);
-        self.maps.create_map("calc").load_at(0x110000000);
+        //self.maps.create_map("calc").load_at(0x110000000);
         self.maps
             .create_map("code")
             .set_base(self.cfg.code_base_addr);
         self.maps.create_map("stack");
-        //self.maps.create_map("peb").load_at(0x7fffffdf000);
-        peb64::init_peb(self);
         self.maps.create_map("teb").load_at(0x7fffffdd000);
         self.maps.create_map("ntdll_pe").load_at(0x76fd0000);
         self.maps.create_map("ntdll_text").load_at(0x76fd1000);
@@ -959,15 +956,9 @@ impl Emu {
         /*self.maps.create_map("iphlpapi_pe").load_at(0x7fefc1b0000);
         self.maps.create_map("iphlpapi_text").load_at(0x7fefc1b1000);*/
 
-        // peb64 patch for being_debugged
-        let peb = self.maps.get_mem("peb");
-        peb.write_byte(peb.get_base() + 2, 0);
 
         std::env::set_current_dir(orig_path);
 
-        winapi64::kernel32::load_library(self, "iphlpapi.dll");
-        winapi64::kernel32::load_library(self, "winhttp.dll");
-        winapi64::kernel32::load_library(self, "dnsapi.dll");
     }
 
     pub fn filename_to_mapname(&self, filename: &str) -> String {
@@ -979,18 +970,43 @@ impl Emu {
     pub fn load_pe32(&mut self, filename: &str, set_entry: bool, force_base: u32) -> (u32, u32) {
         let is_maps = filename.contains("maps32/");
         let mut pe32 = PE32::load(filename);
-        let mut base;
+        let base: u32;
 
+        // base is forced by libscemu 
         if force_base > 0 {
-            base = force_base;
-        } else {
-            base = pe32.opt.image_base;
-        }
+            if self.maps.overlaps(force_base as u64, pe32.size() as u64) {
+                panic!("the forced base address overlaps");
+            } else {
+                base = force_base;
+            }
 
-        if !is_maps && self.cfg.code_base_addr != 0x3c0000 {
+        // base is setted by user
+        } else if !is_maps && self.cfg.code_base_addr != 0x3c0000 {
             base = self.cfg.code_base_addr as u32;
-        }
+            if self.maps.overlaps(base as u64, pe32.size() as u64) {
+                panic!("the setted base address overlaps");
+            }   
 
+        // base is setted by image base (if overlapps, alloc)
+        } else {
+
+            // user's program   
+            if set_entry {
+                if self.maps.overlaps(pe32.opt.image_base as u64, pe32.size() as u64) {
+                    base = self.maps.alloc(pe32.size() as u64).expect("out of memory") as u32; 
+                } else {
+                    base = pe32.opt.image_base;
+                }
+
+            // system library
+            } else {
+                if self.maps.overlaps(pe32.opt.image_base as u64, pe32.size() as u64) {
+                    base = self.maps.alloc(pe32.size() as u64).expect("out of memory") as u32; 
+                } else {
+                    base = pe32.opt.image_base;
+                }
+            }
+        }
         let map_name = self.filename_to_mapname(filename);
 
         if set_entry {
@@ -1011,30 +1027,12 @@ impl Emu {
             }
         }
 
-        //TODO: query if this vaddr is already used
         let pemap = self.maps.create_map(&format!("{}.pe", map_name));
         pemap.set_base(base.into());
         pemap.set_size(pe32.opt.size_of_headers.into());
         pemap.memcpy(pe32.get_headers(), pe32.opt.size_of_headers as usize);
 
-        /*println!("Loaded {}", filename);
-        println!(
-            "\t{} sections  base addr 0x{:x}",
-            pe32.num_of_sections(),
-            base
-        );*/
-
         for i in 0..pe32.num_of_sections() {
-            let base: u32;
-            if force_base > 0 {
-                base = force_base;
-            } else {
-                if self.cfg.code_base_addr == 0x3c0000 || is_maps {
-                    base = pe32.opt.image_base;
-                } else {
-                    base = self.cfg.code_base_addr as u32;
-                }
-            }
             let ptr = pe32.get_section_ptr(i);
             let sect = pe32.get_section(i);
             let map;
@@ -1053,7 +1051,6 @@ impl Emu {
                 ));
             }
 
-            //println!("-x-> {} {:x}+{:x} = {:x}", sect.get_name(), base, sect.virtual_address, base as u64 + sect.virtual_address as u64);
             map.set_base(base as u64 + sect.virtual_address as u64);
             if sect.virtual_size > sect.size_of_raw_data {
                 map.set_size(sect.virtual_size as u64);
@@ -1061,17 +1058,10 @@ impl Emu {
                 map.set_size(sect.size_of_raw_data as u64);
             }
             if sect.get_name() == ".text" {
-                //map.set_size( (map.size() + 0x1000) as u64 );
                 map.set_size(map.size() as u64);
             }
             map.memcpy(ptr, ptr.len());
 
-            /*println!(
-                "\tcreated pe32 map for section `{}` at 0x{:x} size: {}",
-                sect.get_name(),
-                map.get_base(),
-                sect.virtual_size
-            );*/
             if set_entry {
                 if sect.get_name() == ".text" || i == 0 {
                     if self.cfg.entry_point != 0x3c0000 {
@@ -1110,26 +1100,33 @@ impl Emu {
         let mut pe64 = PE64::load(filename);
         let base: u64;
 
-        if force_base != 0 {
+        // base is setted by libscemu
+        if force_base > 0 {
             if self.maps.overlaps(force_base, pe64.size()) {
                 panic!("the forced base address overlaps");
             } else {
                 base = force_base;
             }
+
+        // base is setted by user
+        } else if !is_maps && self.cfg.code_base_addr != 0x3c0000 {
+            base = self.cfg.code_base_addr;
+            if self.maps.overlaps(base as u64, pe64.size()) {
+                panic!("the setted base address overlaps");
+            }
+
+        // base is setted by image base (if overlapps, alloc)
         } else {
+
+            // user's program
             if set_entry {
-                if self.cfg.code_base_addr != 0x3c0000 {
-                    base = self.cfg.code_base_addr;
-                    if self.maps.overlaps(base, pe64.size()) {
-                        panic!("the setted base address overlaps");
-                    }
+                if self.maps.overlaps(pe64.opt.image_base, pe64.size()) {
+                    base = self.maps.alloc(pe64.size()).expect("out of memory");
                 } else {
-                    if self.maps.overlaps(pe64.opt.image_base, pe64.size()) {
-                        base = self.maps.alloc(pe64.size()).expect("out of memory");
-                    } else {
-                        base = pe64.opt.image_base;
-                    }
+                    base = pe64.opt.image_base;
                 }
+
+            // system library
             } else {
                 if self.maps.overlaps(pe64.opt.image_base, pe64.size()) {
                     base = self.maps.lib64_alloc(pe64.size()).expect("out of memory");
@@ -1143,64 +1140,52 @@ impl Emu {
             }
         }
 
-        /*
-        if force_base > 0 {
-            base = force_base;
-        } else {
-            if is_maps && pe64.is_dll() {
-                base = self.maps.lib64_alloc(pe64.size()).expect("out of memory");
-            } else {
-                base = match self.maps.get_mem_by_addr(pe64.opt.image_base + 0x1000) {
-                    Some(_) => self.maps.alloc(pe64.size()).expect("out of memory"),
-                    None => pe64.opt.image_base,
-                };
-            }
-        }
-
-        if set_entry && !is_maps && self.cfg.code_base_addr != 0x3c0000 {
-            base = self.cfg.code_base_addr;
-        }
-        */
-
         let map_name = self.filename_to_mapname(filename);
 
-        if set_entry && !is_maps {
-            pe64.iat_binding(self);
-            pe64.delay_load_binding(self);
+        if set_entry {
+            let space_addr = peb64::create_ldr_entry(
+                self,
+                base,
+                base, // entry point
+                &map_name,
+                0,
+                0x2c1950,
+            );
+            let peb = peb64::init_peb(self, space_addr, base);
+
+            if !is_maps {
+                pe64.iat_binding(self);
+                pe64.delay_load_binding(self);
+            }
+
+            winapi64::kernel32::load_library(self, "iphlpapi.dll");
+            winapi64::kernel32::load_library(self, "winhttp.dll");
+            winapi64::kernel32::load_library(self, "dnsapi.dll");
         }
 
-        //TODO: query if this vaddr is already used
         let pemap = self.maps.create_map(&format!("{}.pe", map_name));
         pemap.set_base(base.into());
         pemap.set_size(pe64.opt.size_of_headers.into());
         pemap.memcpy(pe64.get_headers(), pe64.opt.size_of_headers as usize);
 
-        /*println!("Loaded {}", filename);
-        println!(
-            "\t{} sections, base addr 0x{:x}",
-            pe64.num_of_sections(),
-            base
-        );*/
-
         for i in 0..pe64.num_of_sections() {
-            /*let base;
-            if force_base > 0 {
-                base = force_base;
-            } else {
-                base = pe64.opt.image_base;
-            }*/
-            //println!("id:{} name:{}", i, pe64.sect_hdr[i].get_name());
             let ptr = pe64.get_section_ptr(i);
             let sect = pe64.get_section(i);
-            let map = self.maps.create_map(&format!(
-                "{}{}",
-                map_name,
-                sect.get_name()
-                    .replace(" ", "")
-                    .replace("\t", "")
-                    .replace("\x0a", "")
-                    .replace("\x0d", "")
-            ));
+            let map;
+
+            if force_base == 0 && sect.get_name() == ".text" && !is_maps {
+                map = self.maps.get_map_by_name_mut("code").unwrap();
+            } else {
+                map = self.maps.create_map(&format!(
+                    "{}{}",
+                    map_name,
+                    sect.get_name()
+                        .replace(" ", "")
+                        .replace("\t", "")
+                        .replace("\x0a", "")
+                        .replace("\x0d", "")
+                ));
+            }
 
             map.set_base(base + sect.virtual_address as u64);
             if sect.virtual_size > sect.size_of_raw_data {
@@ -1210,23 +1195,18 @@ impl Emu {
             }
             map.memcpy(ptr, ptr.len());
 
-            /*println!(
-                "\tcreated pe64 map for section `{}` at 0x{:x} size: {}",
-                sect.get_name(),
-                map.get_base(),
-                sect.virtual_size
-            );*/
-
             if set_entry {
                 if sect.get_name() == ".text" || i == 0 {
-                    if pe64.opt.address_of_entry_point == 0 {
-                        println!("zero entry!!");
-                        self.regs.rip =
-                            base + sect.virtual_address as u64 + sect.pointer_to_raw_data as u64;
+                    if self.cfg.entry_point != 0x3c0000 {
+                        self.regs.rip = self.cfg.entry_point;
+                        println!(
+                            "entry point at 0x{:x} but forcing it at 0x{:x} by -a flag",
+                            base + pe64.opt.address_of_entry_point as u64,
+                            self.regs.rip
+                        );
                     } else {
                         self.regs.rip = base + pe64.opt.address_of_entry_point as u64;
                     }
-
                     println!(
                         "\tentry point at 0x{:x}  0x{:x} ",
                         self.regs.rip, pe64.opt.address_of_entry_point
@@ -1354,7 +1334,25 @@ impl Emu {
             // shellcode
 
             println!("shellcode detected.");
-            if !self.cfg.is_64bits {
+
+            if self.cfg.is_64bits {
+                let space_addr = peb64::create_ldr_entry(
+                    self,
+                    self.cfg.code_base_addr,
+                    self.cfg.entry_point, 
+                    "code",
+                    0,
+                    0x2c1950,
+                ); 
+                //peb64::init_peb(self, 0x2c18c0, 0);
+                peb64::init_peb(self, space_addr, self.cfg.code_base_addr);
+                winapi64::kernel32::load_library(self, "iphlpapi.dll");
+                winapi64::kernel32::load_library(self, "winhttp.dll");
+                winapi64::kernel32::load_library(self, "dnsapi.dll");
+
+                peb64::update_ldr_entry_base("loader.exe", self.cfg.code_base_addr, self);
+
+            } else {
                 peb32::init_peb(self, 0x2c18c0, 0);
             }
 
