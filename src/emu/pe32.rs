@@ -1080,6 +1080,8 @@ impl PE32 {
             if emu::winapi32::kernel32::load_library(emu, &iim.name) == 0 {
                 println!("cannot found the library `{}` on maps32/", &iim.name);
                 return;
+            } else if dbg {
+                println!("library `{}` loaded", &iim.name);
             }
 
             // Walking function names.
@@ -1110,7 +1112,8 @@ impl PE32 {
                     break;
                 }
                 if dbg {
-                    println!("real addr: 0x{:x}", real_addr);
+                    let old_addr = read_u32_le!(self.raw, off_addr);
+                    println!("patch addr: 0x{:x}: 0x{:x} -> 0x{:x}", off_addr, old_addr, real_addr);
                 }
 
                 write_u32_le!(self.raw, off_addr, real_addr);

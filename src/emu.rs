@@ -1001,7 +1001,7 @@ impl Emu {
             // system library
             } else {
                 if self.maps.overlaps(pe32.opt.image_base as u64, pe32.size() as u64) {
-                    base = self.maps.alloc(pe32.size() as u64).expect("out of memory") as u32; 
+                    base = self.maps.lib32_alloc(pe32.size() as u64).expect("out of memory") as u32; 
                 } else {
                     base = pe32.opt.image_base;
                 }
@@ -1153,15 +1153,16 @@ impl Emu {
             );
             let peb = peb64::init_peb(self, space_addr, base);
 
+            winapi64::kernel32::load_library(self, "iphlpapi.dll");
+            winapi64::kernel32::load_library(self, "winhttp.dll");
+            winapi64::kernel32::load_library(self, "dnsapi.dll");
+
             if !is_maps {
                 pe64.iat_binding(self);
                 pe64.delay_load_binding(self);
             }
-
-            winapi64::kernel32::load_library(self, "iphlpapi.dll");
-            winapi64::kernel32::load_library(self, "winhttp.dll");
-            winapi64::kernel32::load_library(self, "dnsapi.dll");
         }
+
 
         let pemap = self.maps.create_map(&format!("{}.pe", map_name));
         pemap.set_base(base.into());

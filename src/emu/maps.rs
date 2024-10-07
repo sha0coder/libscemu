@@ -1035,6 +1035,31 @@ impl Maps {
         }
     }
 
+    pub fn lib32_alloc(&self, sz: u64) -> Option<u64> {
+        // super simple memory allocator
+        let mut addr: u64 = constants::LIBS_BARRIER;
+
+        loop {
+            addr += sz;
+
+            if addr >= 0xf0000000 {
+                return None;
+            }
+
+            for mem in self.maps.iter() {
+                if addr >= mem.get_base() && addr <= mem.get_bottom() {
+                    continue;
+                }
+            }
+
+            //return Some(addr);
+
+            if !self.overlaps(addr, sz) {
+                return Some(addr);
+            }
+        }
+    }
+
     pub fn alloc(&self, sz: u64) -> Option<u64> {
         // super simple memory allocator
 
