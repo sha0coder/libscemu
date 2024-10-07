@@ -497,7 +497,7 @@ impl Emu {
         self.maps.create_map("msvcrt_text");
         self.maps.create_map("reserved");
         self.maps.create_map("kuser_shared_data");
-        self.maps.create_map("binary");
+        //self.maps.create_map("binary");
         //self.maps.create_map("reserved2");
         self.maps.create_map("ws2_32");
         self.maps.create_map("ws2_32_text");
@@ -617,9 +617,9 @@ impl Emu {
         kuser_shared_data.set_base(0x7ffe0000);
         kuser_shared_data.load("kuser_shared_data.bin");
 
-        let binary = self.maps.get_mem("binary");
-        binary.set_base(0x400000);
-        binary.set_size(0x1000);
+        //let binary = self.maps.get_mem("binary");
+        //binary.set_base(0x400000);
+        //binary.set_size(0x1000);
 
         let ws2_32 = self.maps.get_mem("ws2_32");
         ws2_32.set_base(0x77480000);
