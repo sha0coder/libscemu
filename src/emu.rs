@@ -1347,11 +1347,10 @@ impl Emu {
                 ); 
                 //peb64::init_peb(self, 0x2c18c0, 0);
                 peb64::init_peb(self, space_addr, self.cfg.code_base_addr);
+                peb64::update_ldr_entry_base("loader.exe", self.cfg.code_base_addr, self);
                 winapi64::kernel32::load_library(self, "iphlpapi.dll");
                 winapi64::kernel32::load_library(self, "winhttp.dll");
                 winapi64::kernel32::load_library(self, "dnsapi.dll");
-
-                peb64::update_ldr_entry_base("loader.exe", self.cfg.code_base_addr, self);
 
             } else {
                 peb32::init_peb(self, 0x2c18c0, 0);
@@ -12382,8 +12381,7 @@ impl Emu {
                 let source = match self.get_operand_xmm_value_128(&ins, 1, true) {
                     Some(v) => v,
                     None => {
-                        println!("error reading memory xmm 1 source operand");
-                        return false;
+                        self.get_operand_value(&ins, 1, true).unwrap_or(0) as u128
                     }
                 };
 

@@ -16,7 +16,7 @@ pub fn init_peb(emu: &mut emu::Emu, first_entry: u64, bin_base: u64) -> u64 {
     let peb = PEB64::new(image_base_address, ldr, process_parameters);
     peb.save(&mut peb_map);
 
-    emu.maps.write_qword(ldr + 0x30, first_entry);
+    emu.maps.write_qword(ldr + 0x30, first_entry); //LIST_ENTRY InInitializationOrderModuleList;
     emu.maps.write_byte(peb_addr + 2, 0); // not being_debugged
     emu.maps.write_qword(peb_addr + 8, bin_base);
     return peb_addr;
