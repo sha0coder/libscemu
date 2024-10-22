@@ -143,6 +143,7 @@ pub struct Emu {
     now: Instant,
     pub skip_apicall: bool,
     pub its_apicall: Option<u64>,
+    pub last_instruction_size: usize,
 }
 
 impl Emu {
@@ -191,6 +192,7 @@ impl Emu {
             now: Instant::now(),
             skip_apicall: false,
             its_apicall: None,
+            last_instruction_size: 0,
         }
     }
 
@@ -4434,6 +4436,7 @@ impl Emu {
 
         // emulate
         let result_ok = self.emulate_instruction(&ins, sz, true);
+        self.last_instruction_size = sz;
 
         // update eip/rip
         if self.force_reload {

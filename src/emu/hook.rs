@@ -16,6 +16,8 @@ type TypeHookOnPostInstruction =
     fn(emu: &mut emu::Emu, ip_addr: u64, ins: &Instruction, sz: usize, emu_ok: bool);
 type TypeHookOnWinApiCall = fn(emu: &mut emu::Emu, ip_addr: u64, called_addr: u64) -> bool;
 
+
+
 pub struct Hook {
     pub hook_on_interrupt: Option<TypeHookOnInterrupt>,
     pub hook_on_exception: Option<TypeHookOnException>,
@@ -94,5 +96,4 @@ impl Hook {
     pub fn disable_winapi_call(&mut self) {
         self.hook_on_winapi_call = None;
     }
-
 }
