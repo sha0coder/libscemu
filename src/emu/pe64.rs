@@ -391,7 +391,6 @@ impl PE64 {
         }
         let off = self.sect_hdr[id].pointer_to_raw_data as usize;
         let sz = self.sect_hdr[id].size_of_raw_data as usize; //TODO: coger sz en disk
-        println!("off: {:x} sz: {}", off, sz);
         if off + sz > self.raw.len() {
             println!(
                 "/!\\ warning: id:{} name:{} raw sz:{} off:{} sz:{}  off+sz:{}",

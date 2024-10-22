@@ -4303,9 +4303,13 @@ impl Emu {
 
     pub fn call32(&mut self, addr: u64, args: &[u64]) -> Result<u32, ScemuError> {
         if addr == self.regs.get_eip() {
-            return Err(ScemuError::new(
-                "return address reached after starting, change eip.",
-            ));
+            if addr == 0 {
+                return Err(ScemuError::new(
+                    "return address reached after starting the call32, change eip.",
+                ));
+            } else {
+                self.regs.rip = 0;
+            }
         }
         let orig_stack = self.regs.get_esp();
         for arg in args.iter().rev() {
@@ -4321,9 +4325,13 @@ impl Emu {
 
     pub fn call64(&mut self, addr: u64, args: &[u64]) -> Result<u64, ScemuError> {
         if addr == self.regs.rip {
-            return Err(ScemuError::new(
-                "return address reached after starting, change rip.",
-            ));
+            if addr == 0 {
+                return Err(ScemuError::new(
+                    "return address reached after starting the call64, change rip.",
+                ));
+            } else {
+                self.regs.rip = 0;
+            }
         }
 
         let n = args.len();
