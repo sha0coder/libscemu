@@ -305,6 +305,7 @@ impl PE64 {
 
         if import_va > 0 {
             import_off = PE32::vaddr_to_off(&sect, import_va) as usize;
+
             if import_off > 0 {
                 loop {
                     let mut iid = pe32::ImageImportDescriptor::load(&raw, import_off);
@@ -390,7 +391,8 @@ impl PE64 {
         }
         let off = self.sect_hdr[id].pointer_to_raw_data as usize;
         let sz = self.sect_hdr[id].size_of_raw_data as usize; //TODO: coger sz en disk
-        if off + sz >= self.raw.len() {
+        println!("off: {:x} sz: {}", off, sz);
+        if off + sz > self.raw.len() {
             println!(
                 "/!\\ warning: id:{} name:{} raw sz:{} off:{} sz:{}  off+sz:{}",
                 id,
@@ -401,7 +403,8 @@ impl PE64 {
                 off + sz
             );
             //sz = self.raw.len() - off - 1;
-            return &[];
+            return &self.raw[off..];
+            //return &[];
         }
         let section_ptr = &self.raw[off..off + sz];
         return section_ptr;

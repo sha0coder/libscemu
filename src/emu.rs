@@ -1151,6 +1151,7 @@ impl Emu {
                 0,
                 0x2c1950,
             );
+
             let peb = peb64::init_peb(self, space_addr, base);
 
             winapi64::kernel32::load_library(self, "iphlpapi.dll");
@@ -1194,6 +1195,7 @@ impl Emu {
             } else {
                 map.set_size(sect.size_of_raw_data as u64);
             }
+            let qw = map.read_qword(map.get_base());
             map.memcpy(ptr, ptr.len());
 
             if set_entry {

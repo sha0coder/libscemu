@@ -16,6 +16,7 @@ pub fn init_peb(emu: &mut emu::Emu, first_entry: u64, bin_base: u64) -> u64 {
     let peb = PEB64::new(image_base_address, ldr, process_parameters);
     peb.save(&mut peb_map);
 
+
     emu.maps.write_qword(ldr + 0x30, first_entry); //LIST_ENTRY InInitializationOrderModuleList;
     emu.maps.write_byte(peb_addr + 2, 0); // not being_debugged
     emu.maps.write_qword(peb_addr + 8, bin_base);
@@ -40,11 +41,11 @@ impl Flink {
     pub fn new(emu: &mut emu::Emu) -> Flink {
         let peb = emu.maps.get_mem("peb");
         let peb_base = peb.get_base();
-        let ldr = peb.read_dword(peb_base + 0x18) as u64;
+        let ldr = peb.read_qword(peb_base + 0x18);
         let flink = emu
             .maps
-            .read_dword(ldr + 0x10)
-            .expect("peb64::new() error reading flink") as u64;
+            .read_qword(ldr + 0x10)
+            .expect("peb64::new() error reading flink");
 
         Flink {
             flink_addr: flink,
@@ -212,6 +213,7 @@ pub fn get_module_base(libname: &str, emu: &mut emu::Emu) -> Option<u64> {
 
     let mut flink = Flink::new(emu);
     flink.load(emu);
+
     let first_flink = flink.get_ptr();
     loop {
         //println!("{} == {}", libname2, flink.mod_name);
