@@ -1980,6 +1980,26 @@ impl Emu {
         return true;
     }
 
+    pub fn handle_winapi(&mut self, addr: u64) {
+        let name = match self.maps.get_addr_name(addr) {
+            Some(n) => n,
+            None => {
+                eprintln!("/!\\ setting rip to non mapped addr 0x{:x}", addr);
+                self.exception();
+                return;
+            }
+        };
+        if self.cfg.is_64bits {
+            self.gateway_return = self.stack_pop64(false).unwrap_or(0);
+            self.regs.rip = self.gateway_return;
+            winapi64::gateway(addr, name, self);
+        } else {
+            self.gateway_return = self.stack_pop32(false).unwrap_or(0) as u64;
+            self.regs.rip = self.gateway_return;
+            winapi32::gateway(addr as u32, name, self);
+        }
+    }
+
     pub fn set_eip(&mut self, addr: u64, is_branch: bool) -> bool {
         self.force_reload = true;
 
