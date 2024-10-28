@@ -24,6 +24,9 @@ pub fn gateway(addr: u64, name: String, emu: &mut emu::Emu) {
         "dnsapi.text" => dnsapi::gateway(addr, emu),
         "comctl32.text" => comctl64::gateway(addr, emu),
         "shell32.text" => shell32::gateway(addr, emu),
+        "not_loaded" => {
+            emu.pe64.as_ref().unwrap().import_addr_to_name(addr)
+        }
         _ => panic!("/!\\ trying to execute on {} at 0x{:x}", name, addr),
     };
 

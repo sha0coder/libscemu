@@ -34,6 +34,9 @@ pub fn gateway(addr: u32, name: String, emu: &mut emu::Emu) {
         "oleaut32_text" => oleaut32::gateway(addr, emu),
         "kernelbase_text" => kernelbase::gateway(addr, emu),
         "libgcc_s_dw2-1.text" => libgcc::gateway(addr, emu),
+        "not_loaded" => {
+            emu.pe32.as_ref().unwrap().import_addr_to_name(addr as u32)
+        }
         _ => {
             println!("/!\\ trying to execute on {} at 0x{:x}", name, addr);
             name

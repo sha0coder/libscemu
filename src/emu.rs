@@ -144,6 +144,8 @@ pub struct Emu {
     pub skip_apicall: bool,
     pub its_apicall: Option<u64>,
     pub last_instruction_size: usize,
+    pub pe64: Option<PE64>,
+    pub pe32: Option<PE32>,
 }
 
 impl Emu {
@@ -193,6 +195,8 @@ impl Emu {
             skip_apicall: false,
             its_apicall: None,
             last_instruction_size: 0,
+            pe64: None, 
+            pe32: None,
         }
     }
 
@@ -1094,8 +1098,7 @@ impl Emu {
         }
 
         let pe_hdr_off = pe32.dos.e_lfanew;
-
-        pe32.clear();
+        self.pe32 = Some(pe32);
         return (base, pe_hdr_off);
     }
 
@@ -1227,8 +1230,7 @@ impl Emu {
         }
 
         let pe_hdr_off = pe64.dos.e_lfanew;
-
-        pe64.clear();
+        self.pe64 = Some(pe64);
         return (base, pe_hdr_off);
     }
 
@@ -1930,9 +1932,18 @@ impl Emu {
         let name = match self.maps.get_addr_name(addr) {
             Some(n) => n,
             None => {
-                eprintln!("/!\\ setting rip to non mapped addr 0x{:x}", addr);
-                self.exception();
-                return false;
+                let api_name = self.pe64.as_ref().unwrap().import_addr_to_name(addr);
+                if api_name.len() > 0 {
+                    self.gateway_return = self.stack_pop64(false).unwrap_or(0);
+                    self.regs.rip = self.gateway_return;
+                    winapi64::gateway(addr, "not_loaded".to_string(), self);
+                    self.force_break = true;
+                    return true;
+                } else {
+                    eprintln!("/!\\ setting eip to non mapped addr 0x{:x}", addr);
+                    self.exception();
+                    return false;
+                }
             }
         };
 
@@ -2006,9 +2017,18 @@ impl Emu {
         let name = match self.maps.get_addr_name(addr) {
             Some(n) => n,
             None => {
-                eprintln!("/!\\ setting eip to non mapped addr 0x{:x}", addr);
-                self.exception();
-                return false;
+                let api_name = self.pe32.as_ref().unwrap().import_addr_to_name(addr as u32);
+                if api_name.len() > 0 {
+                    self.gateway_return = self.stack_pop32(false).unwrap_or(0) as u64;
+                    self.regs.rip = self.gateway_return;
+                    winapi32::gateway(addr as u32, "not_loaded".to_string(), self);
+                    self.force_break = true;
+                    return true;
+                } else {
+                    eprintln!("/!\\ setting eip to non mapped addr 0x{:x}", addr);
+                    self.exception();
+                    return false;
+                }
             }
         };
 

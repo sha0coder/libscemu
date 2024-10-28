@@ -563,4 +563,56 @@ impl PE64 {
         }
         println!("IAT Bound.");
     }
+
+    pub fn import_addr_to_name(&self, paddr: u64) -> String {
+        if paddr == 0 {
+            return String::new();
+        }
+
+        for i in 0..self.image_import_descriptor.len() {
+            let iim = &self.image_import_descriptor[i];
+
+            if iim.name.len() == 0 {
+                continue;
+            }
+
+            // Walking function names.
+            let mut off_name =
+                PE32::vaddr_to_off(&self.sect_hdr, iim.original_first_thunk) as usize;
+
+            //println!("----> 0x{:x}", iim.first_thunk);
+            let mut off_addr = PE32::vaddr_to_off(&self.sect_hdr, iim.first_thunk) as usize;
+            //off_addr += 8;
+
+            loop {
+                if self.raw.len() <= off_name + 4 || self.raw.len() <= off_addr + 8 {
+                    break;
+                }
+
+                let hint = pe32::HintNameItem::load(&self.raw, off_name);
+                let addr = read_u32_le!(self.raw, off_addr); // & 0b01111111_11111111_11111111_11111111;
+                let off2 = PE32::vaddr_to_off(&self.sect_hdr, hint.func_name_addr) as usize;
+                if off2 == 0 {
+                    //|| addr < 0x100 {
+                    off_name += pe32::HintNameItem::size();
+                    //off_addr += 8;
+                    continue;
+                }
+
+                if addr == paddr as u32 {
+                    let func_name = PE32::read_string(&self.raw, off2 + 2);
+                    return func_name;
+                }
+
+                off_name += pe32::HintNameItem::size();
+                off_addr += 8;
+            }
+        }
+
+        return String::new();
+    }
+
 }
+
+
+
