@@ -862,6 +862,7 @@ impl Emu {
             .set_base(self.cfg.code_base_addr);
         self.maps.create_map("stack");
         self.maps.create_map("teb").load_at(0x7fffffdd000);
+        /*
         self.maps.create_map("ntdll_pe").load_at(0x76fd0000);
         self.maps.create_map("ntdll_text").load_at(0x76fd1000);
         self.maps.create_map("ntdll_rt").load_at(0x770d2000);
@@ -929,11 +930,6 @@ impl Emu {
         self.maps.create_map("urlmon_pe").load_at(0x7fefed30000);
         self.maps.create_map("urlmon_text").load_at(0x7fefed31000);
         self.maps.create_map("urlmon_rdata").load_at(0x7fefee05000);
-        self.maps.create_map("ws2_32_pe").load_at(0x7fefeeb0000);
-        self.maps.create_map("ws2_32_text").load_at(0x7fefeeb1000);
-        self.maps.create_map("ws2_32_rdata").load_at(0x7fefeee1000);
-        //self.maps.create_map("msvcrt_pe").load_at(0x7fefef00000);
-        //self.maps.create_map("msvcrt_text").load_at(0x7fefef01000);
         self.maps.create_map("advapi32_pe").load_at(0x7fefefa0000);
         self.maps.create_map("advapi32_text").load_at(0x7fefefa1000);
         self.maps
@@ -948,18 +944,28 @@ impl Emu {
         self.maps.create_map("shlwapi_text").load_at(0x7feff261000);
         self.maps.create_map("shlwapi_rdata").load_at(0x7feff2a5000);
 
-        // load from dll not from maps
-        self.maps.create_map("winhttp_pe").load_at(0x7fef9760000);
-        self.maps.create_map("winhttp_text").load_at(0x7fef9761000);
-
-        self.maps.create_map("dnsapi_pe").load_at(0x7fefc5f0000);
-        self.maps.create_map("dnsapi_text").load_at(0x7fefc5f1000);
-
-        /*self.maps.create_map("iphlpapi_pe").load_at(0x7fefc1b0000);
-        self.maps.create_map("iphlpapi_text").load_at(0x7fefc1b1000);*/
+        */
 
 
         std::env::set_current_dir(orig_path);
+
+        peb64::init_peb(self);
+
+        winapi64::kernel32::load_library(self, "ntdll.dll");
+
+        let ntdll_base = self.maps.get_mem("ntdll.pe").get_base();
+        peb64::update_peb_image_base(self, ntdll_base);
+
+        winapi64::kernel32::load_library(self, "kernel32.dll");
+        winapi64::kernel32::load_library(self, "kernelbase.dll");
+        winapi64::kernel32::load_library(self, "iphlpapi.dll");
+        winapi64::kernel32::load_library(self, "ws2_32.dll");
+        winapi64::kernel32::load_library(self, "advapi32.dll");
+        winapi64::kernel32::load_library(self, "comctl64.dll");
+        winapi64::kernel32::load_library(self, "winhttp.dll");
+        winapi64::kernel32::load_library(self, "wininet.dll");
+        winapi64::kernel32::load_library(self, "dnsapi.dll");
+        winapi64::kernel32::load_library(self, "shell32.dll");
 
     }
 
@@ -1154,11 +1160,8 @@ impl Emu {
                 0x2c1950,
             );
 
-            let peb = peb64::init_peb(self, space_addr, base);
+            peb64::update_ldr_entry_base("loader.exe", base, self);
 
-            winapi64::kernel32::load_library(self, "iphlpapi.dll");
-            winapi64::kernel32::load_library(self, "winhttp.dll");
-            winapi64::kernel32::load_library(self, "dnsapi.dll");
 
             if !is_maps {
                 pe64.iat_binding(self);
@@ -1313,12 +1316,13 @@ impl Emu {
             let ep = self.regs.rip;
 
             // emulating tls callbacks
+            /*
             for i in 0..self.tls_callbacks.len() {
                 self.regs.rip = self.tls_callbacks[i];
                 println!("emulating tls_callback {} at 0x{:x}", i + 1, self.regs.rip);
                 self.stack_push32(base);
                 self.run(Some(base as u64));
-            }
+            }*/
 
             self.regs.rip = ep;
         } else if self.cfg.is_64bits && PE64::is_pe64(filename) {
@@ -1327,12 +1331,13 @@ impl Emu {
             let ep = self.regs.rip;
 
             // emulating tls callbacks
+            /*
             for i in 0..self.tls_callbacks.len() {
                 self.regs.rip = self.tls_callbacks[i];
                 println!("emulating tls_callback {} at 0x{:x}", i + 1, self.regs.rip);
                 self.stack_push64(base);
                 self.run(Some(base));
-            }
+            }*/
 
             self.regs.rip = ep;
         } else {
@@ -1341,20 +1346,7 @@ impl Emu {
             println!("shellcode detected.");
 
             if self.cfg.is_64bits {
-                let space_addr = peb64::create_ldr_entry(
-                    self,
-                    self.cfg.code_base_addr,
-                    self.cfg.entry_point, 
-                    "code",
-                    0,
-                    0x2c1950,
-                ); 
-                //peb64::init_peb(self, 0x2c18c0, 0);
-                peb64::init_peb(self, space_addr, self.cfg.code_base_addr);
                 peb64::update_ldr_entry_base("loader.exe", self.cfg.code_base_addr, self);
-                winapi64::kernel32::load_library(self, "iphlpapi.dll");
-                winapi64::kernel32::load_library(self, "winhttp.dll");
-                winapi64::kernel32::load_library(self, "dnsapi.dll");
 
             } else {
                 peb32::init_peb(self, 0x2c18c0, 0);

@@ -7,37 +7,34 @@ use lazy_static::lazy_static;
 use std::sync::Mutex;
 
 pub fn gateway(addr: u64, emu: &mut emu::Emu) -> String {
-    match addr {
-        0x7fefeeb4980 => WsaStartup(emu),
-        0x7fefeeb2010 => WsaSocketA(emu),
-        0x7fefeeb45c0 => connect(emu),
-        0x7fefeebdf40 => recv(emu),
-        0x7fefeeb8000 => send(emu),
-        0x7fefeebde90 => socket(emu),
-        0x7fefeeddda0 => WsaHtons(emu),
-        0x7fefeeb1250 => htons(emu),
-        0x7fefeeb1350 => inet_addr(emu),
-        0x7fefeeb1f00 => bind(emu),
-        0x7fefeeb8290 => listen(emu),
-        0x7fefeebea00 => accept(emu),
-        0x7fefeeb18e0 => closesocket(emu),
-        0x7fefeebdd30 => setsockopt(emu),
-        0x7fefeebe200 => getsockopt(emu),
-        0x7fefeebea20 => WsaAccept(emu),
-        0x7fefeeb9480 => GetSockName(emu),
-        0x7fefeeb8df0 => gethostbyname(emu),
-
-        //0x7fefeebd7f0 => sendto(emu),
-
+    let apiname = emu::winapi64::kernel32::guess_api_name(emu, addr);
+    match apiname.as_str() {
+        "WsaStartup" => WsaStartup(emu),
+        "WsaSocketA" => WsaSocketA(emu),
+        "connect" => connect(emu),
+        "recv" => recv(emu),
+        "send" => send(emu),
+        "socket" => socket(emu),
+        "WsaHtons" => WsaHtons(emu),
+        "htons" => htons(emu),
+        "inet_addr" => inet_addr(emu),
+        "bind" => bind(emu),
+        "listen" => listen(emu),
+        "accept" => accept(emu),
+        "closesocket" => closesocket(emu),
+        "setsockopt" => setsockopt(emu),
+        "getsockopt" => getsockopt(emu),
+        "WsaAccept" => WsaAccept(emu),
+        "GetSockName" => GetSockName(emu),
+        "gethostbyname" => gethostbyname(emu),
         /*
-        0x774834b5 => sendto(emu),
-        0x7748b6dc => recvfrom(emu),
-        0x77487089 => WsaRecv(emu),
-        0x7748cba6 => WsaRecvFrom(emu),
-        0x7748cc3f => WsaConnect(emu),
+        "sendto" => sendto(emu),
+        "recvfrom" => recvfrom(emu),
+        "WsaRecv" => WsaRecv(emu),
+        "WsaRecvFrom" => WsaRecvFrom(emu),
+        "WsaConnect" => WsaConnect(emu),
         */
         _ => {
-            let apiname = emu::winapi64::kernel32::guess_api_name(emu, addr);
             println!("calling unimplemented ws2_32 API 0x{:x} {}", addr, apiname);
             return apiname;
         }

@@ -6,23 +6,23 @@ use lazy_static::lazy_static;
 use std::sync::Mutex;
 
 pub fn gateway(addr: u64, emu: &mut emu::Emu) -> String {
-    match addr {
-        0x7fefd899098 => InternetOpenA(emu),
-        0x7fefd8b1c80 => InternetOpenW(emu),
-        0x7fefd8b3130 => InternetConnectA(emu),
-        0x7fefd8b3020 => InternetConnectW(emu),
-        0x7fefd8b3910 => HttpOpenRequestA(emu),
-        0x7fefd8b355c => HttpOpenRequestW(emu),
-        0x7fefd88fb34 => InternetSetOptionA(emu),
-        0x7fefd88ff20 => InternetSetOptionW(emu),
-        0x7fefd8ff600 => HttpSendRequestA(emu),
-        0x7fefd8a3b6c => HttpSendRequestW(emu),
-        0x7fefd893914 => InternetReadFile(emu),
-        0x7fefd8e1020 => InternetReadFileExA(emu),
-        0x7fefd8e2dc0 => InternetReadFileExW(emu),
-        0x7fefd92247c => InternetErrorDlg(emu),
+    let apiname = emu::winapi64::kernel32::guess_api_name(emu, addr);
+    match apiname.as_str() {
+        "InternetOpenA" => InternetOpenA(emu),
+        "InternetOpenW" => InternetOpenW(emu),
+        "InternetConnectA" => InternetConnectA(emu),
+        "InternetConnectW" => InternetConnectW(emu),
+        "HttpOpenRequestA" => HttpOpenRequestA(emu),
+        "HttpOpenRequestW" => HttpOpenRequestW(emu),
+        "InternetSetOptionA" => InternetSetOptionA(emu),
+        "InternetSetOptionW" => InternetSetOptionW(emu),
+        "HttpSendRequestA" => HttpSendRequestA(emu),
+        "HttpSendRequestW" => HttpSendRequestW(emu),
+        "InternetReadFile" => InternetReadFile(emu),
+        "InternetReadFileExA" => InternetReadFileExA(emu),
+        "InternetReadFileExW" => InternetReadFileExW(emu),
+        "InternetErrorDlg" => InternetErrorDlg(emu),
         _ => {
-            let apiname = emu::winapi64::kernel32::guess_api_name(emu, addr);
             println!("calling unimplemented wininet API 0x{:x} {}", addr, apiname);
             return apiname;
         }

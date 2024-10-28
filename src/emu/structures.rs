@@ -7,16 +7,53 @@ use chrono::prelude::*;
 
 #[derive(Debug)]
 pub struct ListEntry {
-    flink: u32,
-    blink: u32,
+    pub flink: u32,
+    pub blink: u32,
 }
 
 impl ListEntry {
+    pub fn new() -> ListEntry {
+        ListEntry { flink: 0, blink: 0 }
+    }
+
     pub fn load(addr: u64, maps: &Maps) -> ListEntry {
         ListEntry {
             flink: maps.read_dword(addr).unwrap(),
             blink: maps.read_dword(addr + 4).unwrap(),
         }
+    }
+
+    pub fn save(&self, addr: u64, maps: &mut Maps) {
+        maps.write_dword(addr, self.flink);
+        maps.write_dword(addr + 4, self.blink);
+    }
+
+    pub fn print(&self) {
+        println!("{:#x?}", self);
+    }
+}
+
+#[derive(Debug)]
+pub struct ListEntry64 {
+    pub flink: u64,
+    pub blink: u64,
+}
+
+impl ListEntry64 {
+    pub fn new() -> ListEntry64 {
+        ListEntry64 { flink: 0, blink: 0 }
+    }
+
+    pub fn load(addr: u64, maps: &Maps) -> ListEntry64 {
+        ListEntry64 {
+            flink: maps.read_qword(addr).unwrap(),
+            blink: maps.read_qword(addr + 8).unwrap(),
+        }
+    }
+
+    pub fn save(&self, addr: u64, maps: &mut Maps) {
+        maps.write_qword(addr, self.flink);
+        maps.write_qword(addr + 8, self.blink);
     }
 
     pub fn print(&self) {
@@ -89,6 +126,10 @@ pub struct PebLdrData {
 }
 
 impl PebLdrData {
+    pub fn size() -> usize {
+        return 44;
+    }
+
     pub fn load(addr: u64, maps: &Maps) -> PebLdrData {
         PebLdrData {
             length: maps.read_dword(addr).unwrap(),
@@ -99,6 +140,71 @@ impl PebLdrData {
             in_initialization_order_module_list: ListEntry::load(addr + 12 + 8 + 8, &maps),
             entry_in_progress: ListEntry::load(addr + 12 + 8 + 8 + 8, &maps),
         }
+    }
+
+    pub fn save(&self, addr: u64, maps: &mut Maps) {
+        maps.write_dword(addr, self.length);
+        maps.write_dword(addr + 4, self.initializated);
+        maps.write_dword(addr + 8, self.sshandle);
+        self.in_load_order_module_list.save(addr + 12, maps);
+        self.in_memory_order_module_list.save(addr + 12 + 8, maps);
+        self.in_initialization_order_module_list.save(addr + 12 + 8 + 8, maps);
+        self.entry_in_progress.save(addr + 12 + 8 + 8 + 8, maps);
+    }
+
+    pub fn print(&self) {
+        println!("{:#x?}", self);
+    }
+}
+
+#[derive(Debug)]
+pub struct PebLdrData64 {
+    pub length: u32,
+    pub initializated: u32,
+    pub sshandle: u64,
+    pub in_load_order_module_list: ListEntry64,   
+    pub in_memory_order_module_list: ListEntry64, 
+    pub in_initialization_order_module_list: ListEntry64,
+    pub entry_in_progress: ListEntry64,
+}
+
+impl PebLdrData64 {
+    pub fn size() -> usize {
+        return 80;
+    }
+
+    pub fn new() -> PebLdrData64 {
+        PebLdrData64 {
+            length: 72,
+            initializated: 0,
+            sshandle: 0,
+            in_load_order_module_list: ListEntry64::new(),
+            in_memory_order_module_list: ListEntry64::new(),
+            in_initialization_order_module_list: ListEntry64::new(),
+            entry_in_progress: ListEntry64::new(),
+        }
+    }
+
+    pub fn load(addr: u64, maps: &Maps) -> PebLdrData64 {
+        PebLdrData64 {
+            length: maps.read_dword(addr).unwrap(),
+            initializated: maps.read_dword(addr + 4).unwrap(),
+            sshandle: maps.read_qword(addr + 8).unwrap(),
+            in_load_order_module_list: ListEntry64::load(addr + 0x10, maps),
+            in_memory_order_module_list: ListEntry64::load(addr + 0x20, maps),
+            in_initialization_order_module_list: ListEntry64::load(addr + 0x30, maps),
+            entry_in_progress: ListEntry64::load(addr + 0x40, maps),
+        }
+    }
+
+    pub fn save(&self, addr: u64, maps: &mut Maps) {
+        maps.write_dword(addr, self.length);
+        maps.write_dword(addr + 4, self.initializated);
+        maps.write_qword(addr + 8, self.sshandle);
+        self.in_load_order_module_list.save(addr + 0x10, maps);
+        self.in_memory_order_module_list.save(addr + 0x20, maps);
+        self.in_initialization_order_module_list.save(addr + 0x30, maps);
+        self.entry_in_progress.save(addr + 0x40, maps);
     }
 
     pub fn print(&self) {
@@ -667,44 +773,72 @@ impl TEB64 {
 
 #[derive(Debug)]
 pub struct LdrDataTableEntry64 {
-    in_load_order_links: u64,
-    in_memory_order_links: u64,
-    in_initialization_order_links: u64,
-    dll_base: u64,
-    entry_point: u64,
-    size_of_image: u64,
-    full_dll_name1: u64,
-    full_dll_name2: u64,
-    base_dll_name1: u64,
-    base_dll_name2: u64,
-    flags: u32,
-    load_count: u16,
-    tls_index: u16,
-    hash_links: u64,
+    pub in_load_order_links: ListEntry64,
+    pub in_memory_order_links: ListEntry64,
+    pub in_initialization_order_links: ListEntry64,
+    pub dll_base: u64,
+    pub entry_point: u64,
+    pub size_of_image: u64,
+    pub full_dll_name: u64,
+    pub base_dll_name: u64,
+    pub flags: u32,
+    pub load_count: u16,
+    pub tls_index: u16,
+    pub hash_links: ListEntry64,
 }
 
 impl LdrDataTableEntry64 {
     pub fn size() -> u64 {
-        return 120;
+        return 0x100;
     }
+
+    pub fn new() -> LdrDataTableEntry64 {
+        LdrDataTableEntry64 {
+            in_load_order_links: ListEntry64::new(),
+            in_memory_order_links: ListEntry64::new(),
+            in_initialization_order_links: ListEntry64::new(),
+            dll_base: 0,
+            entry_point: 0,
+            size_of_image: 0,
+            full_dll_name: 0,
+            base_dll_name: 0,
+            flags: 0,
+            load_count: 0,
+            tls_index: 0,
+            hash_links: ListEntry64::new(),
+        }
+    } 
 
     pub fn load(addr: u64, maps: &Maps) -> LdrDataTableEntry64 {
         LdrDataTableEntry64 {
-            in_load_order_links: maps.read_qword(addr).unwrap(),
-            in_memory_order_links: maps.read_qword(addr + 0x10).unwrap(),
-            in_initialization_order_links: maps.read_qword(addr + 0x20).unwrap(),
+            in_load_order_links: ListEntry64::load(addr, &maps),
+            in_memory_order_links: ListEntry64::load(addr + 0x10, &maps),
+            in_initialization_order_links: ListEntry64::load(addr + 0x20, &maps),
             dll_base: maps.read_qword(addr + 0x30).unwrap(),
             entry_point: maps.read_qword(addr + 0x38).unwrap(),
             size_of_image: maps.read_qword(addr + 0x40).unwrap(),
-            full_dll_name1: maps.read_qword(addr + 0x48).unwrap(),
-            full_dll_name2: maps.read_qword(addr + 0x50).unwrap(),
-            base_dll_name1: maps.read_qword(addr + 0x58).unwrap(),
-            base_dll_name2: maps.read_qword(addr + 0x60).unwrap(),
-            flags: maps.read_dword(addr + 0x68).unwrap(),
-            load_count: maps.read_word(addr + 0x6c).unwrap(),
-            tls_index: maps.read_word(addr + 0x6e).unwrap(),
-            hash_links: maps.read_qword(addr + 0x70).unwrap(),
+            full_dll_name: maps.read_qword(addr + 0x48).unwrap(),
+            base_dll_name: maps.read_qword(addr + 0x50).unwrap(),
+            flags: maps.read_dword(addr + 0x58).unwrap(),
+            load_count: maps.read_word(addr + 0x5c).unwrap(),
+            tls_index: maps.read_word(addr + 0x5e).unwrap(),
+            hash_links: ListEntry64::load(addr + 0x68, &maps),
         }
+    }
+
+    pub fn save(&self, addr: u64, maps: &mut Maps) {
+        self.in_load_order_links.save(addr, maps);
+        self.in_memory_order_links.save(addr + 0x10, maps);
+        self.in_initialization_order_links.save(addr + 0x20, maps);
+        maps.write_qword(addr + 0x30, self.dll_base);
+        maps.write_qword(addr + 0x38, self.entry_point);
+        maps.write_qword(addr + 0x40, self.size_of_image);
+        maps.write_qword(addr + 0x48, self.full_dll_name);
+        maps.write_qword(addr + 0x50, self.base_dll_name);
+        maps.write_dword(addr + 0x58, self.flags);
+        maps.write_word(addr + 0x5c, self.load_count);
+        maps.write_word(addr + 0x5e, self.tls_index);
+        self.hash_links.save(addr + 0x68, maps);
     }
 
     pub fn print(&self) {

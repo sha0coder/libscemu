@@ -1,12 +1,12 @@
 use crate::emu;
 
 pub fn gateway(addr: u64, emu: &mut emu::Emu) -> String {
-    match addr {
-        0x7740ea11 => MessageBoxA(emu),
-        0x773c01a9 => GetDesktopWindow(emu),
+    let apiname = emu::winapi64::kernel32::guess_api_name(emu, addr);
+    match apiname.as_str() {
+        "MessageBoxA" => MessageBoxA(emu),
+        "GetDesktopWindow" => GetDesktopWindow(emu),
 
         _ => {
-            let apiname = emu::winapi64::kernel32::guess_api_name(emu, addr);
             println!("calling unimplemented user32 API 0x{:x} {}", addr, apiname);
             return apiname;
         }

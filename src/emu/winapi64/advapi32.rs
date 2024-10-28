@@ -3,15 +3,15 @@ use crate::emu::constants;
 use crate::emu::winapi32::helper;
 
 pub fn gateway(addr: u64, emu: &mut emu::Emu) -> String {
-    match addr {
-        0x77733553 => StartServiceCtrlDispatcherA(emu),
-        0x776fa965 => StartServiceCtrlDispatcherW(emu),
-        0x7fefefb6d80 => RegOpenKeyExA(emu),
-        0x7fefefb6eb0 => RegQueryValueExA(emu),
-        0x7fefefb6790 => RegCloseKey(emu),
+    let apiname = emu::winapi64::kernel32::guess_api_name(emu, addr);
+    match apiname.as_str() {
+        "StartServiceCtrlDispatcherA" => StartServiceCtrlDispatcherA(emu),
+        "StartServiceCtrlDispatcherW" => StartServiceCtrlDispatcherW(emu),
+        "RegOpenKeyExA" => RegOpenKeyExA(emu),
+        "RegQueryValueExA" => RegQueryValueExA(emu),
+        "RegCloseKey" => RegCloseKey(emu),
 
         _ => {
-            let apiname = emu::winapi64::kernel32::guess_api_name(emu, addr);
             println!(
                 "calling unimplemented advapi32 API 0x{:x} {}",
                 addr, apiname
