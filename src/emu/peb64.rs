@@ -2,6 +2,7 @@ use crate::emu;
 use crate::emu::structures::LdrDataTableEntry64;
 use crate::emu::structures::OrdinalTable;
 use crate::emu::structures::PEB64;
+use crate::emu::structures::TEB64;
 use crate::emu::structures::PebLdrData64;
 
 pub fn init_ldr(emu: &mut emu::Emu) -> u64 {
@@ -33,15 +34,22 @@ pub fn init_ldr(emu: &mut emu::Emu) -> u64 {
 pub fn init_peb(emu: &mut emu::Emu) {
     let ldr = init_ldr(emu);
 
+
     let peb_addr = emu.maps.lib64_alloc(PEB64::size() as u64).expect("cannot alloc the PEB64");
     let mut peb_map = emu.maps.create_map("peb");
     peb_map.set_base(peb_addr);
     peb_map.set_size(PEB64::size() as u64);
-
     let process_parameters = 0x521e20;
     let peb = PEB64::new(0, ldr, process_parameters);
     peb.save(&mut peb_map);
     emu.maps.write_byte(peb_addr + 2, 0); // not being_debugged
+
+    let teb_addr = emu.maps.lib64_alloc(TEB64::size() as u64).expect("cannot alloc the TEB64");
+    let mut teb_map = emu.maps.create_map("teb");
+    teb_map.set_base(teb_addr);
+    teb_map.set_size(TEB64::size() as u64);
+    let teb = TEB64::new(peb_addr);
+    teb.save(&mut teb_map);
 }
 
 pub fn update_peb_image_base(emu: &mut emu::Emu, base: u64) {

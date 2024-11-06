@@ -742,6 +742,34 @@ pub struct TEB64 {
 }
 
 impl TEB64 {
+    pub fn new(peb_addr: u64) -> TEB64 {
+        TEB64 {
+            nt_tib: [0; 56],
+            environment_pointer: 0,
+            process_id: 3240,
+            thread_id: 1,
+            active_rpc_handle: 0,
+            thread_local_storage_pointer: 0,
+            process_environment_block: peb_addr,
+            last_error_value: 0,
+            count_of_owned_critical_sections: 0,
+            csr_client_thread: 0,
+            win32_thread_info: 0,
+            user32_reserved: [0; 26],
+            user_reserved: [0; 6],
+            wow32_reserved: 0,
+            current_locale: 0,
+            fp_software_status_register: 0,
+            system_reserved1: [0; 54],
+            exception_code: 0,
+            activation_context_stack_pointer: 0,
+        }
+    }
+
+    pub fn size() -> usize {
+        return 0x2d0;
+    }
+
     pub fn load(addr: u64, maps: &Maps) -> TEB64 {
         TEB64 {
             nt_tib: [0; 56],
@@ -764,6 +792,35 @@ impl TEB64 {
             exception_code: maps.read_dword(addr + 0x2c0).unwrap(),
             activation_context_stack_pointer: maps.read_qword(addr + 0x2c8).unwrap(),
         }
+    }
+
+    pub fn save(&self, mem: &mut Mem64) {
+        let base = mem.get_base();
+        mem.write_qword(base + 0x38, self.environment_pointer);
+        mem.write_qword(base + 0x40, self.process_id);
+        mem.write_qword(base + 0x48, self.thread_id);
+        mem.write_qword(base + 0x50, self.active_rpc_handle);
+        mem.write_qword(base + 0x58, self.thread_local_storage_pointer);
+        mem.write_qword(base + 0x60, self.process_environment_block);
+        mem.write_dword(base + 0x68, self.last_error_value);
+        mem.write_dword(base + 0x6c, self.count_of_owned_critical_sections);
+        mem.write_qword(base + 0x70, self.csr_client_thread);
+        mem.write_qword(base + 0x78, self.win32_thread_info);
+        let mut idx = base + 0x100;
+        for i in 0..26 {
+            mem.write_dword(idx, self.user32_reserved[i]);
+            idx += 4;
+        }
+        let mut idx = base + 0x108;
+        for i in 0..6 {
+            mem.write_dword(idx, self.user_reserved[i]);
+            idx += 4;
+        }
+        mem.write_qword(base + 0x100, self.wow32_reserved);
+        mem.write_dword(base + 0x108, self.current_locale);
+        mem.write_dword(base + 0x10c, self.fp_software_status_register);
+        mem.write_dword(base + 0x2c0, self.exception_code);
+        mem.write_qword(base + 0x2c8, self.activation_context_stack_pointer);
     }
 
     pub fn print(&self) {

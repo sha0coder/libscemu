@@ -865,7 +865,8 @@ impl Emu {
             .create_map("code")
             .set_base(self.cfg.code_base_addr);
         self.maps.create_map("stack");
-        self.maps.create_map("teb").load_at(0x7fffffdd000);
+        //self.maps.create_map("teb").load_at(0x7fffffdd000);
+
         /*
         self.maps.create_map("ntdll_pe").load_at(0x76fd0000);
         self.maps.create_map("ntdll_text").load_at(0x76fd1000);
@@ -952,6 +953,7 @@ impl Emu {
 
 
         std::env::set_current_dir(orig_path);
+    
 
         peb64::init_peb(self);
 
@@ -1348,7 +1350,8 @@ impl Emu {
             println!("shellcode detected.");
 
             if self.cfg.is_64bits {
-                peb64::update_ldr_entry_base("loader.exe", self.cfg.code_base_addr, self);
+                let (base, pe_off) = self.load_pe64("maps64/loader.exe", false, 0);
+                peb64::update_ldr_entry_base("loader.exe", base, self);
 
             } else {
                 peb32::init_peb(self, 0x2c18c0, 0);
