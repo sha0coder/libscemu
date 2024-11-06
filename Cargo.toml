@@ -1,6 +1,6 @@
 [package]
 name = "libscemu"
-version = "0.18.4"
+version = "0.18.5"
 edition = "2018"
 authors = ["sha0coder"]
 license = "MIT"
