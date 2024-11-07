@@ -1951,7 +1951,7 @@ impl Emu {
         };
 
         let map_name = self.filename_to_mapname(&self.cfg.filename);
-        if addr < constants::LIBS_BARRIER64 || name == "code" || name.starts_with(&map_name) {
+        if addr < constants::LIBS_BARRIER64 || name == "code" || name.starts_with(&map_name) || name == "loader.text" {
             //println!("ha pasado el if {} < {} {} starts_with:{} {}", addr, constants::LIBS_BARRIER64, name, map_name, self.cfg.filename);
             self.regs.rip = addr;
             //self.force_break = true;
@@ -3418,7 +3418,7 @@ impl Emu {
                             let s = structures::TEB64::load(addr, &self.maps);
                             s.print();
                         }
-                        "ldrdatatableentry64" => {
+                        "ldr_data_table_entry64" => {
                             let s = structures::LdrDataTableEntry64::load(addr, &self.maps);
                             s.print();
                         }

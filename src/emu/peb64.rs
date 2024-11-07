@@ -34,7 +34,6 @@ pub fn init_ldr(emu: &mut emu::Emu) -> u64 {
 pub fn init_peb(emu: &mut emu::Emu) {
     let ldr = init_ldr(emu);
 
-
     let peb_addr = emu.maps.lib64_alloc(PEB64::size() as u64).expect("cannot alloc the PEB64");
     let mut peb_map = emu.maps.create_map("peb");
     peb_map.set_base(peb_addr);
@@ -50,6 +49,7 @@ pub fn init_peb(emu: &mut emu::Emu) {
     teb_map.set_size(TEB64::size() as u64);
     let teb = TEB64::new(peb_addr);
     teb.save(&mut teb_map);
+
 }
 
 pub fn update_peb_image_base(emu: &mut emu::Emu, base: u64) {
@@ -130,7 +130,7 @@ impl Flink {
     pub fn get_mod_name(&mut self, emu: &mut emu::Emu) {
         let mod_name_ptr = emu
             .maps
-            .read_qword(self.flink_addr + 0x50)
+            .read_qword(self.flink_addr + 0x70)
             .expect("error reading mod_name_ptr");
         self.mod_name = emu.maps.read_wide_string(mod_name_ptr);
     }
@@ -393,7 +393,7 @@ pub fn create_ldr_entry(
     prev_flink: u64,
 ) -> u64 {
     // make space for ldr
-    let sz = LdrDataTableEntry64::size() + 0x40 + 1024;
+    let sz = LdrDataTableEntry64::size() + 0x40 + (1024*2);
     let space_addr = emu
         .maps
         .alloc(sz)
@@ -405,12 +405,15 @@ pub fn create_ldr_entry(
     mem.set_size(sz);
     mem.write_byte(space_addr + sz - 1, 0x61);
 
+    //let full_libname = "\"C:\\Windows\\System32\\".to_string() + &libname.to_string() + "\"\x00";
+    let full_libname = "C:\\Windows\\System32\\".to_string() + &libname.to_string();
+
     let mut ldr = LdrDataTableEntry64::new();
     if next_flink != 0 {
         ldr.in_load_order_links.flink = next_flink;
         ldr.in_load_order_links.blink = prev_flink;
-        ldr.in_memory_order_links.flink = prev_flink+0x10;
-        ldr.in_memory_order_links.blink = next_flink+0x10;
+        ldr.in_memory_order_links.flink = next_flink+0x10;
+        ldr.in_memory_order_links.blink = prev_flink+0x10;
         ldr.in_initialization_order_links.flink = next_flink+0x20;
         ldr.in_initialization_order_links.blink = prev_flink+0x20;
     } else {
@@ -424,14 +427,19 @@ pub fn create_ldr_entry(
     ldr.dll_base = base;
     ldr.entry_point = entry_point;
     ldr.size_of_image = 0;
-    ldr.full_dll_name = space_addr + LdrDataTableEntry64::size();
-    ldr.base_dll_name = space_addr + LdrDataTableEntry64::size();
+    ldr.full_dll_name.length = full_libname.len() as u16 * 2;
+    ldr.full_dll_name.maximum_length = full_libname.len() as u16 * 2;
+    ldr.full_dll_name.buffer = space_addr + LdrDataTableEntry64::size();
+    ldr.base_dll_name.length = libname.len() as u16 * 2;
+    ldr.base_dll_name.maximum_length = libname.len() as u16 * 2;
+    ldr.base_dll_name.buffer = space_addr + LdrDataTableEntry64::size() + full_libname.len() as u64 * 2 + 10;
     ldr.flags = 0;
     ldr.load_count = 0;
     ldr.tls_index = 0;
     ldr.hash_links.flink = next_flink;
     ldr.hash_links.blink = prev_flink;
-    mem.write_wide_string(space_addr + LdrDataTableEntry64::size(), &(libname.to_string() + "\x00"));
+    mem.write_wide_string(space_addr + LdrDataTableEntry64::size(), &(full_libname.clone() + "\x00\x00"));
+    mem.write_wide_string(space_addr + LdrDataTableEntry64::size() + full_libname.len() as u64 * 2 +10, &(libname.to_string() + "\x00"));
     ldr.save(space_addr, &mut emu.maps);
 
     // http://terminus.rewolf.pl/terminus/structures/ntdll/_LDR_DATA_TABLE_ENTRY_x64.html

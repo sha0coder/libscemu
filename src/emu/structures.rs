@@ -829,6 +829,45 @@ impl TEB64 {
 }
 
 #[derive(Debug)]
+pub struct UnicodeString64 {
+    pub length: u16, // 0x58          0x68
+    pub maximum_length: u16, // 0x5a  0x6a
+    pub padding: u32, // 0x5c         0x6c 
+    pub buffer: u64, // 0x60         0x70
+}
+
+impl UnicodeString64 {
+    pub fn size() -> u64 {
+        return 0x10;
+    }
+
+    pub fn new() -> UnicodeString64 {
+        UnicodeString64 {
+            length: 0,
+            maximum_length: 0,
+            padding: 0,
+            buffer: 0,
+        }
+    }
+
+    pub fn load(addr: u64, maps: &Maps) -> UnicodeString64 {
+        UnicodeString64 {
+            length: maps.read_word(addr).unwrap(),
+            maximum_length: maps.read_word(addr + 2).unwrap(),
+            padding: maps.read_dword(addr + 4).unwrap(),
+            buffer: maps.read_qword(addr + 8).unwrap(),
+        }
+    }
+
+    pub fn save(&self, addr: u64, maps: &mut Maps) {
+        maps.write_word(addr, self.length);
+        maps.write_word(addr + 2, self.maximum_length);
+        maps.write_dword(addr + 4, self.padding);
+        maps.write_qword(addr + 8, self.buffer);
+    }
+}
+
+#[derive(Debug)]
 pub struct LdrDataTableEntry64 {
     pub in_load_order_links: ListEntry64,
     pub in_memory_order_links: ListEntry64,
@@ -836,12 +875,13 @@ pub struct LdrDataTableEntry64 {
     pub dll_base: u64,
     pub entry_point: u64,
     pub size_of_image: u64,
-    pub full_dll_name: u64,
-    pub base_dll_name: u64,
+    pub full_dll_name: UnicodeString64,
+    pub base_dll_name: UnicodeString64,
     pub flags: u32,
     pub load_count: u16,
     pub tls_index: u16,
     pub hash_links: ListEntry64,
+    pub time_date_stamp: u32,
 }
 
 impl LdrDataTableEntry64 {
@@ -857,12 +897,13 @@ impl LdrDataTableEntry64 {
             dll_base: 0,
             entry_point: 0,
             size_of_image: 0,
-            full_dll_name: 0,
-            base_dll_name: 0,
+            full_dll_name: UnicodeString64::new(),
+            base_dll_name: UnicodeString64::new(),
             flags: 0,
             load_count: 0,
             tls_index: 0,
             hash_links: ListEntry64::new(),
+            time_date_stamp: 0,
         }
     } 
 
@@ -874,12 +915,13 @@ impl LdrDataTableEntry64 {
             dll_base: maps.read_qword(addr + 0x30).unwrap(),
             entry_point: maps.read_qword(addr + 0x38).unwrap(),
             size_of_image: maps.read_qword(addr + 0x40).unwrap(),
-            full_dll_name: maps.read_qword(addr + 0x48).unwrap(),
-            base_dll_name: maps.read_qword(addr + 0x50).unwrap(),
-            flags: maps.read_dword(addr + 0x58).unwrap(),
-            load_count: maps.read_word(addr + 0x5c).unwrap(),
-            tls_index: maps.read_word(addr + 0x5e).unwrap(),
-            hash_links: ListEntry64::load(addr + 0x68, &maps),
+            full_dll_name: UnicodeString64::load(addr + 0x58, &maps),
+            base_dll_name: UnicodeString64::load(addr + 0x68, &maps),
+            flags: maps.read_dword(addr + 0x78).unwrap(),
+            load_count: maps.read_word(addr + 0x7c).unwrap(),
+            tls_index: maps.read_word(addr + 0x7e).unwrap(),
+            hash_links: ListEntry64::load(addr + 0x80, &maps),
+            time_date_stamp: maps.read_dword(addr + 0x90).unwrap(),
         }
     }
 
@@ -890,12 +932,13 @@ impl LdrDataTableEntry64 {
         maps.write_qword(addr + 0x30, self.dll_base);
         maps.write_qword(addr + 0x38, self.entry_point);
         maps.write_qword(addr + 0x40, self.size_of_image);
-        maps.write_qword(addr + 0x48, self.full_dll_name);
-        maps.write_qword(addr + 0x50, self.base_dll_name);
-        maps.write_dword(addr + 0x58, self.flags);
-        maps.write_word(addr + 0x5c, self.load_count);
-        maps.write_word(addr + 0x5e, self.tls_index);
-        self.hash_links.save(addr + 0x68, maps);
+        self.full_dll_name.save(addr + 0x58, maps);
+        self.base_dll_name.save(addr + 0x68, maps);
+        maps.write_dword(addr + 0x78, self.flags);
+        maps.write_word(addr + 0x7c, self.load_count);
+        maps.write_word(addr + 0x7e, self.tls_index);
+        self.hash_links.save(addr + 0x80, maps);
+        maps.write_dword(addr + 0x90, self.time_date_stamp);
     }
 
     pub fn print(&self) {

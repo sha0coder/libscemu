@@ -1110,24 +1110,7 @@ impl Maps {
 
     pub fn filter_string(&self, s: &mut String) {
         let valid = " 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~ \t\x00".as_bytes();
-        let sb = s.as_bytes();
-        let mut p;
-        let mut new_len: usize = 0;
-        for i in 0..s.len() {
-            new_len = i as usize;
-            p = false;
-            for j in 0..valid.len() {
-                if sb[i as usize] == valid[j as usize] {
-                    p = true;
-                    break;
-                }
-            }
-            if !p {
-                break;
-            }
-        }
-
-        *s = s[..new_len].to_string();
+        s.retain(|c| valid.contains(&(c as u8)));
     }
 
     pub fn filter_replace_bytes(&self, s: &[u8]) -> Vec<u8> {
