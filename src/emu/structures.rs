@@ -915,13 +915,13 @@ impl LdrDataTableEntry64 {
             dll_base: maps.read_qword(addr + 0x30).unwrap(),
             entry_point: maps.read_qword(addr + 0x38).unwrap(),
             size_of_image: maps.read_qword(addr + 0x40).unwrap(),
-            full_dll_name: UnicodeString64::load(addr + 0x58, &maps),
-            base_dll_name: UnicodeString64::load(addr + 0x68, &maps),
-            flags: maps.read_dword(addr + 0x78).unwrap(),
-            load_count: maps.read_word(addr + 0x7c).unwrap(),
-            tls_index: maps.read_word(addr + 0x7e).unwrap(),
-            hash_links: ListEntry64::load(addr + 0x80, &maps),
-            time_date_stamp: maps.read_dword(addr + 0x90).unwrap(),
+            full_dll_name: UnicodeString64::load(addr + 0x48, &maps),
+            base_dll_name: UnicodeString64::load(addr + 0x58, &maps),
+            flags: maps.read_dword(addr + 0x68).unwrap(), // cc 22 00 00   c4 a2 00 00   cc a2 c0 00
+            load_count: maps.read_word(addr + 0x7b).unwrap(), // ff ff
+            tls_index: maps.read_word(addr + 0x7d).unwrap(), // ff ff
+            hash_links: ListEntry64::load(addr + 0x7f, &maps),
+            time_date_stamp: maps.read_dword(addr + 0x8f).unwrap(),
         }
     }
 
@@ -932,13 +932,13 @@ impl LdrDataTableEntry64 {
         maps.write_qword(addr + 0x30, self.dll_base);
         maps.write_qword(addr + 0x38, self.entry_point);
         maps.write_qword(addr + 0x40, self.size_of_image);
-        self.full_dll_name.save(addr + 0x58, maps);
-        self.base_dll_name.save(addr + 0x68, maps);
-        maps.write_dword(addr + 0x78, self.flags);
-        maps.write_word(addr + 0x7c, self.load_count);
-        maps.write_word(addr + 0x7e, self.tls_index);
-        self.hash_links.save(addr + 0x80, maps);
-        maps.write_dword(addr + 0x90, self.time_date_stamp);
+        self.full_dll_name.save(addr + 0x48, maps);
+        self.base_dll_name.save(addr + 0x58, maps);
+        maps.write_dword(addr + 0x68, self.flags);
+        maps.write_word(addr + 0x7b, self.load_count);
+        maps.write_word(addr + 0x7d, self.tls_index);
+        self.hash_links.save(addr + 0x7f, maps);
+        maps.write_dword(addr + 0x8f, self.time_date_stamp);
     }
 
     pub fn print(&self) {

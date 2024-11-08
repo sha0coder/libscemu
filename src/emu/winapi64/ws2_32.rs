@@ -9,8 +9,8 @@ use std::sync::Mutex;
 pub fn gateway(addr: u64, emu: &mut emu::Emu) -> String {
     let apiname = emu::winapi64::kernel32::guess_api_name(emu, addr);
     match apiname.as_str() {
-        "WsaStartup" => WsaStartup(emu),
-        "WsaSocketA" => WsaSocketA(emu),
+        "WSAStartup" => WsaStartup(emu),
+        "WSASocketA" => WsaSocketA(emu),
         "connect" => connect(emu),
         "recv" => recv(emu),
         "send" => send(emu),

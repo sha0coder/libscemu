@@ -130,7 +130,7 @@ impl Flink {
     pub fn get_mod_name(&mut self, emu: &mut emu::Emu) {
         let mod_name_ptr = emu
             .maps
-            .read_qword(self.flink_addr + 0x70)
+            .read_qword(self.flink_addr + 0x60)
             .expect("error reading mod_name_ptr");
         self.mod_name = emu.maps.read_wide_string(mod_name_ptr);
     }
@@ -428,10 +428,10 @@ pub fn create_ldr_entry(
     ldr.entry_point = entry_point;
     ldr.size_of_image = 0;
     ldr.full_dll_name.length = full_libname.len() as u16 * 2;
-    ldr.full_dll_name.maximum_length = full_libname.len() as u16 * 2;
+    ldr.full_dll_name.maximum_length = full_libname.len() as u16 * 2 + 4;
     ldr.full_dll_name.buffer = space_addr + LdrDataTableEntry64::size();
     ldr.base_dll_name.length = libname.len() as u16 * 2;
-    ldr.base_dll_name.maximum_length = libname.len() as u16 * 2;
+    ldr.base_dll_name.maximum_length = libname.len() as u16 * 2 + 2;
     ldr.base_dll_name.buffer = space_addr + LdrDataTableEntry64::size() + full_libname.len() as u64 * 2 + 10;
     ldr.flags = 0;
     ldr.load_count = 0;
