@@ -15,6 +15,7 @@ use std::sync::Mutex;
 pub fn gateway(addr: u64, emu: &mut emu::Emu) -> String {
     let api = guess_api_name(emu, addr);
     match api.as_str() {
+        "FindActCtxSectionStringW" => FindActCtxSectionStringW(emu),
         "LoadLibraryA" => LoadLibraryA(emu),
         "LoadLibraryW" => LoadLibraryW(emu),
         "LoadLibraryExA" => LoadLibraryExA(emu),
@@ -2323,4 +2324,18 @@ fn lstrcpy(emu: &mut emu::Emu) {
     } else {
         emu.regs.rax = dst;
     }
+}
+
+pub fn FindActCtxSectionStringW(emu: &mut emu::Emu) {
+    let actctx = emu.regs.rcx;
+    let section_name = emu.maps.read_wide_string(emu.regs.rdx);
+    let string_name = emu.maps.read_wide_string(emu.regs.r8);
+    let string_value = emu.maps.read_wide_string(emu.regs.r9);
+
+    println!(
+        "{}** {} kernel32!FindActCtxSectionStringW section_name: {} string_name: {} string_value: {} {}",
+        emu.colors.light_red, emu.pos, section_name, string_name, string_value, emu.colors.nc
+    );
+
+    emu.regs.rax = 0;
 }

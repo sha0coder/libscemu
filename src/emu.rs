@@ -972,6 +972,7 @@ impl Emu {
         winapi64::kernel32::load_library(self, "wininet.dll");
         winapi64::kernel32::load_library(self, "dnsapi.dll");
         winapi64::kernel32::load_library(self, "shell32.dll");
+        winapi64::kernel32::load_library(self, "shlwapi.dll");
 
     }
 
