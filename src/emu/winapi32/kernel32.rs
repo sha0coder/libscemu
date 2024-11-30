@@ -30,6 +30,7 @@ pub fn gateway(addr: u32, emu: &mut emu::Emu) -> String {
         0x75e9f438 => DisconnectNamedPipe(emu),
         0x75e896fb => ReadFile(emu),
         0x75e91400 => WriteFile(emu),
+        0x75e8cc56 => CreateFileW(emu),
         0x75e8ca7c => CloseHandle(emu),
         0x75e9214f => ExitProcess(emu),
         0x75e82331 => TerminateProcess(emu),
@@ -160,6 +161,8 @@ pub fn gateway(addr: u32, emu: &mut emu::Emu) -> String {
         0x75efee2a => AddVectoredExceptionHandler(emu),
         0x75e91181 => GetLongPathNameW(emu),
         0x75e8d9d0 => FreeLibrary(emu),
+        0x75ecf311 => AreFileApisANSI(emu),
+        0x75e933f6 => GetModuleFileNameA(emu),
 
         _ => {
             let apiname = guess_api_name(emu, addr);
@@ -3689,7 +3692,7 @@ fn GetFileType(emu: &mut emu::Emu) {
     );
 
     emu.stack_pop32(false);
-    emu.regs.rax = 1;
+    emu.regs.rax = 3;
 
     /*
      * FILE_TYPE_CHAR 0x0002
@@ -3868,7 +3871,9 @@ fn WideCharToMultiByte(emu: &mut emu::Emu) {
     //emu.maps.write_byte(out_default_char, 0);
 
     let s = emu.maps.read_wide_string(wstr_ptr);
-    emu.maps.write_string(mbytestr_ptr, &s);
+    if mbytestr_ptr > 0 {
+        emu.maps.write_string(mbytestr_ptr, &s);
+    }
 
     println!(
         "{}** {} kernel32!WideCharToMultiByte `{}` sz:{}->{} ={} {}",
@@ -3884,7 +3889,7 @@ fn WideCharToMultiByte(emu: &mut emu::Emu) {
     for _ in 0..8 {
         emu.stack_pop32(false);
     }
-    emu.regs.rax = s.len() as u64;
+    emu.regs.rax = s.len() as u64 + 2;
 }
 
 fn CryptCreateHash(emu: &mut emu::Emu) {
@@ -4101,4 +4106,82 @@ fn FreeLibrary(emu: &mut emu::Emu) {
 
     emu.regs.rax = 1;
     emu.stack_pop32(false);
+}
+
+fn AreFileApisANSI(emu: &mut emu::Emu) {
+    println!(
+        "{}** {} kernel32!AreFileApisANSI {}",
+        emu.colors.light_red, emu.pos, emu.colors.nc
+    );
+    emu.regs.rax = 1;
+}
+
+fn CreateFileW(emu: &mut emu::Emu) {
+    let fname_ptr = emu
+        .maps
+        .read_dword(emu.regs.get_esp())
+        .expect("kernel32!CreateFileW: error reading param") as u64;
+    let access = emu
+        .maps
+        .read_dword(emu.regs.get_esp() + 4)
+        .expect("kernel32!CreateFileW: error reading param");
+
+    let fname = emu.maps.read_wide_string(fname_ptr);
+
+    let mut perm: String = String::new();
+    if access & constants::GENERIC_READ != 0 {
+        perm.push('r');
+    }
+    if access & constants::GENERIC_WRITE != 0 {
+        perm.push('w');
+    }
+
+    if perm.is_empty() {
+        perm = "unknown permissions".to_string();
+    }
+
+    println!(
+        "{}** {} kernel32!CreateFileW `{}` {} {}",
+        emu.colors.light_red, emu.pos, fname, perm, emu.colors.nc
+    );
+
+    for _ in 0..7 {
+        emu.stack_pop32(false);
+    }
+
+    //if perm == "r" {
+    //    emu.regs.rax = constants::INVALID_HANDLE_VALUE_32;
+    //} else {
+        emu.regs.rax = helper::handler_create(&format!("file://{}", fname)) as u64;
+    //}
+}
+
+fn GetModuleFileNameA(emu: &mut emu::Emu) {
+    let hmod = emu
+        .maps
+        .read_dword(emu.regs.get_esp())
+        .expect("kernel32!GetModuleFileNameA: error reading param") as u64;
+    let fname_ptr = emu
+        .maps
+        .read_dword(emu.regs.get_esp() + 4)
+        .expect("kernel32!GetModuleFileNameA: error reading param") as u64;
+    let buff_sz = emu
+        .maps
+        .read_dword(emu.regs.get_esp() + 8)
+        .expect("kernel32!GetModuleFileNameA: error reading param");
+
+    if buff_sz > 8 {
+        emu.maps.write_string(fname_ptr, "test.exe");
+    }
+
+    println!(
+        "{}** {} kernel32!GetModuleFileNameA 0x{:x} {}",
+        emu.colors.light_red, emu.pos, hmod, emu.colors.nc
+    );
+
+    for _ in 0..3 {
+        emu.stack_pop32(false);
+    }
+
+    emu.regs.rax = 8;
 }

@@ -403,6 +403,7 @@ impl Maps {
         for (i, bsi) in bs.iter().enumerate() {
             self.write_byte(to + i as u64, *bsi);
         }
+        self.write_byte(to + bs.len() as u64, 0x00);
     }
 
     pub fn write_wide_string(&mut self, to: u64, from: &str) {
@@ -413,6 +414,8 @@ impl Maps {
             self.write_byte(to + off + 1 as u64, 0x00);
             off += 2;
         }
+        self.write_byte(to + off as u64, 0x00);
+        self.write_byte(to + off + 1 as u64, 0x00);
     }
 
     pub fn write_buffer(&mut self, to: u64, from: &[u8]) {

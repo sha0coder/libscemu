@@ -4223,6 +4223,8 @@ impl Emu {
             OpKind::Immediate32to64 => 64,
             OpKind::Immediate8to64 => 64, //TODO: this could be 8
             OpKind::Register => self.regs.get_size(ins.op_register(noperand)),
+            OpKind::MemoryESEDI => 32,
+            OpKind::MemorySegESI => 32,
             OpKind::Memory => {
                 let mut info_factory = InstructionInfoFactory::new();
                 let info = info_factory.info(ins);
@@ -13902,6 +13904,68 @@ impl Emu {
                 } else {
                     self.regs.set_al(0);
                 }
+            }
+
+            Mnemonic::Movlhps => {
+                self.show_instruction(&self.colors.red, &ins);
+                assert!(ins.op_count() == 2);
+
+                let dest = self.get_operand_xmm_value_128(&ins, 0, true).unwrap_or(0);
+                let source = self.get_operand_xmm_value_128(&ins, 1, true).unwrap_or(0);
+
+                let low_qword = dest & 0xFFFFFFFFFFFFFFFF;
+                let high_qword = (source & 0xFFFFFFFFFFFFFFFF) << 64;
+                let result = low_qword | high_qword;
+
+                self.set_operand_xmm_value_128(&ins, 0, result);
+            }
+
+            Mnemonic::Pshuflw => {
+                self.show_instruction(&self.colors.red, &ins);
+                assert!(ins.op_count() == 3);
+
+                let value1 = self.get_operand_xmm_value_128(&ins, 1, true).unwrap_or(0);
+                let value2 = self.get_operand_value(&ins, 2, true).unwrap_or(0);
+                
+                let high_qword = value1 & 0xFFFFFFFFFFFFFFFF_0000000000000000;
+                let lw0 = value1 & 0xFFFF;
+                let lw1 = (value1 >> 16) & 0xFFFF;
+                let lw2 = (value1 >> 32) & 0xFFFF;
+                let lw3 = (value1 >> 48) & 0xFFFF;
+                let low_words = [lw0, lw1, lw2, lw3];
+                let mut low_qword: u64 = 0;
+                low_qword |= (low_words[(value2 & 0b11) as usize]) as u64;
+                low_qword |= (low_words[((value2 >> 2) & 0b11) as usize] as u64) << 16;
+                low_qword |= (low_words[((value2 >> 4) & 0b11) as usize] as u64) << 32;
+                low_qword |= (low_words[((value2 >> 6) & 0b11) as usize] as u64) << 48;
+                let result = high_qword | low_qword as u128;
+
+                self.set_operand_xmm_value_128(&ins, 0, result);
+            }
+
+            Mnemonic::Pshufhw => {
+                self.show_instruction(&self.colors.red, &ins);
+                assert!(ins.op_count() == 3);
+
+                let value1 = self.get_operand_xmm_value_128(&ins, 1, true).unwrap_or(0);
+                let value2 = self.get_operand_value(&ins, 2, true).unwrap_or(0);
+
+                let low_qword = value1 & 0xFFFFFFFFFFFFFFFF;
+                let hw0 = (value1 >> 64) & 0xFFFF;
+                let hw1 = (value1 >> 80) & 0xFFFF;
+                let hw2 = (value1 >> 96) & 0xFFFF;
+                let hw3 = (value1 >> 112) & 0xFFFF;
+                let high_words = [hw0, hw1, hw2, hw3];
+                let mut high_qword: u64 = 0;
+                
+                high_qword |= (high_words[(value2 & 0b11) as usize]) as u64;
+                high_qword |= (high_words[((value2 >> 2) & 0b11) as usize] as u64) << 16;
+                high_qword |= (high_words[((value2 >> 4) & 0b11) as usize] as u64) << 32;
+                high_qword |= (high_words[((value2 >> 6) & 0b11) as usize] as u64) << 48;
+                
+                let result = low_qword | ((high_qword as u128) << 64);
+
+                self.set_operand_xmm_value_128(&ins, 0, result);
             }
 
             Mnemonic::Prefetchw => {
