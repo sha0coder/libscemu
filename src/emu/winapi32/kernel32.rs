@@ -229,7 +229,7 @@ pub fn resolve_api_addr_to_name(emu: &mut emu::Emu, addr: u64) -> String {
 
                 let ordinal = flink.get_function_ordinal(emu, i);
                 if ordinal.func_va == addr {
-                    let apiname = ordinal.func_va.to_string();
+                    let apiname = ordinal.func_name.to_string();
                     return apiname;
                 }
             }
