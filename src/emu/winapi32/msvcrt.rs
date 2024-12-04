@@ -223,13 +223,14 @@ fn malloc(emu: &mut emu::Emu) {
         .read_dword(emu.regs.get_esp())
         .expect("msvcrt!malloc error reading size") as u64;
 
+    let addr = emu.alloc("alloc_malloc", size);
     println!(
-        "{}** {} msvcrt!malloc {} {}",
-        emu.colors.light_red, emu.pos, size, emu.colors.nc
+        "{}** {} msvcrt!malloc {} =0x{:x} {}",
+        emu.colors.light_red, emu.pos, size, addr, emu.colors.nc
     );
 
     emu.stack_pop32(false);
-    emu.regs.rax = emu.alloc("alloc_malloc", size);
+    emu.regs.rax = addr;
 }
 
 fn __p__acmdln(emu: &mut emu::Emu) {
