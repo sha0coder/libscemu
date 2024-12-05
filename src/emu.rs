@@ -4751,13 +4751,16 @@ impl Emu {
                         let value = self
                             .memory_read(self.cfg.inspect_seq.clone().as_str())
                             .unwrap_or(0);
+
+                        let mut s = self.maps.read_string(addr);
+                        self.maps.filter_string(&mut s);
                         println!(
                             "\tmem_inspect: rip = {:x} (0x{:x}): 0x{:x} {} '{}' {{{}}}",
                             self.regs.rip,
                             addr,
                             value,
                             value,
-                            self.maps.read_string(addr),
+                            s,
                             self.maps
                                 .read_string_of_bytes(addr, constants::NUM_BYTES_TRACE)
                         );

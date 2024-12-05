@@ -1013,6 +1013,22 @@ impl Maps {
         }
     }
 
+    pub fn dealloc(&mut self, addr: u64) {
+        let mut id_to_delete = 0;
+        let mut remove = false;
+
+        for i in 0..self.maps.len() {
+            if self.maps[i].get_base() == addr {
+                id_to_delete = i;
+                remove = true;
+                break;
+            }
+        }
+        if remove {
+            self.maps.remove(id_to_delete);
+        }
+    }
+
     pub fn lib64_alloc(&self, sz: u64) -> Option<u64> {
         // super simple memory allocator
         let mut addr: u64 = constants::LIB64_BARRIER;

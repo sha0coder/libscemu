@@ -2450,8 +2450,17 @@ fn GetComputerNameA(emu: &mut emu::Emu) {
         .read_dword(emu.regs.get_esp() + 4)
         .expect("kernel32!GetComputerNameA cannot read size param") as u64;
 
-    emu.maps.write_dword(size_ptr, 6);
-    emu.maps.write_string(buff_ptr, "medusa");
+    if buff_ptr > 0 {
+        emu.maps.write_string(buff_ptr, "medusa");
+        emu.regs.rax = 1;
+    } else {
+        emu.regs.rax = 0;
+    }
+
+    if size_ptr > 0 {
+        emu.maps.write_dword(size_ptr, 6);
+        emu.regs.rax = 1;
+    }
 
     println!(
         "{}** {} kernel32!GetComputerName 'medusa' {}",
@@ -2461,7 +2470,6 @@ fn GetComputerNameA(emu: &mut emu::Emu) {
     emu.stack_pop32(false);
     emu.stack_pop32(false);
 
-    emu.regs.rax = 1;
 }
 
 fn CreateMutexA(emu: &mut emu::Emu) {

@@ -3,6 +3,8 @@ use crate::emu::winapi32::helper;
 use crate::emu::winapi32::kernel32;
 //use crate::emu::endpoint;
 
+// msvcrt is an exception and these functions dont have to compensate the stack.
+
 pub fn gateway(addr: u32, emu: &mut emu::Emu) -> String {
     match addr {
         0x761f1d9d => _initterm_e(emu),
@@ -17,6 +19,9 @@ pub fn gateway(addr: u32, emu: &mut emu::Emu) -> String {
         0x761e9cee => malloc(emu),
         0x761f112d => _onexit(emu),
         0x761ea449 => _lock(emu),
+        0x761e9894 => free(emu),
+        0x761eb10d => realloc(emu),
+
         _ => {
             let apiname = kernel32::guess_api_name(emu, addr);
             println!("calling unimplemented msvcrt API 0x{:x} {}", addr, apiname);
@@ -42,8 +47,8 @@ fn _initterm_e(emu: &mut emu::Emu) {
         emu.colors.light_red, emu.pos, start_ptr, end_ptr, emu.colors.nc
     );
 
-    emu.stack_pop32(false);
-    emu.stack_pop32(false);
+    //emu.stack_pop32(false);
+    //emu.stack_pop32(false);
     emu.regs.rax = 0;
 }
 
@@ -62,8 +67,8 @@ fn _initterm(emu: &mut emu::Emu) {
         emu.colors.light_red, emu.pos, start_ptr, end_ptr, emu.colors.nc
     );
 
-    emu.stack_pop32(false);
-    emu.stack_pop32(false);
+    //emu.stack_pop32(false);
+    //emu.stack_pop32(false);
     emu.regs.rax = 0;
 }
 
@@ -85,8 +90,8 @@ fn StrCmpCA(emu: &mut emu::Emu) {
         emu.colors.light_red, emu.pos, str1, str2, emu.colors.nc
     );
 
-    emu.stack_pop32(false);
-    emu.stack_pop32(false);
+    //emu.stack_pop32(false);
+    //emu.stack_pop32(false);
 
     if str1 == str2 {
         emu.regs.rax = 0;
@@ -113,8 +118,8 @@ fn fopen(emu: &mut emu::Emu) {
         emu.colors.light_red, emu.pos, filepath, mode, emu.colors.nc
     );
 
-    emu.stack_pop32(false);
-    emu.stack_pop32(false);
+    //emu.stack_pop32(false);
+    //emu.stack_pop32(false);
 
     emu.regs.rax = helper::handler_create(&filepath);
 }
@@ -139,9 +144,9 @@ fn fwrite(emu: &mut emu::Emu) {
 
     let filename = helper::handler_get_uri(file as u64);
 
-    for _ in 0..4 {
+    /*for _ in 0..4 {
         emu.stack_pop32(false);
-    }
+    }*/
     println!(
         "{}** {} msvcrt!fwrite `{}` 0x{:x} {} {}",
         emu.colors.light_red, emu.pos, filename, buff_ptr, size, emu.colors.nc
@@ -163,7 +168,7 @@ fn fflush(emu: &mut emu::Emu) {
         emu.colors.light_red, emu.pos, filename, emu.colors.nc
     );
 
-    emu.stack_pop32(false);
+    //emu.stack_pop32(false);
 
     emu.regs.rax = 1;
 }
@@ -181,7 +186,7 @@ fn fclose(emu: &mut emu::Emu) {
         emu.colors.light_red, emu.pos, filename, emu.colors.nc
     );
 
-    emu.stack_pop32(false);
+    //emu.stack_pop32(false);
 
     emu.regs.rax = 1;
 }
@@ -229,7 +234,7 @@ fn malloc(emu: &mut emu::Emu) {
         emu.colors.light_red, emu.pos, size, addr, emu.colors.nc
     );
 
-    emu.stack_pop32(false);
+    //emu.stack_pop32(false);
     emu.regs.rax = addr;
 }
 
@@ -253,7 +258,7 @@ fn _onexit(emu: &mut emu::Emu) {
     );
 
     emu.regs.rax = fptr;
-    emu.stack_pop32(false);
+    //emu.stack_pop32(false);
 }
 
 fn _lock(emu: &mut emu::Emu) {
@@ -267,5 +272,37 @@ fn _lock(emu: &mut emu::Emu) {
     );
 
     emu.regs.rax = 1;
-    emu.stack_pop32(false);
+    //emu.stack_pop32(false);
+}
+
+fn free(emu: &mut emu::Emu) {
+    let addr = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("msvcrt!free error reading addr");
+
+    println!(
+        "{}** {} msvcrt!free 0x{:x} {}",
+        emu.colors.light_red, emu.pos, addr, emu.colors.nc
+    );
+}
+
+fn realloc(emu: &mut emu::Emu) {
+
+    let addr = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("msvcrt!realloc error reading addr") as u64;
+    let size = emu.maps.read_dword(emu.regs.get_esp() + 4)
+        .expect("msvcrt!realloc error reading size");
+
+    let mem = emu.maps.get_mem_by_addr(addr).expect("msvcrt!realloc error getting mem");
+    let prev_size = mem.size();
+
+    let new_addr = emu.alloc("alloc_realloc", size as u64);
+    emu.maps.memcpy(new_addr, addr, prev_size);
+    emu.maps.dealloc(addr);
+
+    println!(
+        "{}** {} msvcrt!realloc 0x{:x} {} =0x{:x} {}",
+        emu.colors.light_red, emu.pos, addr, size, new_addr, emu.colors.nc
+    );
+
+    emu.regs.rax = new_addr;
 }

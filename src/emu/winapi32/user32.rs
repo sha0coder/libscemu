@@ -10,6 +10,7 @@ pub fn gateway(addr: u32, emu: &mut emu::Emu) -> String {
         0x773bdfdc => GetProcessWindowStation(emu),
         0x773be355 => GetUserObjectInformationW(emu),
         0x773bba8a => CharLowerW(emu),
+        0x773c3f47 => wsprintfA(emu),
         _ => {
             let apiname = kernel32::guess_api_name(emu, addr);
             println!("calling unimplemented user32 API 0x{:x} {}", addr, apiname);
@@ -141,4 +142,76 @@ fn CharLowerW(emu: &mut emu::Emu) {
     emu.regs.rax = ptr_str;
 }
 
+fn wsprintfA(emu: &mut emu::Emu) {
+    let out = emu
+        .maps
+        .read_dword(emu.regs.get_esp())
+        .expect("user32!wsprintfA: error reading out") as u64;
+    let in_fmt = emu
+        .maps
+        .read_dword(emu.regs.get_esp() + 4)
+        .expect("user32!wsprintfA: error reading in_fmt") as u64;
+    let mut multiple = emu
+        .maps
+        .read_dword(emu.regs.get_esp() + 8)
+        .expect("user32!wsprintfA: error reading multiple") as u64;
 
+    let fmt = emu.maps.read_string(in_fmt);
+    let mut args = Vec::new();
+    let mut chars = fmt.chars().peekable();
+    let mut arg_index = 0;
+    let mut result = String::new();
+
+    while let Some(arg) = emu.maps.read_dword(multiple) {
+        args.push(arg as u64);
+        multiple += 4;
+    }
+
+    while let Some(c) = chars.next() {
+        if c == '%' {
+            if chars.peek() == Some(&'%') {
+                result.push('%');
+                chars.next();
+            } else if arg_index < args.len() {
+                let specifier = chars.next();
+                match specifier {
+                    Some('d') => result.push_str(&format!("{}", args[arg_index] as i32)),
+                    Some('u') => result.push_str(&format!("{}", args[arg_index])),
+                    Some('x') => result.push_str(&format!("{:x}", args[arg_index])),
+                    Some('X') => result.push_str(&format!("{:X}", args[arg_index])),
+                    Some('s') => {
+                        let addr = args[arg_index];
+                        let s = emu.maps.read_string(addr);
+                        if s != "" {
+                            result.push_str(&s);
+                        } else {
+                            result.push_str("<invalid string>");
+                        }
+                    }
+                    Some('c') => result.push(args[arg_index] as u8 as char),
+                    _ => result.push_str("<unsupported format>"),
+                }
+                arg_index += 1;
+            } else {
+                result.push_str("<missing>");
+            }
+        } else {
+            result.push(c);
+        }
+    }
+
+    emu.maps
+        .write_string(out, &result);
+
+
+    println!(
+        "{}** {} user32!wsprintfA fmt:`{}` out:`{}` {}",
+        emu.colors.light_red, emu.pos, fmt, &result, emu.colors.nc
+    );
+
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+
+    emu.regs.rax = result.len() as u64;
+}
