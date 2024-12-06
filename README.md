@@ -7,7 +7,7 @@
 Download the maps32 or maps64 from:
 https://github.com/sha0coder/scemu
 
-Uncompress it somewhere, in the example it's on /tmp/ but dont use tmp.
+In the example it's on /tmp/ but dont use tmp.
 
 Create an emu32 or emu64 and it's important to set the maps folder.
 
@@ -22,7 +22,7 @@ fn main() {
 ```
 
 Load your shellcode or PE binary and run the emulator.
-Zero parameter means emulate for-ever.
+None parameter means emulate for-ever.
 
 ```rust
 emu.load_code("shellcodes32/shikata.bin");
@@ -65,7 +65,7 @@ println!("return value: 0x{:x}", emu.regs.get_eax());
 emu.maps.dump(param2_out_buff);
 ```
 
-Now it's possible to do hooks.
+Now it's possible to do hooks on libscemu but not on pyscemu.
 
 ```rust
 use libscemu::emu32;
