@@ -11,16 +11,15 @@ use lazy_static::lazy_static;
 use std::sync::Mutex;
 
 pub fn gateway(addr: u32, emu: &mut emu::Emu) -> String {
-    match addr {
-        0x7594eca1 => LoadStringW(emu),
+    let api = kernel32::guess_api_name(emu, addr);
+    match api.as_str() {
+        "LoadStringW" => LoadStringW(emu),
+        "_initterm" => _initterm(emu),
+        "_initterm_e" => _initterm_e(emu),
 
         _ => {
-            let apiname = kernel32::guess_api_name(emu, addr);
-            println!(
-                "calling unimplemented kernelbase API 0x{:x} {}",
-                addr, apiname
-            );
-            return apiname;
+            println!("calling unimplemented kernelbase API 0x{:x} {}", addr, api);
+            return api;
         }
     }
 
@@ -58,6 +57,27 @@ fn LoadStringW(emu: &mut emu::Emu) {
     emu.regs.rax = 1;
 }
 
+fn _initterm(emu: &mut emu::Emu) {
+    let ptr1 = emu.maps.read_dword(emu.regs.rsp)
+        .expect("kernelbase!_initterm error reading param");
+    let ptr2 = emu.maps.read_dword(emu.regs.rsp+4)
+        .expect("kernelbase!_initterm error reading param");
+    println!("{}** {} kernelbase!_initterm 0x{:x} 0x{:x} {}", emu.colors.light_red, emu.pos, ptr1, ptr2, emu.colors.nc);
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+    emu.regs.rax = 0;
+}
+
+fn _initterm_e(emu: &mut emu::Emu) {
+    let ptr1 = emu.maps.read_dword(emu.regs.rsp)
+        .expect("kernelbase!_initterm_e error reading param");
+    let ptr2 = emu.maps.read_dword(emu.regs.rsp+4)
+        .expect("kernelbase!_initterm_e error reading param");
+    println!("{}** {} kernelbase!_initterm_e 0x{:x} 0x{:x} {}", emu.colors.light_red, emu.pos, ptr1, ptr2, emu.colors.nc);
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+    emu.regs.rax = 0;
+}
 
 
 

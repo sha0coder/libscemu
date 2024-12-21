@@ -759,7 +759,7 @@ pub struct PE32 {
     pub nt: ImageNtHeaders,
     pub fh: ImageFileHeader,
     pub opt: ImageOptionalHeader,
-    sect_hdr: Vec<ImageSectionHeader>,
+    pub sect_hdr: Vec<ImageSectionHeader>,
     //import_dir: ImageImportDirectory,
     pub delay_load_dir: Vec<DelayLoadDirectory>,
     pub image_import_descriptor: Vec<ImageImportDescriptor>,
@@ -878,10 +878,10 @@ impl PE32 {
                     import_off += ImageImportDescriptor::size();
                 }
             } else {
-                println!("no import directory at va 0x{:x}.", import_va);
+                //println!("no import directory at va 0x{:x}.", import_va);
             }
         } else {
-            println!("no import directory at va 0x{:x}", import_va);
+            //println!("no import directory at va 0x{:x}", import_va);
         }
 
         PE32 {
@@ -899,6 +899,25 @@ impl PE32 {
 
     pub fn size(&self) -> usize {
         return self.raw.len();
+    }
+
+    pub fn mem_size(&self) -> usize {
+        let mut max_va:u32 = 0;
+        let mut max_va_sz:usize = 0;
+
+        for i in 0..self.sect_hdr.len() {
+            let sect = &self.sect_hdr[i];
+            if sect.virtual_address > max_va {
+                max_va = sect.virtual_address;
+                if sect.size_of_raw_data > sect.virtual_size {
+                    max_va_sz = sect.size_of_raw_data as usize;
+                } else {
+                    max_va_sz = sect.virtual_size as usize;
+                }
+            }
+        }
+
+        return (max_va as usize) + max_va_sz;
     }
 
     pub fn get_raw(&self) -> &[u8] {
@@ -1113,7 +1132,7 @@ impl PE32 {
                 }
                 if dbg {
                     let old_addr = read_u32_le!(self.raw, off_addr);
-                    println!("patch addr: 0x{:x}: 0x{:x} -> 0x{:x}", off_addr, old_addr, real_addr);
+                    //println!("patch addr: 0x{:x}: 0x{:x} -> 0x{:x}", off_addr, old_addr, real_addr);
                 }
 
                 write_u32_le!(self.raw, off_addr, real_addr);

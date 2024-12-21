@@ -193,15 +193,7 @@ pub fn gateway(emu: &mut emu::Emu) {
             let heap_base = 0x4b5b00;
             let heap_size = 0x4d8000-0x4b5000;
 
-            let heap = match emu.maps.get_map_by_name_mut("heap") {
-                Some(h) => h,
-                None => {
-                    let h = emu.maps.create_map("heap");
-                    h.set_base(heap_base);
-                    h.set_size(heap_size);
-                    h
-                }
-            };
+            let heap = emu.maps.create_map("heap", heap_base, heap_size).expect("cannot create heap map from brk syscall");
 
             if emu.regs.rdi == 0 {
                 emu.regs.r11 = 0x346;
@@ -714,9 +706,7 @@ pub fn gateway(emu: &mut emu::Emu) {
                 addr = emu.maps.lib64_alloc(sz).expect("syscall64 mmap cannot alloc");
             }
 
-            let map = emu.maps.create_map(&format!("mmap_{:x}",addr));
-            map.set_base(addr);
-            map.set_size(sz);
+            let map = emu.maps.create_map(&format!("mmap_{:x}",addr), addr, sz).expect("cannot create mmap map");
 
             if helper::handler_exist(fd) {
                 let filepath = helper::handler_get_uri(fd);

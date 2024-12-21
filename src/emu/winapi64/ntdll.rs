@@ -101,12 +101,7 @@ fn NtAllocateVirtualMemory(emu: &mut emu::Emu) {
         emu.colors.light_red, emu.pos, addr, size, alloc_addr, emu.colors.nc
     );
 
-    let alloc = emu
-        .maps
-        .create_map(format!("valloc_{:x}", alloc_addr).as_str());
-    alloc.set_base(alloc_addr);
-    alloc.set_size(size);
-    //alloc.set_bottom(alloc_addr + size);
+    emu.maps.create_map(format!("valloc_{:x}", alloc_addr).as_str(), alloc_addr, size).expect("ntdll!NtAllocateVirtualMemory cannot create map");
 
     if !emu.maps.write_qword(addr_ptr, alloc_addr) {
         panic!("NtAllocateVirtualMemory: cannot write on address pointer");
@@ -192,11 +187,9 @@ fn LdrLoadDll(emu: &mut emu::Emu) {
     );
 
     if libname == "user32.dll" {
-        let user32 = emu.maps.create_map("user32");
-        user32.set_base(0x773b0000);
+        let user32 = emu.maps.create_map("user32", 0x773b0000, 0x1000).expect("ntdll!LdrLoadDll_gul cannot create map");
         user32.load("maps32/user32.bin");
-        let user32_text = emu.maps.create_map("user32_text");
-        user32_text.set_base(0x773b1000);
+        let user32_text = emu.maps.create_map("user32_text", 0x773b1000, 0x1000).expect("ntdll!LdrLoadDll_gul cannot create map");
         user32_text.load("maps32/user32_text.bin");
 
         if !emu.maps.write_qword(libaddr_ptr, 0x773b0000) {
@@ -311,9 +304,7 @@ fn RtlAllocateHeap(emu: &mut emu::Emu) {
         Some(a) => a,
         None => panic!("/!\\ out of memory cannot allocate ntdll!RtlAllocateHeap"),
     };
-    let alloc = emu.maps.create_map(&map_name);
-    alloc.set_base(alloc_addr);
-    alloc.set_size(size);
+    emu.maps.create_map(&map_name, alloc_addr, size).expect("ntdll!RtlAllocateHeap cannot create map");
     //}
 
     println!(
@@ -481,9 +472,7 @@ fn RtlDosPathNameToNtPathName_U(emu: &mut emu::Emu) {
         } else {
             let addr = match emu.maps.alloc(255) {
                 Some(a) => {
-                    let mem = emu.maps.create_map("nt_alloc");
-                    mem.set_base(a);
-                    mem.set_size(255);
+                    let mem = emu.maps.create_map("nt_alloc", a, 255).expect("ntdll!RtlDosPathNameToNtPathName_U cannot create map");
                     emu.maps.write_dword(nt_path_name_ptr, a as u32);
                     emu.maps.memcpy(
                         a,

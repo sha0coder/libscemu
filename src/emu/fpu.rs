@@ -22,6 +22,7 @@ pub struct FPU {
     pub f_c2: bool, // div by zero
     pub f_c3: bool, // precission
     pub f_c4: bool, // stack fault
+    pub mxcsr: u32,
 }
 
 impl FPU {
@@ -47,6 +48,7 @@ impl FPU {
             f_c2: false, // div by zero
             f_c3: false, // precision
             f_c4: false, // stack fault
+            mxcsr: 0,
         }
     }
 

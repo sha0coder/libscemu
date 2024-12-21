@@ -59,11 +59,33 @@ impl Maps {
         return None;
     }
 
-    pub fn create_map(&mut self, name: &str) -> &mut Mem64 {
+    pub fn create_map(&mut self, name: &str, base: u64, size: u64) -> Result<&mut Mem64, String> {
+
+        //if size == 0 {
+        //    return Err(format!("map size cannot be 0"));
+        //}
+
+        if self.get_mem_by_addr(base).is_some() {
+            return Err(format!("this map address 0x{:x} already exists!", base));
+        }
+
+        if self.exists_mapname(name) {
+            self.show_maps();
+            return Err(format!("this map name {} already exists!", name));
+        }
+
         let mut mem = Mem64::new();
         mem.set_name(name);
-        self.maps.push(mem);
-        return self.maps.last_mut().unwrap();
+        mem.set_base(base);
+        mem.set_size(size);
+
+        let pos = self
+            .maps
+            .binary_search_by(|c| c.get_base().cmp(&base))
+            .unwrap_or_else(|e| e);
+        self.maps.insert(pos, mem);
+
+        return Ok(self.maps.get_mut(pos).unwrap());
     }
 
     pub fn write_qword(&mut self, addr: u64, value: u64) -> bool {
@@ -997,6 +1019,19 @@ impl Maps {
         }
     }
 
+    pub fn show_maps(&self) {
+        for mem in self.maps.iter() {
+            let name = mem.get_name();
+            println!(
+                "{} 0x{:x} - 0x{:x} ({})",
+                name,
+                mem.get_base(),
+                mem.get_bottom(),
+                mem.size()
+            );
+        }
+    }
+
     pub fn free(&mut self, name: &str) {
         let mut id_to_delete = 0;
         let mut remove = false;
@@ -1030,62 +1065,64 @@ impl Maps {
     }
 
     pub fn lib64_alloc(&self, sz: u64) -> Option<u64> {
-        // super simple memory allocator
-        let mut addr: u64 = constants::LIB64_BARRIER;
-
-        loop {
-            addr += sz;
-
-            if addr >= 0xf0000000_00000000 {
-                return None;
-            }
-
-            for mem in self.maps.iter() {
-                if addr >= mem.get_base() && addr <= mem.get_bottom() {
-                    continue;
-                }
-            }
-
-            //return Some(addr);
-
-            if !self.overlaps(addr, sz) {
-                return Some(addr);
-            }
-        }
+        self._alloc(sz, constants::LIBS64_MIN, constants::LIBS64_MAX, true)
     }
 
     pub fn lib32_alloc(&self, sz: u64) -> Option<u64> {
-        // super simple memory allocator
-        let mut addr: u64 = constants::LIBS_BARRIER;
-
-        loop {
-            addr += sz;
-
-            if addr >= 0xf0000000 {
-                return None;
-            }
-
-            for mem in self.maps.iter() {
-                if addr >= mem.get_base() && addr <= mem.get_bottom() {
-                    continue;
-                }
-            }
-
-            //return Some(addr);
-
-            if !self.overlaps(addr, sz) {
-                return Some(addr);
-            }
-        }
+        self._alloc(sz, constants::LIBS32_MIN, constants::LIBS32_MAX, true)
     }
 
     pub fn alloc(&self, sz: u64) -> Option<u64> {
-        // super simple memory allocator
+        if self.is_64bits {
+            self._alloc(sz, 1, constants::LIBS64_MIN, false)
+        } else {
+            self._alloc(sz, 1, constants::LIBS32_MIN, false)
+        }
+    }
 
-        let mut addr: u64 = 100;
+    fn _alloc(&self, sz: u64, bottom: u64, top: u64, lib: bool) -> Option<u64> {
+        let mut prev: u64 = bottom;
+
+        //println!("allocating {} bytes from 0x{:x} to 0x{:x}", sz, bottom, top);
+
+        for i in 0..self.maps.len() {
+            let mem = &self.maps[i];
+            let base = mem.get_base();
+
+            if lib && base < bottom {
+                //println!("skipping: 0x{:x}", base);
+                continue; // a lib finding allocs that are not lib
+            }
+
+            //println!("base: 0x{:x} prev: 0x{:x} sz: 0x{:x}", base, prev, sz);
+            if prev > base {
+                //self.show_maps();
+                panic!("alloc error");
+            }
+            //println!("space: 0x{:x}", base - prev);
+            if (base - prev) > sz {
+                //println!("space found: 0x{:x}", prev);
+                return Some(prev);
+            }
+
+            prev = mem.get_bottom();
+        }
+
+        if top - prev > sz {
+            //println!("space found: 0x{:x} sz:{}", prev, sz);
+            return Some(prev);
+        }
+
+        println!("no space found");
+        None
+    }
+
+    pub fn alloc_deprecated(&self, sz: u64) -> Option<u64> {
+        let mut addr: u64 = 0;
+        let inc = 0x10;
 
         loop {
-            addr += sz;
+            addr += inc;
 
             if addr >= 0x70000000 {
                 return None;
@@ -1093,6 +1130,7 @@ impl Maps {
 
             for mem in self.maps.iter() {
                 if addr >= mem.get_base() && addr <= mem.get_bottom() {
+                    addr = mem.get_bottom();
                     continue;
                 }
             }

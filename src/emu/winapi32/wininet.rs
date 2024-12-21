@@ -8,25 +8,27 @@ use lazy_static::lazy_static;
 use std::sync::Mutex;
 
 pub fn gateway(addr: u32, emu: &mut emu::Emu) -> String {
-    match addr {
-        0x7633f18e => InternetOpenA(emu),
-        0x76339197 => InternetOpenW(emu),
-        0x763349e9 => InternetConnectA(emu),
-        0x7633492c => InternetConnectW(emu),
-        0x76334c7d => HttpOpenRequestA(emu),
-        0x76334a42 => HttpOpenRequestW(emu),
-        0x763275e8 => InternetSetOptionA(emu),
-        0x76327741 => InternetSetOptionW(emu),
-        0x763a18f8 => HttpSendRequestA(emu),
-        0x7633ba12 => HttpSendRequestW(emu),
-        0x7632b406 => InternetReadFile(emu),
-        0x763b3328 => InternetErrorDlg(emu),
-        0x7632a33e => HttpQueryInfoA(emu),
-        0x7632ab49 => InternetCloseHandle(emu),
+    let api = kernel32::guess_api_name(emu, addr);
+    match api.as_str() {
+        "InternetOpenA" => InternetOpenA(emu),
+        "InternetOpenW" => InternetOpenW(emu),
+        "InternetConnectA" => InternetConnectA(emu),
+        "InternetConnectW" => InternetConnectW(emu),
+        "HttpOpenRequestA" => HttpOpenRequestA(emu),
+        "HttpOpenRequestW" => HttpOpenRequestW(emu),
+        "InternetSetOptionA" => InternetSetOptionA(emu),
+        "InternetSetOptionW" => InternetSetOptionW(emu),
+        "HttpSendRequestA" => HttpSendRequestA(emu),
+        "HttpSendRequestW" => HttpSendRequestW(emu),
+        "InternetReadFile" => InternetReadFile(emu),
+        "InternetErrorDlg" => InternetErrorDlg(emu),
+        "HttpQueryInfoA" => HttpQueryInfoA(emu),
+        "InternetCloseHandle" => InternetCloseHandle(emu),
+        "InternetCrackUrlA" => InternetCrackUrlA(emu),
+        "InternetCrackUrlW" => InternetCrackUrlW(emu),
         _ => {
-            let apiname = kernel32::guess_api_name(emu, addr);
-            println!("calling unimplemented wininet API 0x{:x} {}", addr, apiname);
-            return apiname;
+            println!("calling unimplemented wininet API 0x{:x} {}", addr, api);
+            return api;
         }
     }
 
@@ -766,4 +768,45 @@ fn InternetCloseHandle(emu: &mut emu::Emu) {
     helper::handler_close(handle);
     emu.stack_pop32(false);
     emu.regs.rax = 1; // true
+}
+
+fn InternetCrackUrlA(emu: &mut emu::Emu) {
+    let url_ptr = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("wininet!InternetCrackUrlA error reading url_ptr") as u64;
+    let url_len = emu.maps.read_dword(emu.regs.get_esp() + 4)
+        .expect("wininet!InternetCrackUrlA error reading flags");
+    let flags = emu.maps.read_dword(emu.regs.get_esp() + 8)
+        .expect("wininet!InternetCrackUrlA error reading reserved");
+    let components = emu.maps.read_dword(emu.regs.get_esp() + 12)
+        .expect("wininet!InternetCrackUrlA error reading component");
+
+    let url = emu.maps.read_string(url_ptr);
+
+    println!("{}** {} wininet!InternetCrackUrlA url: `{}` {}", emu.colors.light_red, emu.pos, url, emu.colors.nc);
+
+    for _ in 0..4 {
+        emu.stack_pop32(false);
+    }
+    emu.regs.rax = 1;
+}
+
+fn InternetCrackUrlW(emu: &mut emu::Emu) {
+    let url_ptr = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("wininet!InternetCrackUrlW error reading url_ptr") as u64;
+    let url_len = emu.maps.read_dword(emu.regs.get_esp() + 4)
+        .expect("wininet!InternetCrackUrlW error reading url_len");
+    let flags = emu.maps.read_dword(emu.regs.get_esp() + 8)
+        .expect("wininet!InternetCrackUrlW error reading flags");
+    let components = emu.maps.read_dword(emu.regs.get_esp() + 12)
+        .expect("wininet!InternetCrackUrlW error reading components");
+
+    let url = emu.maps.read_wide_string(url_ptr);
+
+    println!("{}** {} wininet!InternetCrackUrlW url: `{}` {}", emu.colors.light_red, emu.pos, url, emu.colors.nc);
+
+    for _ in 0..4 {
+        emu.stack_pop32(false);
+    }
+
+    emu.regs.rax = 1;
 }

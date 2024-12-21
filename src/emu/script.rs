@@ -407,9 +407,7 @@ impl Script {
                             return;
                         }
                     };
-                    let map = emu.maps.create_map(&args[1]);
-                    map.set_base(addr);
-                    map.set_size(sz);
+                    emu.maps.create_map(&args[1], addr, sz);
                     println!("allocated {} at 0x{:x} sz: {}", &args[1], addr, sz);
                     self.result = addr;
                 }
@@ -427,9 +425,7 @@ impl Script {
                             return;
                         }
                     };
-                    let map = emu.maps.create_map(&args[1]);
-                    map.set_base(addr);
-                    map.set_size(sz);
+                    emu.maps.create_map(&args[1], addr, sz);
                     println!("allocated {} at 0x{:x} sz: {}", &args[1], addr, sz);
                 }
                 "ml" => {

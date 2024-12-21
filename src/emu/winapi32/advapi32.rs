@@ -5,33 +5,32 @@ use crate::emu::winapi32::helper;
 use crate::emu::winapi32::kernel32;
 
 pub fn gateway(addr: u32, emu: &mut emu::Emu) -> String {
-    match addr {
-        0x77733553 => StartServiceCtrlDispatcherA(emu),
-        0x776fa965 => StartServiceCtrlDispatcherW(emu),
-        0x777041b3 => LookupPrivilegeValueW(emu),
-        0x776f91dd => CryptAcquireContextA(emu),
-        0x776fdf14 => CryptAcquireContextW(emu),
-        0x7771779b => CryptEncrypt(emu),
-        0x77733178 => CryptDecrypt(emu),
-        0x776fdf4e => CryptCreateHash(emu),
-        0x776f8ee9 => CryptGenKey(emu),
-        0x776fdf7e => CryptGetHashParam(emu),
-        0x777177cb => CryptGetKeyParam(emu),
-        0x776fc532 => CryptImportKey(emu),
-        0x777332a8 => CryptSignHashA(emu),
-        0x777332b8 => CryptSignHashW(emu),
-        0x776fe124 => CryptReleaseContext(emu),
-        0x776fdf36 => CryptHashData(emu),
-        0x77733188 => CryptDeriveKey(emu),
-
+    let api = kernel32::guess_api_name(emu, addr);
+    match api.as_str() {
+        "StartServiceCtrlDispatcherA" => StartServiceCtrlDispatcherA(emu),
+        "StartServiceCtrlDispatcherW" => StartServiceCtrlDispatcherW(emu),
+        "LookupPrivilegeValueW" => LookupPrivilegeValueW(emu),
+        "CryptAcquireContextA" => CryptAcquireContextA(emu),
+        "CryptAcquireContextW" => CryptAcquireContextW(emu),
+        "CryptEncrypt" => CryptEncrypt(emu),
+        "CryptDecrypt" => CryptDecrypt(emu),
+        "CryptCreateHash" => CryptCreateHash(emu),
+        "CryptGenKey" => CryptGenKey(emu),
+        "CryptGetHashParam" => CryptGetHashParam(emu),
+        "CryptGetKeyParam" => CryptGetKeyParam(emu),
+        "CryptImportKey" => CryptImportKey(emu),
+        "CryptSignHashA" => CryptSignHashA(emu),
+        "CryptSignHashW" => CryptSignHashW(emu),
+        "CryptReleaseContext" => CryptReleaseContext(emu),
+        "CryptHashData" => CryptHashData(emu),
+        "CryptDeriveKey" => CryptDeriveKey(emu),
 
         _ => {
-            let apiname = kernel32::guess_api_name(emu, addr);
             println!(
                 "calling unimplemented advapi32 API 0x{:x} {}",
-                addr, apiname
+                addr, api
             );
-            return apiname;
+            return api;
         }
     }
 

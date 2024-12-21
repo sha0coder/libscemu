@@ -2,19 +2,19 @@ use crate::emu;
 use crate::emu::winapi32::kernel32;
 
 pub fn gateway(addr: u32, emu: &mut emu::Emu) -> String {
-    match addr {
-        0x7740ea11 => MessageBoxA(emu),
-        0x7740ea5f => MessageBoxW(emu),
-        0x773c01a9 => GetDesktopWindow(emu),
-        0x773d426d => wsprintfW(emu),
-        0x773bdfdc => GetProcessWindowStation(emu),
-        0x773be355 => GetUserObjectInformationW(emu),
-        0x773bba8a => CharLowerW(emu),
-        0x773c3f47 => wsprintfA(emu),
+    let api = kernel32::guess_api_name(emu, addr);
+    match api.as_str() {
+        "MessageBoxA" => MessageBoxA(emu),
+        "MessageBoxW" => MessageBoxW(emu),
+        "GetDesktopWindow" => GetDesktopWindow(emu),
+        "wsprintfW" => wsprintfW(emu),
+        "GetProcessWindowStation" => GetProcessWindowStation(emu),
+        "GetUserObjectInformationW" => GetUserObjectInformationW(emu),
+        "CharLowerW" => CharLowerW(emu),
+        "wsprintfA" => wsprintfA(emu),
         _ => {
-            let apiname = kernel32::guess_api_name(emu, addr);
-            println!("calling unimplemented user32 API 0x{:x} {}", addr, apiname);
-            return apiname;
+            println!("calling unimplemented user32 API 0x{:x} {}", addr, api);
+            return api;
         }
     }
 

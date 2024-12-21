@@ -661,9 +661,7 @@ fn VirtualAlloc(emu: &mut emu::Emu) {
             emu.colors.light_red, emu.pos, addr, size, base, emu.colors.nc
         );
 
-        let alloc = emu.maps.create_map(format!("alloc_{:x}", base).as_str());
-        alloc.set_base(base);
-        alloc.set_size(size);
+        emu.maps.create_map(format!("alloc_{:x}", base).as_str(), base, size).expect("kernel32!VirtualAlloc out of memory");
 
         emu.regs.rax = base;
     }
@@ -689,9 +687,7 @@ fn VirtualAllocEx(emu: &mut emu::Emu) {
         emu.colors.light_red, emu.pos, proc_hndl, addr, size, base, emu.colors.nc
     );
 
-    let alloc = emu.maps.create_map(format!("alloc_{:x}", base).as_str());
-    alloc.set_base(base);
-    alloc.set_size(size);
+    emu.maps.create_map(format!("alloc_{:x}", base).as_str(), base, size).expect("kernel32!VirtualAllocEx out of memory");
 
     emu.regs.rax = base;
 }
@@ -832,11 +828,7 @@ fn HeapAlloc(emu: &mut emu::Emu) {
         None => 0,
     };
 
-    let mem = emu
-        .maps
-        .create_map(format!("alloc_{:x}", emu.regs.rax).as_str());
-    mem.set_base(emu.regs.rax);
-    mem.set_size(size);
+    emu.maps.create_map(format!("alloc_{:x}", emu.regs.rax).as_str(), emu.regs.rax, size).expect("kernel32!HeapAlloc out of memory");
 
     println!(
         "{}** {} kernel32!HeapAlloc flags: 0x{:x} size: {} =0x{:x} {}",
@@ -878,7 +870,9 @@ fn CreateThread(emu: &mut emu::Emu) {
         .read_qword(emu.regs.rsp + 8)
         .expect("kernel32!CreateThread cannot read tid_ptr") as u64;
 
-    emu.maps.write_dword(tid_ptr, 0x123);
+    if tid_ptr > 0 {
+        emu.maps.write_dword(tid_ptr, 0x123);
+    }
 
     println!(
         "{}** {} kernel32!CreateThread code: 0x{:x} param: 0x{:x} {}",
@@ -936,9 +930,7 @@ fn LocalAlloc(emu: &mut emu::Emu) {
         .maps
         .alloc(bytes)
         .expect("kernel32!LocalAlloc out of memory");
-    let alloc = emu.maps.create_map(format!("alloc_{:x}", base).as_str());
-    alloc.set_base(base);
-    alloc.set_size(bytes);
+    emu.maps.create_map(format!("alloc_{:x}", base).as_str(), base, bytes).expect("kernel32!LocalAlloc out of memory");
 
     emu.regs.rax = base;
 }
@@ -1566,9 +1558,7 @@ fn MapViewOfFile(emu: &mut emu::Emu) {
         .maps
         .alloc(size)
         .expect("kernel32!MapViewOfFile cannot allocate");
-    let mem = emu.maps.create_map("file_map");
-    mem.set_base(addr);
-    mem.set_size(size);
+    let mem = emu.maps.create_map("file_map", addr, size).expect("kernel32!MapViewOfFile cannot create map");
     let loaded = mem.load_chunk(&emu.filename, off, size as usize);
 
     println!(
@@ -1680,9 +1670,7 @@ fn VirtualAllocExNuma(emu: &mut emu::Emu) {
         .maps
         .alloc(size)
         .expect("kernel32!VirtualAllocExNuma out of memory");
-    let alloc = emu.maps.create_map(format!("alloc_{:x}", base).as_str());
-    alloc.set_base(base);
-    alloc.set_size(size);
+    emu.maps.create_map(format!("alloc_{:x}", base).as_str(), base, size).expect("kernel32!VirtualAllocExNuma cannot create map");
 
     emu.regs.rax = base;
 }

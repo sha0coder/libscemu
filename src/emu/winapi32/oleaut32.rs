@@ -3,17 +3,14 @@ use crate::emu::winapi32::kernel32;
 use crate::emu;
 
 pub fn gateway(addr: u32, emu: &mut emu::Emu) -> String {
-    match addr {
-        0x764745d2 => SysAllocStringLen(emu),
-        0x76473e59 => SysFreeString(emu),
+    let api = kernel32::guess_api_name(emu, addr);
+    match api.as_str() {
+        "SysAllocStringLen" => SysAllocStringLen(emu),
+        "SysFreeString" => SysFreeString(emu),
 
         _ => {
-            let apiname = kernel32::guess_api_name(emu, addr);
-            println!(
-                "calling unimplemented oleaut32 API 0x{:x} {}",
-                addr, apiname
-            );
-            return apiname;
+            println!("calling unimplemented oleaut32 API 0x{:x} {}", addr, api);
+            return api;
         }
     }
 
@@ -41,10 +38,7 @@ fn SysAllocStringLen(emu: &mut emu::Emu) {
         .alloc(size + 8)
         .expect("oleaut32!SysAllocStringLen out of memory");
     let name = format!("alloc_{:x}", base + 8);
-    let alloc = emu.maps.create_map(&name);
-    alloc.set_base(base);
-    alloc.set_size(size);
-
+    emu.maps.create_map(&name, base, size);
     emu.maps.memcpy(base + 8, str_ptr, size as usize - 1);
 
     println!(

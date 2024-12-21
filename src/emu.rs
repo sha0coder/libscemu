@@ -236,6 +236,7 @@ impl Emu {
     }
 
     pub fn get_base_addr(&self) -> Option<u64> {
+        //TODO: fix this, now there is no code map.
         let map = match self.maps.get_map_by_name("code") {
             Some(m) => m,
             None => return None,
@@ -284,6 +285,14 @@ impl Emu {
         }
     }
 
+    pub fn link_library(&mut self, libname: &str) -> u64 {
+        if self.cfg.is_64bits {
+            return winapi64::kernel32::load_library(self, libname);
+        } else {
+            return winapi32::kernel32::load_library(self, libname);
+        }
+    }
+
     pub fn api_addr_to_name(&mut self, addr: u64) -> String {
         let name: String;
         if self.cfg.is_64bits {
@@ -306,14 +315,12 @@ impl Emu {
     }
 
     pub fn init_stack32(&mut self) {
-        let stack = self.maps.get_mem("stack");
 
         if self.cfg.stack_addr == 0 {
             self.cfg.stack_addr = 0x212000;
         }
 
-        stack.set_base(self.cfg.stack_addr);
-        stack.set_size(0x030000);
+        let stack = self.maps.create_map("stack", self.cfg.stack_addr, 0x030000).expect("cannot create stack map");
         self.regs.set_esp(self.cfg.stack_addr + 0x1c000 + 4);
         self.regs
             .set_ebp(self.cfg.stack_addr + 0x1c000 + 4 + 0x1000);
@@ -328,16 +335,14 @@ impl Emu {
     }
 
     pub fn init_stack64(&mut self) {
-        let stack = self.maps.get_mem("stack");
-
         if self.cfg.stack_addr == 0 {
             self.cfg.stack_addr = 0x22a000;
         }
 
         self.regs.rsp = self.cfg.stack_addr + 0x4000;
         self.regs.rbp = self.cfg.stack_addr + 0x4000 + 0x1000;
-        stack.set_base(self.cfg.stack_addr);
-        stack.set_size(0x6000);
+
+        let stack = self.maps.create_map("stack", self.cfg.stack_addr, 0x6000).expect("cannot create stack map");
 
         assert!(self.regs.rsp < self.regs.rbp);
         assert!(self.regs.rsp > stack.get_base());
@@ -406,13 +411,14 @@ impl Emu {
             self.maps.is_64bits = true;
             self.init_regs_tests();
             self.init_mem64();
-            //self.init_stack64();
-            self.init_stack64_tests();
+            self.init_stack64();
+            //self.init_stack64_tests();
             //self.init_flags_tests();
         } else {
             // 32bits
+            self.regs.rip = self.cfg.entry_point;
+            self.maps.is_64bits = false;
             self.regs.sanitize32();
-            self.regs.set_eip(self.cfg.entry_point);
             self.init_mem32();
             self.init_stack32();
         }
@@ -445,31 +451,34 @@ impl Emu {
             //self.regs.rsp = 0x7fffffffe2b0;
             self.regs.rsp = 0x7fffffffe790;
             self.maps
-                .create_map("linux_dynamic_stack")
-                .load_at(0x7ffffffde000);
+                .create_map("linux_dynamic_stack", 0x7ffffffde000, 0x100000)
+                .expect("cannot create linux_dynamic_stack map");
             //self.maps.create_map("dso_dyn").load_at(0x7ffff7ffd0000);
-            self.maps.create_map("dso_dyn").load_at(0x7ffff7fd0000);
-            self.maps.create_map("linker").load_at(0x7ffff7ffe000);
+            self.maps
+                .create_map("dso_dyn", 0x7ffff7ffd000, 0x100000)
+                .expect("cannot create dso_dyn map");
+            self.maps
+                .create_map("linker", 0x7ffff7ffe000, 0x100000)
+                .expect("cannot create linker map");
         } else {
             self.regs.rsp = 0x7fffffffe270;
             self.maps
-                .create_map("linux_static_stack")
-                .load_at(0x7ffffffde000);
-            self.maps.create_map("dso").load_at(0x7ffff7ffd000);
+                .create_map("linux_static_stack", 0x7ffffffde000, 0x100000)
+                .expect("cannot create linux_static_stack map");
+            self.maps
+                .create_map("dso", 0x7ffff7ffd000, 0x100000)
+                .expect("cannot create dso map");
         }
-        let tls = self.maps.create_map("tls");
-        tls.set_base(0x7ffff7fff000);
-        tls.set_size(0xfff);
+        let tls = self.maps.create_map("tls", 0x7ffff7fff000, 0xfff).expect("cannot create tls map");
+        tls.load("tls.bin");
 
         std::env::set_current_dir(orig_path);
 
         if dyn_link {
             //heap.set_base(0x555555579000);
         } else {
-            //heap.set_base(0x4b5000);
-            let heap = self.maps.create_map("heap");
-            heap.set_base(0x4b5b00);
-            heap.set_size(0x4d8000 - 0x4b5000);
+            let heap = self.maps.create_map("heap", 0x4b5b00, 0x4d8000 - 0x4b5000).expect("cannot create heap map");
+            heap.load("heap.bin");
         }
 
         self.regs.rbp = 0;
@@ -483,313 +492,39 @@ impl Emu {
     }
 
     pub fn init_mem32(&mut self) {
-        //println!("loading memory maps");
-        self.maps.create_map("10000");
-        self.maps.create_map("20000");
-        self.maps.create_map("stack");
-        self.maps.create_map("code");
-        self.maps.create_map("peb");
-        self.maps.create_map("teb");
-        self.maps.create_map("ntdll");
-        self.maps.create_map("ntdll_text");
-        self.maps.create_map("ntdll_data");
-        self.maps.create_map("kernel32");
-        self.maps.create_map("kernel32_text");
-        self.maps.create_map("kernel32_data");
-        self.maps.create_map("kernelbase");
-        self.maps.create_map("kernelbase_text");
-        self.maps.create_map("kernelbase_data");
-        self.maps.create_map("msvcrt");
-        self.maps.create_map("msvcrt_text");
-        self.maps.create_map("reserved");
-        self.maps.create_map("kuser_shared_data");
-        //self.maps.create_map("binary");
-        //self.maps.create_map("reserved2");
-        self.maps.create_map("ws2_32");
-        self.maps.create_map("ws2_32_text");
-        self.maps.create_map("wininet");
-        self.maps.create_map("wininet_text");
-        self.maps.create_map("shlwapi");
-        self.maps.create_map("shlwapi_text");
-        self.maps.create_map("gdi32");
-        self.maps.create_map("gdi32_text");
-        self.maps.create_map("user32");
-        self.maps.create_map("user32_text");
-        self.maps.create_map("lpk");
-        self.maps.create_map("lpk_text");
-        self.maps.create_map("usp10");
-        self.maps.create_map("usp10_text");
-        self.maps.create_map("advapi32");
-        self.maps.create_map("advapi32_text");
-        self.maps.create_map("sechost");
-        self.maps.create_map("sechost_text");
-        self.maps.create_map("rpcrt4");
-        self.maps.create_map("rpcrt4_text");
-        self.maps.create_map("urlmon");
-        self.maps.create_map("urlmon_text");
-        self.maps.create_map("ole32");
-        self.maps.create_map("ole32_text");
-        self.maps.create_map("oleaut32");
-        self.maps.create_map("oleaut32_text");
-        self.maps.create_map("crypt32");
-        self.maps.create_map("crypt32_text");
-        self.maps.create_map("msasn1");
-        self.maps.create_map("msasn1_text");
-        self.maps.create_map("iertutils");
-        self.maps.create_map("iertutils_text");
-        self.maps.create_map("imm32");
-        self.maps.create_map("imm32_text");
-        self.maps.create_map("msctf");
-        self.maps.create_map("msctf_text");
-
-        //self.maps.write_byte(0x2c3000, 0x61); // metasploit trick
+        println!("loading memory maps");
 
         let orig_path = std::env::current_dir().unwrap();
         std::env::set_current_dir(self.cfg.maps_folder.clone());
 
-        self.maps.get_mem("code").set_base(self.cfg.code_base_addr);
-        let kernel32 = self.maps.get_mem("kernel32");
-        kernel32.set_base(0x75e40000);
-        if !kernel32.load("kernel32.bin") {
-            println!("cannot find the maps files, use --maps flag to speficy the folder.");
-            std::process::exit(1);
-        }
+        //self.maps.create_map("m10000", 0x10000, 0).expect("cannot create m10000 map");
+        //self.maps.create_map("m20000", 0x20000, 0).expect("cannot create m20000 map");
+        //self.maps.create_map("code", self.cfg.code_base_addr, 0);
 
-        let kernel32_text = self.maps.get_mem("kernel32_text");
-        kernel32_text.set_base(0x75e41000);
-        kernel32_text.load("kernel32_text.bin");
-
-        let kernel32_data = self.maps.get_mem("kernel32_data");
-        kernel32_data.set_base(0x75f06000);
-        kernel32_data.load("kernel32_data.bin");
-
-        let kernelbase = self.maps.get_mem("kernelbase");
-        kernelbase.set_base(0x75940000);
-        kernelbase.load("kernelbase.bin");
-
-        let kernelbase_text = self.maps.get_mem("kernelbase_text");
-        kernelbase_text.set_base(0x75941000);
-        kernelbase_text.load("kernelbase_text.bin");
-
-        let kernelbase_data = self.maps.get_mem("kernelbase_data");
-        kernelbase_data.set_base(0x75984000);
-        kernelbase_data.load("kernelbase_data.bin");
-
-        let msvcrt = self.maps.get_mem("msvcrt");
-        msvcrt.set_base(0x761e0000);
-        msvcrt.load("msvcrt.bin");
-
-        let msvcrt_text = self.maps.get_mem("msvcrt_text");
-        msvcrt_text.set_base(0x761e1000);
-        msvcrt_text.load("msvcrt_text.bin");
-
-        /*let reserved2 = self.maps.get_mem("reserved2");
-        reserved2.set_base(0x2c3000); //0x2c3018
-        reserved2.set_size(0xfd000);*/
-
-        let reserved = self.maps.get_mem("reserved");
-        reserved.set_base(0x2c0000);
-        reserved.load("reserved.bin");
-        assert!(reserved.read_byte(0x2c31a0) != 0);
-
-        let peb = self.maps.get_mem("peb");
-        peb.set_base(0x7ffdf000);
-        peb.load("peb.bin");
-
-        //let peb = self.maps.get_mem("peb");
-        peb.write_byte(peb.get_base() + 2, 0);
-
-        //let peb = peb32::init_peb(self, space_addr, base);
-        //self.maps.write_dword(peb + 8, base);
-
-
-        let teb = self.maps.get_mem("teb");
-        teb.set_base(0x7ffde000);
-        teb.load("teb.bin");
-
-        let ntdll = self.maps.get_mem("ntdll");
-        ntdll.set_base(0x77570000);
-        ntdll.load("ntdll.bin");
-
-        let ntdll_text = self.maps.get_mem("ntdll_text");
-        ntdll_text.set_base(0x77571000);
-        ntdll_text.load("ntdll_text.bin");
-
-        let ntdll_data = self.maps.get_mem("ntdll_data");
-        ntdll_data.set_base(0x77647000);
-        ntdll_data.load("ntdll_data.bin");
-
-        let kuser_shared_data = self.maps.get_mem("kuser_shared_data");
-        kuser_shared_data.set_base(0x7ffe0000);
-        kuser_shared_data.load("kuser_shared_data.bin");
-
-        //let binary = self.maps.get_mem("binary");
-        //binary.set_base(0x400000);
-        //binary.set_size(0x1000);
-
-        let ws2_32 = self.maps.get_mem("ws2_32");
-        ws2_32.set_base(0x77480000);
-        ws2_32.load("ws2_32.bin");
-
-        let ws2_32_text = self.maps.get_mem("ws2_32_text");
-        ws2_32_text.set_base(0x77481000);
-        ws2_32_text.load("ws2_32_text.bin");
-
-        let wininet = self.maps.get_mem("wininet");
-        wininet.set_base(0x76310000);
-        wininet.load("wininet.bin");
-
-        let wininet_text = self.maps.get_mem("wininet_text");
-        wininet_text.set_base(0x76311000);
-        wininet_text.load("wininet_text.bin");
-
-        let shlwapi = self.maps.get_mem("shlwapi");
-        shlwapi.set_base(0x76700000);
-        shlwapi.load("shlwapi.bin");
-
-        let shlwapi_text = self.maps.get_mem("shlwapi_text");
-        shlwapi_text.set_base(0x76701000);
-        shlwapi_text.load("shlwapi_text.bin");
-
-        let gdi32 = self.maps.get_mem("gdi32");
-        gdi32.set_base(0x759c0000);
-        gdi32.load("gdi32.bin");
-
-        let gdi32_text = self.maps.get_mem("gdi32_text");
-        gdi32_text.set_base(0x759c1000);
-        gdi32_text.load("gdi32_text.bin");
-
-        let user32 = self.maps.get_mem("user32");
-        user32.set_base(0x773b0000);
-        user32.load("user32.bin");
-
-        let user32_text = self.maps.get_mem("user32_text");
-        user32_text.set_base(0x773b1000);
-        user32_text.load("user32_text.bin");
-
-        let lpk = self.maps.get_mem("lpk");
-        lpk.set_base(0x75b00000);
-        lpk.load("lpk.bin");
-
-        let lpk_text = self.maps.get_mem("lpk_text");
-        lpk_text.set_base(0x75b01000);
-        lpk_text.load("lpk_text.bin");
-
-        let usp10 = self.maps.get_mem("usp10");
-        usp10.set_base(0x76660000);
-        usp10.load("usp10.bin");
-
-        let usp10_text = self.maps.get_mem("usp10_text");
-        usp10_text.set_base(0x76661000);
-        usp10_text.load("usp10_text.bin");
-
-        let advapi32 = self.maps.get_mem("advapi32");
-        advapi32.set_base(0x776f0000);
-        advapi32.load("advapi32.bin");
-
-        let advapi32_text = self.maps.get_mem("advapi32_text");
-        advapi32_text.set_base(0x776f1000);
-        advapi32_text.load("advapi32_text.bin");
-
-        let sechost = self.maps.get_mem("sechost");
-        sechost.set_base(0x75a10000);
-        sechost.load("sechost.bin");
-
-        let sechost_text = self.maps.get_mem("sechost_text");
-        sechost_text.set_base(0x75a11000);
-        sechost_text.load("sechost_text.bin");
-
-        let rpcrt4 = self.maps.get_mem("rpcrt4");
-        rpcrt4.set_base(0x774c0000);
-        rpcrt4.load("rpcrt4.bin");
-
-        let rpcrt4_text = self.maps.get_mem("rpcrt4_text");
-        rpcrt4_text.set_base(0x774c1000);
-        rpcrt4_text.load("rpcrt4_text.bin");
-
-        let urlmon = self.maps.get_mem("urlmon");
-        urlmon.set_base(0x75b60000);
-        urlmon.load("urlmon.bin");
-
-        let urlmon_text = self.maps.get_mem("urlmon_text");
-        urlmon_text.set_base(0x75b61000);
-        urlmon_text.load("urlmon_text.bin");
-
-        let ole32 = self.maps.get_mem("ole32");
-        ole32.set_base(0x76500000);
-        ole32.load("ole32.bin");
-
-        let ole32_text = self.maps.get_mem("ole32_text");
-        ole32_text.set_base(0x76501000);
-        ole32_text.load("ole32_text.bin");
-
-        let oleaut32 = self.maps.get_mem("oleaut32");
-        oleaut32.set_base(0x76470000);
-        oleaut32.load("oleaut32.bin");
-
-        let oleaut32_text = self.maps.get_mem("oleaut32_text");
-        oleaut32_text.set_base(0x76471000);
-        oleaut32_text.load("oleaut32_text.bin");
-
-        let crypt32 = self.maps.get_mem("crypt32");
-        crypt32.set_base(0x757d0000);
-        crypt32.load("crypt32.bin");
-
-        let crypt32_text = self.maps.get_mem("crypt32_text");
-        crypt32_text.set_base(0x757d1000);
-        crypt32_text.load("crypt32_text.bin");
-
-        let msasn1 = self.maps.get_mem("msasn1");
-        msasn1.set_base(0x75730000);
-        msasn1.load("msasn1.bin");
-
-        let msasn1_text = self.maps.get_mem("msasn1_text");
-        msasn1_text.set_base(0x75731000);
-        msasn1_text.load("msasn1_text.bin");
-
-        let iertutils = self.maps.get_mem("iertutils");
-        iertutils.set_base(0x75fb0000);
-        iertutils.load("iertutils.bin");
-
-        let iertutils_text = self.maps.get_mem("iertutils_text");
-        iertutils_text.set_base(0x75fb1000);
-        iertutils_text.load("iertutils_text.bin");
-
-        let imm32 = self.maps.get_mem("imm32");
-        imm32.set_base(0x776d0000);
-        imm32.load("imm32.bin");
-
-        let imm32_text = self.maps.get_mem("imm32_text");
-        imm32_text.set_base(0x776d1000);
-        imm32_text.load("imm32_text.bin");
-
-        let msctf = self.maps.get_mem("msctf");
-        msctf.set_base(0x75a30000);
-        msctf.load("msctf.bin");
-
-        let msctf_text = self.maps.get_mem("msctf_text");
-        msctf_text.set_base(0x75a31000);
-        msctf_text.load("msctf_text.bin");
-
-        let m10000 = self.maps.get_mem("10000");
-        m10000.set_base(0x10000);
-        m10000.load("m10000.bin");
-        m10000.set_size(0xffff);
-
-        let m20000 = self.maps.get_mem("20000");
-        m20000.set_base(0x20000);
-        m20000.load("m20000.bin");
-        m20000.set_size(0xffff);
-
-        let (base, pe_hdr) = self.load_pe32("nsi.dll", false, 0x776c0000);
+        //self.maps.write_byte(0x2c3000, 0x61); // metasploit trick
 
         std::env::set_current_dir(orig_path);
+
+        peb32::init_peb(self);
+        winapi32::kernel32::load_library(self, "ntdll.dll");
+        let ntdll_base = self.maps.get_mem("ntdll.pe").get_base();
+        peb32::update_peb_image_base(self, ntdll_base as u32);
+
+        winapi32::kernel32::load_library(self, "kernel32.dll");
+        winapi32::kernel32::load_library(self, "kernelbase.dll");
+        winapi32::kernel32::load_library(self, "iphlpapi.dll");
+        winapi32::kernel32::load_library(self, "ws2_32.dll");
+        winapi32::kernel32::load_library(self, "advapi32.dll");
+        //winapi32::kernel32::load_library(self, "comctl64.dll");
+        winapi32::kernel32::load_library(self, "winhttp.dll");
+        winapi32::kernel32::load_library(self, "wininet.dll");
+        //winapi32::kernel32::load_library(self, "dnsapi.dll");
+        winapi32::kernel32::load_library(self, "shell32.dll");
+        //winapi32::kernel32::load_library(self, "shlwapi.dll");
     }
 
     pub fn init_tests(&mut self) {
-        let mem = self.maps.create_map("test");
-        mem.set_base(0);
-        mem.set_size(1024);
+        let mem = self.maps.create_map("test", 0, 1024).expect("cannot create test map");
         mem.write_qword(0, 0x1122334455667788);
         assert!(mem.read_qword(0) == 0x1122334455667788);
         self.maps.free("test");
@@ -855,110 +590,17 @@ impl Emu {
         let orig_path = std::env::current_dir().unwrap();
         std::env::set_current_dir(self.cfg.maps_folder.clone());
 
-        self.maps.create_map("m10000").load_at(0x10000);
-        self.maps.create_map("m20000").load_at(0x20000);
-        self.maps.create_map("m520000").load_at(0x520000);
-        self.maps.create_map("m53b000").load_at(0x53b000);
-        //self.maps.create_map("exe_pe").load_at(0x400000);
-        //self.maps.create_map("calc").load_at(0x110000000);
-        self.maps
-            .create_map("code")
-            .set_base(self.cfg.code_base_addr);
-        self.maps.create_map("stack");
-        //self.maps.create_map("teb").load_at(0x7fffffdd000);
-
-        /*
-        self.maps.create_map("ntdll_pe").load_at(0x76fd0000);
-        self.maps.create_map("ntdll_text").load_at(0x76fd1000);
-        self.maps.create_map("ntdll_rt").load_at(0x770d2000);
-        self.maps.create_map("ntdll_rdata").load_at(0x770d3000);
-        self.maps.create_map("ntdll_data").load_at(0x77102000);
-        self.maps.create_map("kernel32_pe").load_at(0x76db0000);
-        self.maps.create_map("kernel32_text").load_at(0x76db1000);
-        self.maps.create_map("kernel32_rdata").load_at(0x76e4c000);
-        self.maps.create_map("kernel32_data").load_at(0x76eba000);
-        self.maps.create_map("kernelbase_pe").load_at(0x7fefd010000);
-        self.maps
-            .create_map("kernelbase_text")
-            .load_at(0x7fefd011000);
-        self.maps
-            .create_map("kernelbase_rdata")
-            .load_at(0x7fefd05a000);
-        self.maps
-            .create_map("kernelbase_data")
-            .load_at(0x7fefd070000);
-        self.maps.create_map("msvcrt_pe").load_at(0x7fefef00000);
-        self.maps.create_map("msvcrt_text").load_at(0x7fefef01000);
-        self.maps.create_map("msvcrt_rdata").load_at(0x7fefef7a000);
-        self.maps.create_map("user32_pe").load_at(0x76ed0000);
-        self.maps.create_map("user32_text").load_at(0x76ed1000);
-        self.maps.create_map("user32_rdata").load_at(0x76f52000);
-        self.maps.create_map("msasn1_pe").load_at(0x7fefcfc0000);
-        self.maps.create_map("msasn1_text").load_at(0x7fefcfc1000);
-        self.maps.create_map("msasn1_rdata").load_at(0x7fefcfc9000);
-        self.maps.create_map("crypt32_pe").load_at(0x7fefd0c0000);
-        self.maps.create_map("crypt32_text").load_at(0x7fefd0c1000);
-        self.maps.create_map("crypt32_rdata").load_at(0x7fefd18f000);
-        self.maps.create_map("msctf_pe").load_at(0x7fefd2f0000);
-        self.maps.create_map("msctf_text").load_at(0x7fefd2f1000);
-        self.maps.create_map("msctf_rdata").load_at(0x7fefd391000);
-        self.maps.create_map("iertutil_pe").load_at(0x7fefd400000);
-        self.maps.create_map("iertutil_text").load_at(0x7fefd401000);
-        self.maps
-            .create_map("iertutil_rdata")
-            .load_at(0x7fefd43e000);
-        self.maps.create_map("ole32_pe").load_at(0x7fefd660000);
-        self.maps.create_map("ole32_text").load_at(0x7fefd661000);
-        self.maps.create_map("ole32_rdata").load_at(0x7fefd7df000);
-        self.maps.create_map("lpk_pe").load_at(0x7fefd870000);
-        self.maps.create_map("lpk_text").load_at(0x7fefd871000);
-        self.maps.create_map("lpk_rdata").load_at(0x7fefd878000);
-        self.maps.create_map("wininet_pe").load_at(0x7fefd880000);
-        self.maps.create_map("wininet_text").load_at(0x7fefd881000);
-        self.maps.create_map("wininet_rdata").load_at(0x7fefd940000);
-        self.maps.create_map("gdi32_pe").load_at(0x7fefd9b0000);
-        self.maps.create_map("gdi32_text").load_at(0x7fefd9b1000);
-        self.maps.create_map("gdi32_rdata").load_at(0x7fefda02000);
-        self.maps.create_map("imm32_pe").load_at(0x7fefe990000);
-        self.maps.create_map("imm32_text").load_at(0x7fefe991000);
-        self.maps.create_map("imm32_rdata").load_at(0x7fefe9ad000);
-        self.maps.create_map("usp10_pe").load_at(0x7fefe9c0000);
-        self.maps.create_map("usp10_text").load_at(0x7fefe9c1000);
-        self.maps.create_map("sechost_pe").load_at(0x7fefea90000);
-        self.maps.create_map("sechost_text").load_at(0x7fefea91000);
-        self.maps.create_map("rpcrt4_pe").load_at(0x7fefeab0000);
-        self.maps.create_map("rpcrt4_text").load_at(0x7fefeab1000);
-        self.maps.create_map("rpcrt4_rdata").load_at(0x7fefeb93000);
-        self.maps.create_map("nsi_pe").load_at(0x7fefebe0000);
-        self.maps.create_map("nsi_text").load_at(0x7fefebe1000);
-        self.maps.create_map("nsi_rdata").load_at(0x7fefebe3000);
-        self.maps.create_map("urlmon_pe").load_at(0x7fefed30000);
-        self.maps.create_map("urlmon_text").load_at(0x7fefed31000);
-        self.maps.create_map("urlmon_rdata").load_at(0x7fefee05000);
-        self.maps.create_map("advapi32_pe").load_at(0x7fefefa0000);
-        self.maps.create_map("advapi32_text").load_at(0x7fefefa1000);
-        self.maps
-            .create_map("advapi32_rdata")
-            .load_at(0x7feff00a000);
-        self.maps.create_map("oleaut32_pe").load_at(0x7feff180000);
-        self.maps.create_map("oleaut32_text").load_at(0x7feff181000);
-        self.maps
-            .create_map("oleaut32_rdata")
-            .load_at(0x7feff21d000);
-        self.maps.create_map("shlwapi_pe").load_at(0x7feff260000);
-        self.maps.create_map("shlwapi_text").load_at(0x7feff261000);
-        self.maps.create_map("shlwapi_rdata").load_at(0x7feff2a5000);
-
-        */
-
+        //self.maps.create_map("m10000", 0x10000, 0).expect("cannot create m10000 map");
+        //self.maps.create_map("m20000", 0x20000, 0).expect("cannot create m20000 map");
+        //self.maps.create_map("m520000", 0x520000, 0).expect("cannot create m520000 map");
+        //self.maps.create_map("m53b000", 0x53b000, 0).expect("cannot create m53b000 map");
+        //self.maps.create_map("code", self.cfg.code_base_addr, 0);
 
         std::env::set_current_dir(orig_path);
     
-
         peb64::init_peb(self);
 
         winapi64::kernel32::load_library(self, "ntdll.dll");
-
         let ntdll_base = self.maps.get_mem("ntdll.pe").get_base();
         peb64::update_peb_image_base(self, ntdll_base);
 
@@ -984,8 +626,12 @@ impl Emu {
 
     pub fn load_pe32(&mut self, filename: &str, set_entry: bool, force_base: u32) -> (u32, u32) {
         let is_maps = filename.contains("maps32/");
+        let map_name = self.filename_to_mapname(filename);
         let mut pe32 = PE32::load(filename);
         let base: u32;
+
+
+        // 1. base logic
 
         // base is forced by libscemu 
         if force_base > 0 {
@@ -1007,112 +653,119 @@ impl Emu {
 
             // user's program   
             if set_entry {
-                if self.maps.overlaps(pe32.opt.image_base as u64, pe32.size() as u64) {
-                    base = self.maps.alloc(pe32.size() as u64).expect("out of memory") as u32; 
+                if pe32.opt.image_base >= constants::LIBS32_MIN as u32 {
+                    base = self.maps.alloc(pe32.mem_size() as u64 + 0xff).expect("out of memory") as u32; 
                 } else {
                     base = pe32.opt.image_base;
                 }
 
             // system library
             } else {
-                if self.maps.overlaps(pe32.opt.image_base as u64, pe32.size() as u64) {
-                    base = self.maps.lib32_alloc(pe32.size() as u64).expect("out of memory") as u32; 
-                } else {
-                    base = pe32.opt.image_base;
-                }
+                base = self.maps.lib32_alloc(pe32.mem_size() as u64).expect("out of memory") as u32; 
             }
         }
-        let map_name = self.filename_to_mapname(filename);
+
 
         if set_entry {
-            let space_addr = peb32::create_ldr_entry(
-                self,
-                base as u64,
-                pe32.dos.e_lfanew,
-                &map_name,
-                0,
-                0x2c1950,
-            );
-            let peb = peb32::init_peb(self, space_addr, base);
-            self.maps.write_dword(peb + 8, base);
-
+            // 2. pe binding
             if !is_maps {
                 pe32.iat_binding(self);
                 pe32.delay_load_binding(self);
             }
+
+
+            // 3. entry point logic
+            if self.cfg.entry_point == 0x3c0000 {
+                self.regs.rip = base as u64 + pe32.opt.address_of_entry_point as u64;
+                println!("entry point at 0x{:x}", self.regs.rip);
+            } else {
+                self.regs.rip = self.cfg.entry_point;
+                println!(
+                    "entry point at 0x{:x} but forcing it at 0x{:x}",
+                    base as u64 + pe32.opt.address_of_entry_point as u64,
+                    self.regs.rip
+                );
+            }
+
         }
 
-        let pemap = self.maps.create_map(&format!("{}.pe", map_name));
-        pemap.set_base(base.into());
-        pemap.set_size(pe32.opt.size_of_headers.into());
+        // 4. map pe and then sections
+        let pemap = self.maps.create_map(&format!("{}.pe", map_name), base.into(), pe32.opt.size_of_headers.into()).expect("cannot create pe map");
         pemap.memcpy(pe32.get_headers(), pe32.opt.size_of_headers as usize);
 
         for i in 0..pe32.num_of_sections() {
             let ptr = pe32.get_section_ptr(i);
             let sect = pe32.get_section(i);
             let map;
+            let sz:u64;
 
-            if force_base == 0 && sect.get_name() == ".text" && !is_maps {
-                map = self.maps.get_map_by_name_mut("code").unwrap();
-            } else {
-                map = self.maps.create_map(&format!(
-                    "{}{}",
-                    map_name,
-                    sect.get_name()
-                        .replace(" ", "")
-                        .replace("\t", "")
-                        .replace("\x0a", "")
-                        .replace("\x0d", "")
-                ));
-            }
-
-            map.set_base(base as u64 + sect.virtual_address as u64);
             if sect.virtual_size > sect.size_of_raw_data {
-                map.set_size(sect.virtual_size as u64);
+                sz = sect.virtual_size as u64;
             } else {
-                map.set_size(sect.size_of_raw_data as u64);
+                sz = sect.size_of_raw_data as u64;
             }
-            if sect.get_name() == ".text" {
-                map.set_size(map.size() as u64);
-            }
-            map.memcpy(ptr, ptr.len());
 
-            if set_entry {
-                if sect.get_name() == ".text" || i == 0 {
-                    if self.cfg.entry_point != 0x3c0000 {
-                        self.regs.rip = self.cfg.entry_point;
-                        println!(
-                            "entry point at 0x{:x} but forcing it at 0x{:x} by -a flag",
-                            base as u64 + pe32.opt.address_of_entry_point as u64,
-                            self.regs.rip
-                        );
-                    } else {
-                        self.regs.rip = base as u64 + pe32.opt.address_of_entry_point as u64;
-                    }
-                    println!(
-                        "\tentry point at 0x{:x}  0x{:x} ",
-                        self.regs.rip, pe32.opt.address_of_entry_point
-                    );
-                } else if sect.get_name() == ".tls" {
-                    let tls_off = sect.pointer_to_raw_data;
-                    self.tls_callbacks = pe32.get_tls_callbacks(sect.virtual_address);
-                }
+            if sz == 0 {
+                println!("size of section {} is 0", sect.get_name());
+                continue;
+            }
+
+            let mut sect_name = sect.get_name()
+                .replace(" ", "")
+                .replace("\t", "")
+                .replace("\x0a", "")
+                .replace("\x0d", "");
+
+            if sect_name == "" {
+                sect_name = format!("{:x}", sect.virtual_address);
+            }
+
+            map = match self.maps.create_map(&format!(
+                "{}{}",
+                map_name,
+                sect_name
+            ), base as u64 + sect.virtual_address as u64, sz) {
+                Ok(m) => m,
+                Err(e) => {
+                    println!("weird pe, skipping section {} {} because overlaps", map_name, sect.get_name());
+                    continue;
+                },
+            };
+
+            if ptr.len() > sz as usize {
+                panic!("overflow {} {} {} {}", map_name, sect.get_name(), ptr.len(), sz);
+            }
+            if ptr.len() > 0 {
+                map.memcpy(ptr, ptr.len());
             }
         }
 
+        // 5. ldr table entry creation and link
+        if set_entry {
+            let space_addr = peb32::create_ldr_entry(
+                self,
+                base,
+                self.regs.rip as u32,
+                &map_name,
+                0,
+                0x2c1950,
+            );
+            peb32::update_ldr_entry_base("loader.exe", base as u64, self);
+        }
+
+        // 6. return values
         let pe_hdr_off = pe32.dos.e_lfanew;
         self.pe32 = Some(pe32);
         return (base, pe_hdr_off);
     }
 
-    pub fn peb64_link(&mut self, libname: &str, base: u64) {
-        peb64::dynamic_link_module(base, 0x3c, libname, self);
-    }
-
     pub fn load_pe64(&mut self, filename: &str, set_entry: bool, force_base: u64) -> (u64, u32) {
         let is_maps = filename.contains("maps64/");
+        let map_name = self.filename_to_mapname(filename);
         let mut pe64 = PE64::load(filename);
         let base: u64;
+
+        // 1. base logic
 
         // base is setted by libscemu
         if force_base > 0 {
@@ -1134,104 +787,106 @@ impl Emu {
 
             // user's program
             if set_entry {
-                if self.maps.overlaps(pe64.opt.image_base, pe64.size()) {
-                    base = self.maps.alloc(pe64.size()).expect("out of memory");
+                if pe64.opt.image_base >= constants::LIBS64_MIN as u64 {
+                    base = self.maps.alloc(pe64.size()+0xff).expect("out of memory");
                 } else {
                     base = pe64.opt.image_base;
                 }
 
             // system library
             } else {
-                if self.maps.overlaps(pe64.opt.image_base, pe64.size()) {
-                    base = self.maps.lib64_alloc(pe64.size()).expect("out of memory");
-                } else {
-                    if pe64.opt.image_base < constants::LIB64_BARRIER {
-                        base = self.maps.lib64_alloc(pe64.size()).expect("out of memory");
-                    } else {
-                        base = pe64.opt.image_base;
-                    }
-                }
+                base = self.maps.lib64_alloc(pe64.size()).expect("out of memory");
             }
         }
 
-        let map_name = self.filename_to_mapname(filename);
 
         if set_entry {
-            let space_addr = peb64::create_ldr_entry(
-                self,
-                base,
-                base, // entry point
-                &map_name,
-                0,
-                0x2c1950,
-            );
-
-            peb64::update_ldr_entry_base("loader.exe", base, self);
-
-
+            // 2. pe binding
             if !is_maps {
                 pe64.iat_binding(self);
                 pe64.delay_load_binding(self);
             }
+
+            // 3. entry point logic
+            if self.cfg.entry_point == 0x3c0000 {
+                self.regs.rip = base + pe64.opt.address_of_entry_point as u64;
+                println!("entry point at 0x{:x}", self.regs.rip);
+            } else {
+                self.regs.rip = self.cfg.entry_point;
+                println!(
+                    "entry point at 0x{:x} but forcing it at 0x{:x} by -a flag",
+                    base + pe64.opt.address_of_entry_point as u64,
+                    self.regs.rip
+                );
+            }
         }
 
-
-        let pemap = self.maps.create_map(&format!("{}.pe", map_name));
-        pemap.set_base(base.into());
-        pemap.set_size(pe64.opt.size_of_headers.into());
+        // 4. map pe and then sections
+        let pemap = self.maps.create_map(&format!("{}.pe", map_name), base, pe64.opt.size_of_headers.into()).expect("cannot create pe64 map");
         pemap.memcpy(pe64.get_headers(), pe64.opt.size_of_headers as usize);
 
         for i in 0..pe64.num_of_sections() {
             let ptr = pe64.get_section_ptr(i);
             let sect = pe64.get_section(i);
             let map;
+            let sz:u64;
 
-            if force_base == 0 && sect.get_name() == ".text" && !is_maps {
-                map = self.maps.get_map_by_name_mut("code").unwrap();
-            } else {
-                map = self.maps.create_map(&format!(
-                    "{}{}",
-                    map_name,
-                    sect.get_name()
-                        .replace(" ", "")
-                        .replace("\t", "")
-                        .replace("\x0a", "")
-                        .replace("\x0d", "")
-                ));
-            }
-
-            map.set_base(base + sect.virtual_address as u64);
             if sect.virtual_size > sect.size_of_raw_data {
-                map.set_size(sect.virtual_size as u64);
+                sz = sect.virtual_size as u64;
             } else {
-                map.set_size(sect.size_of_raw_data as u64);
+                sz = sect.size_of_raw_data as u64;
             }
-            let qw = map.read_qword(map.get_base());
-            map.memcpy(ptr, ptr.len());
 
-            if set_entry {
-                if sect.get_name() == ".text" || i == 0 {
-                    if self.cfg.entry_point != 0x3c0000 {
-                        self.regs.rip = self.cfg.entry_point;
-                        println!(
-                            "entry point at 0x{:x} but forcing it at 0x{:x} by -a flag",
-                            base + pe64.opt.address_of_entry_point as u64,
-                            self.regs.rip
-                        );
-                    } else {
-                        self.regs.rip = base + pe64.opt.address_of_entry_point as u64;
-                    }
-                    println!(
-                        "\tentry point at 0x{:x}  0x{:x} ",
-                        self.regs.rip, pe64.opt.address_of_entry_point
-                    );
-                } else if sect.get_name() == ".tls" {
-                    let tls_off = sect.pointer_to_raw_data;
-                    self.tls_callbacks = pe64.get_tls_callbacks(sect.virtual_address);
-                }
+            if sz == 0 {
+                println!("size of section {} is 0", sect.get_name());
+                continue;
+            }
+
+            let mut sect_name = sect.get_name()
+                .replace(" ", "")
+                .replace("\t", "")
+                .replace("\x0a", "")
+                .replace("\x0d", "");
+
+            if sect_name == "" {
+                sect_name = format!("{:x}", sect.virtual_address);
+            }
+
+            map = match self.maps.create_map(&format!(
+                "{}{}",
+                map_name,
+                sect_name
+            ), base as u64 + sect.virtual_address as u64, sz) {
+                Ok(m) => m,
+                Err(e) => {
+                    println!("weird pe, skipping section because overlaps {} {}", map_name, sect.get_name());
+                    continue;
+                },
+            };
+
+            if ptr.len() > sz as usize {
+                panic!("overflow {} {} {} {}", map_name, sect.get_name(), ptr.len(), sz);
+            }
+
+            if ptr.len() > 0 {
+                map.memcpy(ptr, ptr.len());
             }
         }
 
+        // 5. ldr table entry creation and link
+        if set_entry {
+            let space_addr = peb64::create_ldr_entry(
+                self,
+                base,
+                self.regs.rip,
+                &map_name,
+                0,
+                0x2c1950,
+            );
+            peb64::update_ldr_entry_base("loader.exe", base, self);
+        }
+
+        // 6. return values
         let pe_hdr_off = pe64.dos.e_lfanew;
         self.pe64 = Some(pe64);
         return (base, pe_hdr_off);
@@ -1351,19 +1006,20 @@ impl Emu {
             println!("shellcode detected.");
 
             if self.cfg.is_64bits {
-                let (base, pe_off) = self.load_pe64("maps64/loader.exe", false, 0);
+                let (base, pe_off) = self.load_pe64(&format!("{}/{}", self.cfg.maps_folder, "loader.exe"), false, 0);
                 peb64::update_ldr_entry_base("loader.exe", base, self);
 
             } else {
-                peb32::init_peb(self, 0x2c18c0, 0);
+                let (base, pe_off) = self.load_pe32(&format!("{}/{}", self.cfg.maps_folder, "loader.exe"), false, 0);
+                peb32::update_ldr_entry_base("loader.exe", base as u64, self);
             }
 
-            if !self.maps.get_mem("code").load(filename) {
+            if !self.maps.create_map("code", self.cfg.code_base_addr, 0).expect("cannot create code map").load(filename) {
                 println!("shellcode not found, select the file with -f");
                 std::process::exit(1);
             }
             let code = self.maps.get_mem("code");
-            code.extend(0xffff);
+            code.extend(0xffff); // this could overlap an existing map
         }
 
         if self.cfg.entry_point != 0x3c0000 {
@@ -1404,9 +1060,7 @@ impl Emu {
                 return 0;
             }
         };
-        let map = self.maps.create_map(name);
-        map.set_base(addr);
-        map.set_size(size);
+        self.maps.create_map(name, addr, size).expect("cannot create map from alloc api");
         addr
     }
 
@@ -1549,12 +1203,14 @@ impl Emu {
             }
         };
 
+        /*  walking mems in very pop is slow, and now we are not using "code" map
         if self.cfg.verbose >= 1
             && pop_instruction
             && self.maps.get_mem("code").inside(value.into())
         {
             println!("/!\\ poping a code address 0x{:x}", value);
         }
+        */
 
         if self.cfg.trace_mem {
             let name = match self.maps.get_addr_name(self.regs.get_esp()) {
@@ -1866,7 +1522,7 @@ impl Emu {
 
         if name == "code" {
             if self.cfg.verbose >= 1 {
-                println!("/!\\ polymorfic code");
+                println!("/!\\ polymorfic code, write at 0x{:x}", addr);
             }
             self.force_break = true;
         }
@@ -1952,10 +1608,9 @@ impl Emu {
         };
 
         let map_name = self.filename_to_mapname(&self.cfg.filename);
-        if addr < constants::LIBS_BARRIER64 || name == "code" || name.starts_with(&map_name) || name == "loader.text" {
-            //println!("ha pasado el if {} < {} {} starts_with:{} {}", addr, constants::LIBS_BARRIER64, name, map_name, self.cfg.filename);
+        if addr < constants::LIBS64_MIN || name == "code" || 
+        (map_name != "" && name.starts_with(&map_name)) || name == "loader.text" {
             self.regs.rip = addr;
-            //self.force_break = true;
         } else {
             if self.linux {
                 self.regs.rip = addr; // in linux libs are no implemented are emulated
@@ -2037,26 +1692,8 @@ impl Emu {
         };
 
         let map_name = self.filename_to_mapname(&self.filename);
-        if name == "code" || addr < constants::LIBS_BARRIER || 
-            (map_name != "" && name.starts_with(&map_name)) {
-
-            /*
-            if  addr >= constants::LIBS_BARRIER {
-                println!("/!\\ alert, jumping the barrier 0x{:x} name:{} map_name:{} filename:{}",
-                         addr, name, map_name, &self.filename);
-                if name == "code" {
-                    println!("warning the name is code");
-                }
-                if name.starts_with(&map_name) {
-                    println!("alert {} start with {}", name, map_name);
-                }
-                self.spawn_console();
-            }*/
-            /*
-            println!(
-                "entra map:`{}` map_name:`{}` filename:`{}` !!!",
-                name, map_name, &self.filename
-            );*/
+        if name == "code" || addr < constants::LIBS32_MIN || 
+            (map_name != "" && name.starts_with(&map_name)) || name == "loader.text" {
             self.regs.set_eip(addr);
         } else {
             if self.cfg.verbose >= 1 {
@@ -2079,9 +1716,9 @@ impl Emu {
             if handle_winapi {
                 winapi32::gateway(to32!(addr), name, self);
             }
-
             self.force_break = true;
         }
+
         return true;
     }
 
@@ -2933,9 +2570,7 @@ impl Emu {
                             continue;
                         }
                     };
-                    let map = self.maps.create_map(&name);
-                    map.set_base(addr);
-                    map.set_size(sz);
+                    self.maps.create_map(&name, addr, sz).expect("cannot create map from console mc");
                     println!("allocated {} at 0x{:x} sz: {}", name, addr, sz);
                 }
                 "mca" => {
@@ -2959,9 +2594,7 @@ impl Emu {
                         }
                     };
 
-                    let map = self.maps.create_map(&name);
-                    map.set_base(addr);
-                    map.set_size(sz);
+                    self.maps.create_map(&name, addr, sz).expect("cannot create map from console mca");
                     println!("allocated {} at 0x{:x} sz: {}", name, addr, sz);
                 }
                 "ml" => {
@@ -3395,6 +3028,26 @@ impl Emu {
                             let s = structures::ListEntry::load(addr, &self.maps);
                             s.print();
                         }
+                        "peb64" => {
+                            let s = structures::PEB64::load(addr, &self.maps);
+                            s.print();
+                        }
+                        "teb64" => {
+                            let s = structures::TEB64::load(addr, &self.maps);
+                            s.print();
+                        }
+                        "peb_ldr_data64" => {
+                            let s = structures::PebLdrData64::load(addr, &self.maps);
+                            s.print();
+                        }
+                        "ldr_data_table_entry64" => {
+                            let s = structures::LdrDataTableEntry64::load(addr, &self.maps);
+                            s.print();
+                        }
+                        "list_entry64" => {
+                            let s = structures::ListEntry64::load(addr, &self.maps);
+                            s.print();
+                        }
                         "cppeh_record" => {
                             let s = structures::CppEhRecord::load(addr, &self.maps);
                             s.print();
@@ -3409,18 +3062,6 @@ impl Emu {
                         }
                         "memory_basic_information" => {
                             let s = structures::MemoryBasicInformation::load(addr, &self.maps);
-                            s.print();
-                        }
-                        "peb64" => {
-                            let s = structures::PEB64::load(addr, &self.maps);
-                            s.print();
-                        }
-                        "teb64" => {
-                            let s = structures::TEB64::load(addr, &self.maps);
-                            s.print();
-                        }
-                        "ldr_data_table_entry64" => {
-                            let s = structures::LdrDataTableEntry64::load(addr, &self.maps);
                             s.print();
                         }
                         "image_export_directory" => {
@@ -3917,9 +3558,7 @@ impl Emu {
                         64 => {
                             if !self.maps.write_qword(mem_addr, value2) {
                                 if self.cfg.skip_unimplemented {
-                                    let map = self.maps.create_map("banzai");
-                                    map.set_base(mem_addr);
-                                    map.set_size(8);
+                                    let map = self.maps.create_map("banzai", mem_addr, 8).expect("cannot create banzai map");
                                     map.write_qword(mem_addr, value2);
                                     return true;
                                 } else {
@@ -3935,9 +3574,7 @@ impl Emu {
                         32 => {
                             if !self.maps.write_dword(mem_addr, to32!(value2)) {
                                 if self.cfg.skip_unimplemented {
-                                    let map = self.maps.create_map("banzai");
-                                    map.set_base(mem_addr);
-                                    map.set_size(4);
+                                    let map = self.maps.create_map("banzai", mem_addr, 4).expect("cannot create banzai map");
                                     map.write_dword(mem_addr, to32!(value2));
                                     return true;
                                 } else {
@@ -3953,9 +3590,7 @@ impl Emu {
                         16 => {
                             if !self.maps.write_word(mem_addr, value2 as u16) {
                                 if self.cfg.skip_unimplemented {
-                                    let map = self.maps.create_map("banzai");
-                                    map.set_base(mem_addr);
-                                    map.set_size(2);
+                                    let map = self.maps.create_map("banzai", mem_addr, 2).expect("cannot create banzai map");
                                     map.write_word(mem_addr, value2 as u16);
                                     return true;
                                 } else {
@@ -3971,9 +3606,7 @@ impl Emu {
                         8 => {
                             if !self.maps.write_byte(mem_addr, value2 as u8) {
                                 if self.cfg.skip_unimplemented {
-                                    let map = self.maps.create_map("banzai");
-                                    map.set_base(mem_addr);
-                                    map.set_size(1);
+                                    let map = self.maps.create_map("banzai", mem_addr, 1).expect("cannot create banzai map");
                                     map.write_byte(mem_addr, value2 as u8);
                                     return true;
                                 } else {
@@ -3997,6 +3630,7 @@ impl Emu {
                         println!("\tmem_trace: pos = {} rip = {:x} op = write bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, sz, mem_addr, value2, name);
                     }
 
+                    /* 
                     let name = match self.maps.get_addr_name(mem_addr) {
                         Some(n) => n,
                         None => "not mapped".to_string(),
@@ -4004,10 +3638,10 @@ impl Emu {
 
                     if name == "code" {
                         if self.cfg.verbose >= 1 {
-                            println!("/!\\ polymorfic code");
+                            println!("/!\\ polymorfic code, addr 0x{:x}", mem_addr);
                         }
                         self.force_break = true;
-                    }
+                    }*/
 
                     if mem_addr == self.bp.get_mem_write() {
                         println!("Memory breakpoint on write 0x{:x}", mem_addr);
@@ -13969,6 +13603,20 @@ impl Emu {
                 let result = low_qword | ((high_qword as u128) << 64);
 
                 self.set_operand_xmm_value_128(&ins, 0, result);
+            }
+
+            Mnemonic::Stmxcsr => {
+                self.show_instruction(&self.colors.red, &ins);
+
+                let value = self.fpu.mxcsr;
+                self.set_operand_value(&ins, 0, value as u64);
+            }
+
+            Mnemonic::Ldmxcsr => {
+                self.show_instruction(&self.colors.red, &ins);
+
+                let value = self.get_operand_value(&ins, 0, true).unwrap_or(0);
+                self.fpu.mxcsr = value as u32;
             }
 
             Mnemonic::Prefetchw => {

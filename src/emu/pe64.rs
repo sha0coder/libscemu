@@ -347,6 +347,19 @@ impl PE64 {
         return self.raw.len() as u64;
     }
 
+    pub fn mem_size(&self) -> usize {
+        let mut sz = 0;
+        for i in 0..self.sect_hdr.len() {
+            let sect = &self.sect_hdr[i];
+            if sect.virtual_size > sect.size_of_raw_data {
+                sz += sect.virtual_size as usize;
+            } else {
+                sz += sect.size_of_raw_data as usize;
+            }
+        }
+        return sz;
+    }
+
     pub fn is_dll(&self) -> bool {
         self.fh.characteristics & IMAGE_FILE_DLL != 0
     }
@@ -402,8 +415,10 @@ impl PE64 {
                 off + sz
             );
             //sz = self.raw.len() - off - 1;
+            if off > self.raw.len() {
+                return &[];
+            }
             return &self.raw[off..];
-            //return &[];
         }
         let section_ptr = &self.raw[off..off + sz];
         return section_ptr;
@@ -539,13 +554,12 @@ impl PE64 {
                 if off2 == 0 {
                     //|| addr < 0x100 {
                     off_name += pe32::HintNameItem::size();
-                    //off_addr += 8;
+                    off_addr += 8;
                     continue;
                 }
                 let func_name = PE32::read_string(&self.raw, off2 + 2);
-                //println!("IAT: 0x{:x} {}!{}", addr, iim.name, func_name);
-
                 let real_addr = emu::winapi64::kernel32::resolve_api_name(emu, &func_name);
+                println!("IAT: 0x{:x} {}!{} 0x{:x}", iim.first_thunk, iim.name, func_name, self.opt.image_base + iim.first_thunk as u64);
                 if real_addr == 0 {
                     break;
                 }
@@ -554,7 +568,10 @@ impl PE64 {
                     println!("binded 0x{:x} {}", real_addr, func_name);
                 }*/
 
-                //println!("patching 0x{:x} at 0x{:x}", real_addr, off_addr);
+                if real_addr == 0x7ff000210180 {
+                    let fake_addr = read_u64_le!(self.raw, off_addr);
+                    println!("name: {} fake addr: 0x{:x}", func_name, fake_addr);
+                }
                 write_u64_le!(self.raw, off_addr, real_addr);
 
                 off_name += pe32::HintNameItem::size();

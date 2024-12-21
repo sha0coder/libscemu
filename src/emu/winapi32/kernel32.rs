@@ -10,167 +10,180 @@ use lazy_static::lazy_static;
 use std::sync::Mutex;
 
 pub fn gateway(addr: u32, emu: &mut emu::Emu) -> String {
-    match addr {
-        0x75e9395c => LoadLibraryA(emu),
-        0x75e847fa => LoadLibraryExA(emu),
-        0x75e93951 => LoadLibraryExA(emu), // from jump table
-        0x75e84775 => LoadLibraryExW(emu),
-        0x75e933d3 => GetProcAddress(emu),
-        0x75e93c01 => LoadLibraryW(emu),
-        0x75ece5fd => WinExec(emu),
-        0x75e8154e => GetVersion(emu),
-        0x75e42082 => CreateProcessA(emu),
-        0x75e8ba90 => WaitForSingleObject(emu),
-        0x75e92fb6 => VirtualAlloc(emu),
-        0x75e7c1b6 => VirtualAllocEx(emu),
-        0x75e7c1de => WriteProcessMemory(emu),
-        0x75ecf33b => CreateRemoteThread(emu),
-        0x75ecd44f => CreateNamedPipeA(emu),
-        0x75e72727 => ConnectNamedPipe(emu),
-        0x75e9f438 => DisconnectNamedPipe(emu),
-        0x75e896fb => ReadFile(emu),
-        0x75e91400 => WriteFile(emu),
-        0x75e8cc56 => CreateFileW(emu),
-        0x75e8ca7c => CloseHandle(emu),
-        0x75e9214f => ExitProcess(emu),
-        0x75e82331 => TerminateProcess(emu),
-        0x75ea0cc1 => GetThreadContext(emu),
-        0x75e7c1ce => ReadProcessMemory(emu),
-        0x75e9c13a => GetCurrentDirectoryW(emu),
-        0x75e7733c => GetCurrentDirectoryA(emu),
-        0x75e82341 => VirtualProtect(emu),
-        0x75ecf5d9 => VirtualProtectEx(emu),
-        0x75e80f1c => ResumeThread(emu),
-        0x75e93735 => GetFullPathNameA(emu),
-        0x75e94543 => GetFullPathNameW(emu),
-        0x75e7b149 => SystemTimeToTzSpecificLocalTime(emu),
-        0x75e85986 => GetLogicalDrives(emu),
-        0x75e78a5b => ExpandEnvironmentStringsA(emu),
-        0x75e84680 => ExpandEnvironmentStringsW(emu),
-        0x75e91de6 => GetFileAttributesA(emu),
-        0x75e964ff => GetFileAttributesW(emu),
-        0x75e91dfe => FileTimeToSystemTime(emu),
-        0x75e92289 => FindFirstFileA(emu),
-        0x75e8a187 => FindNextFileA(emu),
-        0x75e953b2 => FindFirstFileW(emu),
-        0x75e8963a => FindNextFileW(emu),
-        0x75ea532c => CopyFileA(emu),
-        0x75e767c3 => CopyFileW(emu),
-        0x75e90e62 => FindClose(emu),
-        0x75eca559 => MoveFileA(emu),
-        0x75ea548a => MoveFileW(emu),
-        0x75e859d7 => OpenProcess(emu),
-        0x75e8cac4 => GetCurrentProcessId(emu),
-        0x75ea7e4c => Thread32First(emu),
-        0x75ea7edc => Thread32Next(emu),
-        0x75e96733 => OpenThread(emu),
-        0x75e7f731 => CreateToolhelp32Snapshot(emu),
-        0x75e9375d => CreateThread(emu),
-        0x75ed0193 => SetThreadContext(emu),
-        0x75e8899b => MapViewOfFile(emu),
-        0x75e92fde => GetSystemTimeAsFileTime(emu),
-        0x75e8bb80 => GetCurrentThreadId(emu),
-        0x75e8ba60 => GetTickCount(emu),
-        0x75e8bb9f => QueryPerformanceCounter(emu),
-        0x75e93ea2 => HeapCreate(emu),
-        0x75e82301 => HeapDestroy(emu),
-        0x75e8cf41 => GetModuleHandleA(emu),
-        0x75e9374d => GetModuleHandleW(emu),
-        0x75e935a1 => TlsAlloc(emu),
-        0x75e8da88 => TlsSetValue(emu),
-        0x75e8da70 => TlsGetValue(emu),
-        0x75e913b8 => TlsFree(emu),
-        0x75eff02b => EncodePointer(emu),
-        0x75efef55 => DecodePointer(emu),
-        0x75e8ba46 => Sleep(emu),
-        0x75e93939 => InitializeCriticalSectionAndSpinCount(emu),
-        0x75eff164 => HeapAlloc(emu),
-        0x75e82351 => GetProcessAffinityMask(emu),
-        0x75e83ea8 => IsDebuggerPresent(emu),
-        0x75e93d01 => SetUnhandledExceptionFilter(emu),
-        0x75e9ed38 => UnhandledExceptionFilter(emu),
-        0x75e8cdcf => GetCurrentProcess(emu),
-        0x75e93363 => LocalAlloc(emu),
-        0x75ecf5c9 => VirtualAllocExNuma(emu),
-        0x75ea6447 => GetUserDefaultLangID(emu),
-        0x75e91280 => GetProcessHeap(emu),
-        0x75e76ba9 => GetComputerNameA(emu),
-        0x75e93589 => CreateMutexA(emu),
-        0x75e8bf00 => GetLastError(emu),
-        0x75e897e9 => CreateFileMappingA(emu),
-        0x75e80a7f => CreateFileMappingW(emu),
-        0x75e8ced8 => GetSystemTime(emu),
-        0x75e8a19f => lstrcat(emu),
-        0x75e94a51 => SetErrorMode(emu),
-        0x75e83b1a => GetVersionExW(emu),
-        0x75e88fc5 => GetSystemDirectoryA(emu),
-        0x75e940fb => GetSystemDirectoryW(emu),
-        0x75e41e10 => GetStartupInfoA(emu),
-        0x75e93891 => GetStartupInfoW(emu),
-        0x75e91e16 => FlsGetValue(emu),
-        0x75e976b5 => IsProcessorFeaturePresent(emu),
-        0x75eff1e4 => InitializeCriticalSection(emu),
-        0x75e93879 => InitializeCriticalSectionEx(emu),
-        0x75e9418d => FlsAlloc(emu),
-        0x75e976e6 => FlsSetValue(emu),
-        0x75e8bb08 => SetLastError(emu),
-        0x75e8a611 => lstrlen(emu),
-        0x75e9452b => MultiByteToWideChar(emu),
-        0x75e93728 => GetSystemInfo(emu),
-        0x75e8bbd0 => HeapFree(emu),
-        0x75ea88e6 => SetThreadLocale(emu),
-        0x75e998ff => GetCommandLineA(emu),
-        0x75e9679e => GetCommandLineW(emu),
-        0x75e939aa => GetAcp(emu),
-        0x75e93c26 => GetModuleFileNameW(emu),
-        0x75e8c189 => RegOpenKeyExW(emu),
-        0x75e822ef => GetUserDefaultUILanguage(emu),
-        0x75eff05f => EnterCriticalSection(emu),
-        0x75eff346 => LeaveCriticalSection(emu),
-        0x75e83de4 => IsValidLocale(emu),
-        0x75e7ae42 => GetThreadUILanguage(emu),
-        0x75e822d7 => GetThreadPreferredUILanguages(emu),
-        0x75e78c59 => lstrcmp(emu),
-        0x75e7be77 => GetNativeSystemInfo(emu),
-        0x75e78b33 => GetTempPathW(emu),
-        0x75e92004 => FileTimeToLocalFileTime(emu),
-        0x75e82ce1 => FileTimeToDosDateTime(emu),
-        0x75e82aee => CreateMutexW(emu),
-        0x75e976d6 => VirtualQuery(emu),
-        0x75e91da4 => VirtualFree(emu),
-        0x75e7eb60 => RaiseException(emu),
-        0x75e80e91 => VerifyVersionInfoW(emu),
-        0x75e78a3b => GetTimeZoneInformation(emu),
-        0x75e74e42 => VirtualQueryEx(emu),
-        0x75e8bbc0 => InterlockedIncrement(emu),
-        0x75e91dbc => GetEnvironmentStringsW(emu),
-        0x75e92f99 => GetEnvironmentStrings(emu),
-        0x75e91dc3 => FreeEnvironmentStringsW(emu),
-        0x75e91e46 => GetStdHandle(emu),
-        0x75e975a5 => GetFileType(emu),
-        0x75e99911 => SetHandleCount(emu),
-        0x75e9c1c0 => IsValidCodePage(emu),
-        0x75e91e2e => GetCPInfo(emu),
-        0x75e967c8 => GetStringTypeW(emu),
-        0x75e913d0 => LCMapStringW(emu),
-        0x75e9450e => WideCharToMultiByte(emu),
-        0x776fdf4e => CryptCreateHash(emu),
-        0x75e94157 => HeapSetInformation(emu),
-        0x75eff395 => OpenProcessToken(emu),
-        0x75e80ef7 => CreateEventA(emu),
-        0x75efee2a => AddVectoredExceptionHandler(emu),
-        0x75e91181 => GetLongPathNameW(emu),
-        0x75e8d9d0 => FreeLibrary(emu),
-        0x75ecf311 => AreFileApisANSI(emu),
-        0x75e933f6 => GetModuleFileNameA(emu),
-
+    let api = guess_api_name(emu, addr);
+    match api.as_str() {
+        "LoadLibraryA" => LoadLibraryA(emu),
+        "LoadLibraryExA" => LoadLibraryExA(emu),
+        "LoadLibraryExW" => LoadLibraryExW(emu),
+        "GetProcAddress" => GetProcAddress(emu),
+        "LoadLibraryW" => LoadLibraryW(emu),
+        "WinExec" => WinExec(emu),
+        "GetVersion" => GetVersion(emu),
+        "CreateProcessA" => CreateProcessA(emu),
+        "WaitForSingleObject" => WaitForSingleObject(emu),
+        "VirtualAlloc" => VirtualAlloc(emu),
+        "VirtualAllocEx" => VirtualAllocEx(emu),
+        "WriteProcessMemory" => WriteProcessMemory(emu),
+        "CreateRemoteThread" => CreateRemoteThread(emu),
+        "CreateNamedPipeA" => CreateNamedPipeA(emu),
+        "ConnectNamedPipe" => ConnectNamedPipe(emu),
+        "DisconnectNamedPipe" => DisconnectNamedPipe(emu),
+        "ReadFile" => ReadFile(emu),
+        "WriteFile" => WriteFile(emu),
+        "CreateFileW" => CreateFileW(emu),
+        "CloseHandle" => CloseHandle(emu),
+        "ExitProcess" => ExitProcess(emu),
+        "TerminateProcess" => TerminateProcess(emu),
+        "GetThreadContext" => GetThreadContext(emu),
+        "ReadProcessMemory" => ReadProcessMemory(emu),
+        "GetCurrentDirectoryW" => GetCurrentDirectoryW(emu),
+        "GetCurrentDirectoryA" => GetCurrentDirectoryA(emu),
+        "VirtualProtect" => VirtualProtect(emu),
+        "VirtualProtectEx" => VirtualProtectEx(emu),
+        "ResumeThread" => ResumeThread(emu),
+        "GetFullPathNameA" => GetFullPathNameA(emu),
+        "GetFullPathNameW" => GetFullPathNameW(emu),
+        "SystemTimeToTzSpecificLocalTime" => SystemTimeToTzSpecificLocalTime(emu),
+        "GetLogicalDrives" => GetLogicalDrives(emu),
+        "ExpandEnvironmentStringsA" => ExpandEnvironmentStringsA(emu),
+        "ExpandEnvironmentStringsW" => ExpandEnvironmentStringsW(emu),
+        "GetFileAttributesA" => GetFileAttributesA(emu),
+        "GetFileAttributesW" => GetFileAttributesW(emu),
+        "FileTimeToSystemTime" => FileTimeToSystemTime(emu),
+        "FindFirstFileA" => FindFirstFileA(emu),
+        "FindNextFileA" => FindNextFileA(emu),
+        "FindFirstFileW" => FindFirstFileW(emu),
+        "FindNextFileW" => FindNextFileW(emu),
+        "CopyFileA" => CopyFileA(emu),
+        "CopyFileW" => CopyFileW(emu),
+        "FindClose" => FindClose(emu),
+        "MoveFileA" => MoveFileA(emu),
+        "MoveFileW" => MoveFileW(emu),
+        "OpenProcess" => OpenProcess(emu),
+        "GetCurrentProcessId" => GetCurrentProcessId(emu),
+        "Thread32First" => Thread32First(emu),
+        "Thread32Next" => Thread32Next(emu),
+        "OpenThread" => OpenThread(emu),
+        "CreateToolhelp32Snapshot" => CreateToolhelp32Snapshot(emu),
+        "CreateThread" => CreateThread(emu),
+        "SetThreadContext" => SetThreadContext(emu),
+        "MapViewOfFile" => MapViewOfFile(emu),
+        "GetSystemTimeAsFileTime" => GetSystemTimeAsFileTime(emu),
+        "GetCurrentThreadId" => GetCurrentThreadId(emu),
+        "GetTickCount" => GetTickCount(emu),
+        "QueryPerformanceCounter" => QueryPerformanceCounter(emu),
+        "HeapCreate" => HeapCreate(emu),
+        "HeapDestroy" => HeapDestroy(emu),
+        "GetModuleHandleA" => GetModuleHandleA(emu),
+        "GetModuleHandleW" => GetModuleHandleW(emu),
+        "TlsAlloc" => TlsAlloc(emu),
+        "TlsSetValue" => TlsSetValue(emu),
+        "TlsGetValue" => TlsGetValue(emu),
+        "TlsFree" => TlsFree(emu),
+        "EncodePointer" => EncodePointer(emu),
+        "DecodePointer" => DecodePointer(emu),
+        "Sleep" => Sleep(emu),
+        "InitializeCriticalSectionAndSpinCount" => InitializeCriticalSectionAndSpinCount(emu),
+        "HeapAlloc" => HeapAlloc(emu),
+        "GetProcessAffinityMask" => GetProcessAffinityMask(emu),
+        "IsDebuggerPresent" => IsDebuggerPresent(emu),
+        "SetUnhandledExceptionFilter" => SetUnhandledExceptionFilter(emu),
+        "UnhandledExceptionFilter" => UnhandledExceptionFilter(emu),
+        "GetCurrentProcess" => GetCurrentProcess(emu),
+        "LocalAlloc" => LocalAlloc(emu),
+        "VirtualAllocExNuma" => VirtualAllocExNuma(emu),
+        "GetUserDefaultLangID" => GetUserDefaultLangID(emu),
+        "GetProcessHeap" => GetProcessHeap(emu),
+        "GetComputerNameA" => GetComputerNameA(emu),
+        "CreateMutexA" => CreateMutexA(emu),
+        "GetLastError" => GetLastError(emu),
+        "CreateFileMappingA" => CreateFileMappingA(emu),
+        "CreateFileMappingW" => CreateFileMappingW(emu),
+        "GetSystemTime" => GetSystemTime(emu),
+        "lstrcat" => lstrcat(emu),
+        "SetErrorMode" => SetErrorMode(emu),
+        "GetVersionExW" => GetVersionExW(emu),
+        "GetSystemDirectoryA" => GetSystemDirectoryA(emu),
+        "GetSystemDirectoryW" => GetSystemDirectoryW(emu),
+        "GetStartupInfoA" => GetStartupInfoA(emu),
+        "GetStartupInfoW" => GetStartupInfoW(emu),
+        "FlsGetValue" => FlsGetValue(emu),
+        "IsProcessorFeaturePresent" => IsProcessorFeaturePresent(emu),
+        "InitializeCriticalSection" => InitializeCriticalSection(emu),
+        "InitializeCriticalSectionEx" => InitializeCriticalSectionEx(emu),
+        "FlsAlloc" => FlsAlloc(emu),
+        "FlsSetValue" => FlsSetValue(emu),
+        "SetLastError" => SetLastError(emu),
+        "lstrlen" => lstrlen(emu),
+        "MultiByteToWideChar" => MultiByteToWideChar(emu),
+        "GetSystemInfo" => GetSystemInfo(emu),
+        "HeapFree" => HeapFree(emu),
+        "SetThreadLocale" => SetThreadLocale(emu),
+        "GetCommandLineA" => GetCommandLineA(emu),
+        "GetCommandLineW" => GetCommandLineW(emu),
+        "GetAcp" => GetAcp(emu),
+        "GetModuleFileNameW" => GetModuleFileNameW(emu),
+        "RegOpenKeyExW" => RegOpenKeyExW(emu),
+        "GetUserDefaultUILanguage" => GetUserDefaultUILanguage(emu),
+        "EnterCriticalSection" => EnterCriticalSection(emu),
+        "LeaveCriticalSection" => LeaveCriticalSection(emu),
+        "IsValidLocale" => IsValidLocale(emu),
+        "GetThreadUILanguage" => GetThreadUILanguage(emu),
+        "GetThreadPreferredUILanguages" => GetThreadPreferredUILanguages(emu),
+        "lstrcmp" => lstrcmpA(emu),
+        "lstrcmpA" => lstrcmpA(emu),
+        "lstrcmpW" => lstrcmpW(emu),
+        "GetNativeSystemInfo" => GetNativeSystemInfo(emu),
+        "GetTempPathW" => GetTempPathW(emu),
+        "FileTimeToLocalFileTime" => FileTimeToLocalFileTime(emu),
+        "FileTimeToDosDateTime" => FileTimeToDosDateTime(emu),
+        "CreateMutexW" => CreateMutexW(emu),
+        "VirtualQuery" => VirtualQuery(emu),
+        "VirtualFree" => VirtualFree(emu),
+        "RaiseException" => RaiseException(emu),
+        "VerifyVersionInfoW" => VerifyVersionInfoW(emu),
+        "GetTimeZoneInformation" => GetTimeZoneInformation(emu),
+        "VirtualQueryEx" => VirtualQueryEx(emu),
+        "InterlockedIncrement" => InterlockedIncrement(emu),
+        "GetEnvironmentStrings" => GetEnvironmentStrings(emu),
+        "GetEnvironmentStringsW" => GetEnvironmentStringsW(emu),
+        "GetStdHandle" => GetStdHandle(emu),
+        "GetFileType" => GetFileType(emu),
+        "SetHandleCount" => SetHandleCount(emu),
+        "IsValidCodePage" => IsValidCodePage(emu),
+        "GetCPInfo" => GetCPInfo(emu),
+        "GetStringTypeW" => GetStringTypeW(emu),
+        "LCMapStringW" => LCMapStringW(emu),
+        "WideCharToMultiByte" => WideCharToMultiByte(emu),
+        "CryptCreateHash" => CryptCreateHash(emu),
+        "HeapSetInformation" => HeapSetInformation(emu),
+        "OpenProcessToken" => OpenProcessToken(emu),
+        "CreateEventA" => CreateEventA(emu),
+        "AddVectoredExceptionHandler" => AddVectoredExceptionHandler(emu),
+        "GetLongPathNameW" => GetLongPathNameW(emu),
+        "FreeLibrary" => FreeLibrary(emu),
+        "AreFileApisANSI" => AreFileApisANSI(emu),
+        "GetModuleFileNameA" => GetModuleFileNameA(emu),
+        "lstrcpy" => lstrcpy(emu),
+        "GetACP" => GetACP(emu),
+        "GetOEMCP" => GetOEMCP(emu),
+        "GetWindowsDirectoryA" => GetWindowsDirectoryA(emu),
+        "GetWindowsDirectoryW" => GetWindowsDirectoryW(emu),
+        "GetSystemWindowsDirectoryA" => GetSystemWindowsDirectoryA(emu),
+        "GetSystemWindowsDirectoryW" => GetSystemWindowsDirectoryW(emu),
+        "RegCreateKeyExA" => RegCreateKeyExA(emu),
+        "RegCreateKeyExW" => RegCreateKeyExW(emu),
+        "RegSetValueExA" => RegSetValueExA(emu),
+        "RegSetValueExW" => RegSetValueExW(emu),
+        "RegCloseKey" => RegCloseKey(emu),
+        "RegOpenKeyA" => RegOpenKeyA(emu),
+        "RegOpenKeyW" => RegOpenKeyW(emu),
         _ => {
-            let apiname = guess_api_name(emu, addr);
             println!(
                 "calling unimplemented kernel32 API 0x{:x} {}",
-                addr, apiname
+                addr, api
             );
-            return apiname;
+            return api;
         }
     }
 
@@ -634,9 +647,7 @@ fn VirtualAlloc(emu: &mut emu::Emu) {
         .maps
         .alloc(size)
         .expect("kernel32!VirtualAlloc out of memory");
-    let alloc = emu.maps.create_map(format!("alloc_{:x}", base).as_str());
-    alloc.set_base(base);
-    alloc.set_size(size);
+    emu.maps.create_map(format!("alloc_{:x}", base).as_str(), base, size).expect("kernel32!VirtualAlloc out of memory");
 
     println!(
         "{}** {} kernel32!VirtualAlloc sz: {} addr: 0x{:x} {}",
@@ -681,9 +692,7 @@ fn VirtualAllocEx(emu: &mut emu::Emu) {
         .maps
         .alloc(size)
         .expect("kernel32!VirtualAllocEx out of memory");
-    let alloc = emu.maps.create_map(format!("alloc_{:x}", base).as_str());
-    alloc.set_base(base);
-    alloc.set_size(size);
+    emu.maps.create_map(format!("alloc_{:x}", base).as_str(), base, size).expect("kernel32!VirtualAllocEx out of memory");
 
     emu.regs.rax = base;
 
@@ -1823,7 +1832,9 @@ fn CreateThread(emu: &mut emu::Emu) {
         .read_dword(emu.regs.get_esp() + 20)
         .expect("kernel32!CreateThread cannot read tid_ptr") as u64;
 
-    emu.maps.write_dword(tid_ptr, 0x123);
+    if tid_ptr > 0 {
+        emu.maps.write_dword(tid_ptr, 0x123);
+    }
 
     println!(
         "{}** {} kernel32!CreateThread code: 0x{:x} {}",
@@ -1895,9 +1906,7 @@ fn MapViewOfFile(emu: &mut emu::Emu) {
         .maps
         .alloc(size)
         .expect("kernel32!MapViewOfFile cannot allocate");
-    let mem = emu.maps.create_map("file_map");
-    mem.set_base(addr);
-    mem.set_size(size);
+    let mem = emu.maps.create_map("file_map", addr, size).expect("kernel32!MapViewOfFile cannot create map");
     let loaded = mem.load_chunk(&emu.filename, off, size as usize);
 
     println!(
@@ -2242,11 +2251,7 @@ fn HeapAlloc(emu: &mut emu::Emu) {
         None => 0,
     };
 
-    let mem = emu
-        .maps
-        .create_map(format!("alloc_{:x}", emu.regs.get_eax() as u32).as_str());
-    mem.set_base(emu.regs.get_eax());
-    mem.set_size(size);
+    emu.maps.create_map(format!("alloc_{:x}", emu.regs.get_eax() as u32).as_str(), emu.regs.get_eax(), size).expect("kernel32!HeapAlloc out of memory");
 
     println!(
         "{}** {} kernel32!HeapAlloc flags: 0x{:x} size: {} =0x{:x} {}",
@@ -2358,11 +2363,7 @@ fn LocalAlloc(emu: &mut emu::Emu) {
         None => 0,
     };
 
-    let mem = emu
-        .maps
-        .create_map(format!("alloc_{:x}", emu.regs.get_eax() as u32).as_str());
-    mem.set_base(emu.regs.get_eax());
-    mem.set_size(size);
+    emu.maps.create_map(format!("alloc_{:x}", emu.regs.get_eax() as u32).as_str(), emu.regs.get_eax(), size).expect("kernel32!LocalAlloc out of memory");
 
     println!(
         "{}** {} kernel32!LocalAlloc flags: 0x{:x} size: {} =0x{:x} {}",
@@ -2413,9 +2414,7 @@ fn VirtualAllocExNuma(emu: &mut emu::Emu) {
         .maps
         .alloc(size)
         .expect("kernel32!VirtualAllocExNuma out of memory");
-    let alloc = emu.maps.create_map(format!("alloc_{:x}", base).as_str());
-    alloc.set_base(base);
-    alloc.set_size(size);
+    emu.maps.create_map(format!("alloc_{:x}", base).as_str(), base, size).expect("kernel32!VirtualAllocExNuma out of memory");
 
     emu.regs.rax = base;
 
@@ -3296,7 +3295,7 @@ fn GetThreadPreferredUILanguages(emu: &mut emu::Emu) {
     emu.regs.rax = 1;
 }
 
-fn lstrcmp(emu: &mut emu::Emu) {
+fn lstrcmpA(emu: &mut emu::Emu) {
     let s1_ptr = emu
         .maps
         .read_dword(emu.regs.get_esp())
@@ -3310,7 +3309,38 @@ fn lstrcmp(emu: &mut emu::Emu) {
     let s2 = emu.maps.read_string(s2_ptr);
 
     println!(
-        "{}** {} kernel32!lstrcmp '{}' == '{}' {}",
+        "{}** {} kernel32!lstrcmpA '{}' == '{}' {}",
+        emu.colors.light_red, emu.pos, s1, s2, emu.colors.nc
+    );
+
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+
+    let result = s1.cmp(&s2);
+    if result == std::cmp::Ordering::Less {
+        emu.regs.rax = 0xffffffff;
+    } else if result == std::cmp::Ordering::Greater {
+        emu.regs.rax = 1;
+    } else {
+        emu.regs.rax = 0;
+    }
+}
+
+fn lstrcmpW(emu: &mut emu::Emu) {
+    let s1_ptr = emu
+        .maps
+        .read_dword(emu.regs.get_esp())
+        .expect("kernel32!lstrcmp cannot read s1_ptr") as u64;
+    let s2_ptr = emu
+        .maps
+        .read_dword(emu.regs.get_esp() + 4)
+        .expect("kernel32!lstrcmp cannot read s2_ptr") as u64;
+
+    let s1 = emu.maps.read_wide_string(s1_ptr);
+    let s2 = emu.maps.read_wide_string(s2_ptr);
+
+    println!(
+        "{}** {} kernel32!lstrcmpW '{}' == '{}' {}",
         emu.colors.light_red, emu.pos, s1, s2, emu.colors.nc
     );
 
@@ -4179,7 +4209,7 @@ fn GetModuleFileNameA(emu: &mut emu::Emu) {
         .expect("kernel32!GetModuleFileNameA: error reading param");
 
     if buff_sz > 8 {
-        emu.maps.write_string(fname_ptr, "test.exe");
+        emu.maps.write_string(fname_ptr, "c:\\test.exe");
     }
 
     println!(
@@ -4192,4 +4222,200 @@ fn GetModuleFileNameA(emu: &mut emu::Emu) {
     }
 
     emu.regs.rax = 8;
+}
+
+fn lstrcpy(emu: &mut emu::Emu) {
+    let dst = emu.maps.read_dword(emu.regs.get_esp()).expect("kernel32!lstrcpy: error reading dst") as u64;
+    let src = emu.maps.read_dword(emu.regs.get_esp() + 4).expect("kernel32!lstrcpy: error reading src") as u64;
+    let s = emu.maps.read_string(src);
+    emu.maps.write_string(dst, &s);  
+
+    println!("{}** {} kernel32!lstrcpy 0x{:x} `{}` {}", emu.colors.light_red, emu.pos, dst, s, emu.colors.nc);
+
+    emu.regs.rax = dst;
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+}
+
+fn GetACP(emu: &mut emu::Emu) {
+    println!("{}** {} kernel32!GetACP {}", emu.colors.light_red, emu.pos, emu.colors.nc);
+    emu.regs.rax = 0x00000409;
+}
+
+fn GetOEMCP(emu: &mut emu::Emu) {
+    println!("{}** {} kernel32!GetOEMCP {}", emu.colors.light_red, emu.pos, emu.colors.nc);
+    emu.regs.rax = 0x00000409;
+}
+
+fn GetWindowsDirectoryA(emu: &mut emu::Emu) {
+    let ptr = emu.maps.read_dword(emu.regs.get_esp()).expect("kernel32!GetWindowsDirectoryA: error reading param") as u64;
+    let size = emu.maps.read_dword(emu.regs.get_esp() + 4).expect("kernel32!GetWindowsDirectoryA: error reading param") as u64;
+
+    println!("{}** {} kernel32!GetWindowsDirectoryA {}", emu.colors.light_red, emu.pos, emu.colors.nc);
+
+    emu.maps.write_string(ptr, "C:\\Windows\\");
+    emu.regs.rax = size;
+
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+}
+
+fn GetWindowsDirectoryW(emu: &mut emu::Emu) {
+    let ptr = emu.maps.read_dword(emu.regs.get_esp()).expect("kernel32!GetWindowsDirectoryW: error reading param") as u64;
+    let size = emu.maps.read_dword(emu.regs.get_esp() + 4).expect("kernel32!GetWindowsDirectoryW: error reading param") as u64;
+
+    println!("{}** {} kernel32!GetWindowsDirectoryW {}", emu.colors.light_red, emu.pos, emu.colors.nc);
+
+    emu.maps.write_wide_string(ptr, "C:\\Windows\\");
+    emu.regs.rax = size;
+
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+}
+
+fn GetSystemWindowsDirectoryA(emu: &mut emu::Emu) {
+    let ptr = emu.maps.read_dword(emu.regs.get_esp()).expect("kernel32!GetSystemWindowsDirectoryA: error reading param") as u64;
+    let size = emu.maps.read_dword(emu.regs.get_esp() + 4).expect("kernel32!GetSystemWindowsDirectoryA: error reading param") as u64;
+
+    println!("{}** {} kernel32!GetSystemWindowsDirectoryA {}", emu.colors.light_red, emu.pos, emu.colors.nc);
+
+    emu.maps.write_string(ptr, "C:\\Windows\\system32\\");
+    emu.regs.rax = size;
+
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+}
+
+fn GetSystemWindowsDirectoryW(emu: &mut emu::Emu) {
+    let ptr = emu.maps.read_dword(emu.regs.get_esp()).expect("kernel32!GetSystemWindowsDirectoryW: error reading param") as u64;
+    let size = emu.maps.read_dword(emu.regs.get_esp() + 4).expect("kernel32!GetSystemWindowsDirectoryW: error reading param") as u64;
+
+    println!("{}** {} kernel32!GetSystemWindowsDirectoryW {}", emu.colors.light_red, emu.pos, emu.colors.nc);
+
+    emu.maps.write_wide_string(ptr, "C:\\Windows\\system32\\");
+    emu.regs.rax = size;
+
+
+    emu.stack_pop32(false);
+    emu.stack_pop32(false);
+}
+
+fn RegCreateKeyExA(emu: &mut emu::Emu) {
+    let hKey = emu.maps.read_dword(emu.regs.get_esp()).expect("kernel32!RegCreateKeyExA: error reading param") as u64;
+    let subkey_ptr = emu.maps.read_dword(emu.regs.get_esp() + 4).expect("kernel32!RegCreateKeyExA: error reading param") as u64;
+    let reserved = emu.maps.read_dword(emu.regs.get_esp() + 8).expect("kernel32!RegCreateKeyExA: error reading param") as u64;
+    let class_ptr = emu.maps.read_dword(emu.regs.get_esp() + 12).expect("kernel32!RegCreateKeyExA: error reading param") as u64;
+    let options = emu.maps.read_dword(emu.regs.get_esp() + 16).expect("kernel32!RegCreateKeyExA: error reading param") as u64;
+    let security_attr = emu.maps.read_dword(emu.regs.get_esp() + 20).expect("kernel32!RegCreateKeyExA: error reading param") as u64;
+
+    let subkey = emu.maps.read_string(subkey_ptr);
+    let mut class_name = "".to_string();
+    if class_ptr > 0 {
+        class_name = emu.maps.read_string(class_ptr);
+    }
+
+    println!("{}** {} kernel32!RegCreateKeyExA {} {} {}", emu.colors.light_red, emu.pos, subkey, class_name, emu.colors.nc);
+    emu.regs.rax = constants::ERROR_SUCCESS;
+
+    for _ in 0..9 {
+        emu.stack_pop32(false);
+    }
+}
+
+fn RegCreateKeyExW(emu: &mut emu::Emu) {
+    let hKey = emu.maps.read_dword(emu.regs.get_esp()).expect("kernel32!RegCreateKeyExW: error reading param") as u64;
+    let subkey_ptr = emu.maps.read_dword(emu.regs.get_esp() + 4).expect("kernel32!RegCreateKeyExW: error reading param") as u64;
+    let reserved = emu.maps.read_dword(emu.regs.get_esp() + 8).expect("kernel32!RegCreateKeyExW: error reading param") as u64;
+    let class_ptr = emu.maps.read_dword(emu.regs.get_esp() + 12).expect("kernel32!RegCreateKeyExW: error reading param") as u64;
+    let options = emu.maps.read_dword(emu.regs.get_esp() + 16).expect("kernel32!RegCreateKeyExW: error reading param") as u64;
+    let security_attr = emu.maps.read_dword(emu.regs.get_esp() + 20).expect("kernel32!RegCreateKeyExW: error reading param") as u64;
+
+    let subkey = emu.maps.read_wide_string(subkey_ptr);
+    let mut class_name = "".to_string();
+    if class_ptr > 0 {
+        class_name = emu.maps.read_wide_string(class_ptr);
+    }
+
+    println!("{}** {} kernel32!RegCreateKeyExW {} {} {}", emu.colors.light_red, emu.pos, subkey, class_name, emu.colors.nc);
+    emu.regs.rax = constants::ERROR_SUCCESS;
+
+    for _ in 0..9 {
+        emu.stack_pop32(false);
+    }
+}
+
+fn RegSetValueExA(emu: &mut emu::Emu) {
+    let hKey = emu.maps.read_dword(emu.regs.get_esp()).expect("kernel32!RegSetValueExA: error reading param") as u64;
+    let value_name_ptr = emu.maps.read_dword(emu.regs.get_esp() + 4).expect("kernel32!RegSetValueExA: error reading param") as u64;
+    let reserved = emu.maps.read_dword(emu.regs.get_esp() + 8).expect("kernel32!RegSetValueExA: error reading param") as u64;
+    let value_type = emu.maps.read_dword(emu.regs.get_esp() + 12).expect("kernel32!RegSetValueExA: error reading param") as u64;
+    let data_ptr = emu.maps.read_dword(emu.regs.get_esp() + 16).expect("kernel32!RegSetValueExA: error reading param") as u64;
+    let data_size = emu.maps.read_dword(emu.regs.get_esp() + 20).expect("kernel32!RegSetValueExA: error reading param") as u64;
+
+    let value_name = emu.maps.read_string(value_name_ptr);
+
+    println!("{}** {} kernel32!RegSetValueExA `{}` type: {} data: 0x{:x} {}", emu.colors.light_red, emu.pos, value_name, value_type, data_ptr, emu.colors.nc);
+    emu.regs.rax = constants::ERROR_SUCCESS;
+
+    for _ in 0..6 {
+        emu.stack_pop32(false);
+    }
+}
+
+fn RegSetValueExW(emu: &mut emu::Emu) {
+    let hKey = emu.maps.read_dword(emu.regs.get_esp()).expect("kernel32!RegSetValueExW: error reading param") as u64;
+    let value_name_ptr = emu.maps.read_dword(emu.regs.get_esp() + 4).expect("kernel32!RegSetValueExW: error reading param") as u64;
+    let reserved = emu.maps.read_dword(emu.regs.get_esp() + 8).expect("kernel32!RegSetValueExW: error reading param") as u64;
+    let value_type = emu.maps.read_dword(emu.regs.get_esp() + 12).expect("kernel32!RegSetValueExW: error reading param") as u64;
+    let data_ptr = emu.maps.read_dword(emu.regs.get_esp() + 16).expect("kernel32!RegSetValueExW: error reading param") as u64;
+    let data_size = emu.maps.read_dword(emu.regs.get_esp() + 20).expect("kernel32!RegSetValueExW: error reading param") as u64;
+
+    let value_name = emu.maps.read_wide_string(value_name_ptr);
+
+    println!("{}** {} kernel32!RegSetValueExW `{}` type: {} data: 0x{:x} {}", emu.colors.light_red, emu.pos, value_name, value_type, data_ptr, emu.colors.nc);
+    emu.regs.rax = constants::ERROR_SUCCESS;
+
+    for _ in 0..6 {
+        emu.stack_pop32(false);
+    }
+}
+
+fn RegCloseKey(emu: &mut emu::Emu) {
+    let hKey = emu.maps.read_dword(emu.regs.get_esp()).expect("kernel32!RegCloseKey: error reading param") as u64;
+
+    println!("{}** {} kernel32!RegCloseKey hkey: 0x{:x} {}", emu.colors.light_red, emu.pos, hKey,  emu.colors.nc);
+    emu.stack_pop32(false);
+    emu.regs.rax = constants::ERROR_SUCCESS;
+}
+
+fn RegOpenKeyA(emu: &mut emu::Emu) {
+    let hKey = emu.maps.read_dword(emu.regs.get_esp()).expect("kernel32!RegOpenKeyA: error reading param") as u64;
+    let subkey_ptr = emu.maps.read_dword(emu.regs.get_esp() + 4).expect("kernel32!RegOpenKeyA: error reading param") as u64;
+    let result = emu.maps.read_dword(emu.regs.get_esp() + 8).expect("kernel32!RegOpenKeyA: error reading param") as u64;
+
+    let subkey = emu.maps.read_string(subkey_ptr);
+    emu.maps.write_dword(result, helper::handler_create(&format!("key://{}", subkey)) as u32);
+
+    println!("{}** {} kernel32!RegOpenKeyA `{}` {}", emu.colors.light_red, emu.pos, subkey, emu.colors.nc);
+    emu.regs.rax = constants::ERROR_SUCCESS;
+
+    for _ in 0..3 {
+        emu.stack_pop32(false);
+    }
+}
+
+fn RegOpenKeyW(emu: &mut emu::Emu) {
+    let hKey = emu.maps.read_dword(emu.regs.get_esp()).expect("kernel32!RegOpenKeyW: error reading param") as u64;
+    let subkey_ptr = emu.maps.read_dword(emu.regs.get_esp() + 4).expect("kernel32!RegOpenKeyW: error reading param") as u64;
+    let result = emu.maps.read_dword(emu.regs.get_esp() + 8).expect("kernel32!RegOpenKeyW: error reading param") as u64;
+    
+    let subkey = emu.maps.read_wide_string(subkey_ptr);
+    emu.maps.write_dword(result, helper::handler_create(&format!("key://{}", subkey)) as u32);
+
+    println!("{}** {} kernel32!RegOpenKeyW `{}` {}", emu.colors.light_red, emu.pos, subkey, emu.colors.nc);
+    emu.regs.rax = constants::ERROR_SUCCESS;
+
+    for _ in 0..3 {
+        emu.stack_pop32(false);
+    }
 }

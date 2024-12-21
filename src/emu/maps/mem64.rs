@@ -64,6 +64,9 @@ impl Mem64 {
     }
 
     pub fn memcpy(&mut self, ptr: &[u8], sz: usize) {
+        if self.mem.len() < sz {
+            panic!("memcpy: {} < {}", self.mem.len(), sz);
+        }
         for i in 0..sz {
             self.mem[i] = ptr[i];
         }

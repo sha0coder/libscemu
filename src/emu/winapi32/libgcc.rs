@@ -4,18 +4,15 @@ use crate::emu;
 use crate::emu::winapi32::kernel32;
 
 pub fn gateway(addr: u32, emu: &mut emu::Emu) -> String {
-    match addr {
-        0x6e955da8 => __register_frame_info(emu),
-        0x6e9565c0 => __deregister_frame_info(emu),
+    let api = kernel32::guess_api_name(emu, addr);
+    match api.as_str() {
+        "__register_frame_info" => __register_frame_info(emu),
+        "__deregister_frame_info" => __deregister_frame_info(emu),
 
 
         _ => {
-            let apiname = kernel32::guess_api_name(emu, addr);
-            println!(
-                "calling unimplemented libgcc API 0x{:x} {}",
-                addr, apiname
-            );
-            return apiname;
+            println!("calling unimplemented libgcc API 0x{:x} {}", addr, api);
+            return api;
         }
     }
 
@@ -41,10 +38,7 @@ fn __register_frame_info(emu: &mut emu::Emu) {
     let mem = match emu.maps.get_mem_by_addr(0x40E198) {
         Some(m) => m,
         None => {
-            let m = emu.maps.create_map("glob1");
-            m.set_base(0x40E198);
-            m.set_size(100);
-            m
+            emu.maps.create_map("glob1", 0x40E198, 100).expect("cannot create glob1 map")
         }
     };
 

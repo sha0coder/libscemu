@@ -6,26 +6,27 @@ use crate::emu::winapi32::kernel32;
 // msvcrt is an exception and these functions dont have to compensate the stack.
 
 pub fn gateway(addr: u32, emu: &mut emu::Emu) -> String {
-    match addr {
-        0x761f1d9d => _initterm_e(emu),
-        0x761ec151 => _initterm(emu),
-        0x7670d2ac => StrCmpCA(emu),
-        0x761fb2c4 => fopen(emu),
-        0x761f76ac => fwrite(emu),
-        0x761f4142 => fflush(emu),
-        0x761f3d79 => fclose(emu),
-        0x76233ab4 => __p___argv(emu),
-        0x76233a88 => __p___argc(emu),
-        0x761e9cee => malloc(emu),
-        0x761f112d => _onexit(emu),
-        0x761ea449 => _lock(emu),
-        0x761e9894 => free(emu),
-        0x761eb10d => realloc(emu),
+    let api = kernel32::guess_api_name(emu, addr);
+    match api.as_str() {
+        "_initterm_e" => _initterm_e(emu),
+        "_initterm" => _initterm(emu),
+        "StrCmpCA" => StrCmpCA(emu),
+        "fopen" => fopen(emu),
+        "fwrite" => fwrite(emu),
+        "fflush" => fflush(emu),
+        "fclose" => fclose(emu),
+        "__p___argv" => __p___argv(emu),
+        "__p___argc" => __p___argc(emu),
+        "malloc" => malloc(emu),
+        "_onexit" => _onexit(emu),
+        "_lock" => _lock(emu),
+        "free" => free(emu),
+        "realloc" => realloc(emu),
+        "strtok" => strtok(emu),
 
         _ => {
-            let apiname = kernel32::guess_api_name(emu, addr);
-            println!("calling unimplemented msvcrt API 0x{:x} {}", addr, apiname);
-            return apiname;
+            println!("calling unimplemented msvcrt API 0x{:x} {}", addr, api);
+            return api;
         }
     }
 
@@ -205,11 +206,7 @@ fn __p___argc(emu: &mut emu::Emu) {
         Some(a) => a,
         None => {
             let addr = emu.maps.alloc(1024).expect("out of memory");
-            let a = emu.maps.create_map("args");
-            a.set_base(addr);
-            a.set_size(1024);
-
-            a
+            emu.maps.create_map("args", addr, 1024).expect("cannot create args map")
         }
     };
 
@@ -222,20 +219,23 @@ fn __p___argc(emu: &mut emu::Emu) {
 }
 
 fn malloc(emu: &mut emu::Emu) {
-
-    let size = emu
-        .maps
-        .read_dword(emu.regs.get_esp())
+    let size = emu.maps.read_dword(emu.regs.get_esp())
         .expect("msvcrt!malloc error reading size") as u64;
 
-    let addr = emu.alloc("alloc_malloc", size);
-    println!(
-        "{}** {} msvcrt!malloc {} =0x{:x} {}",
-        emu.colors.light_red, emu.pos, size, addr, emu.colors.nc
-    );
+    if size > 0 {
+        let base = emu.maps.alloc(size)
+            .expect("msvcrt!malloc out of memory");
+        
+        emu.maps.create_map(&format!("alloc_{:x}", base), base, size)
+            .expect("msvcrt!malloc cannot create map");
 
-    //emu.stack_pop32(false);
-    emu.regs.rax = addr;
+        println!("{}** {} msvcrt!malloc sz: {} addr: 0x{:x} {}", 
+            emu.colors.light_red, emu.pos, size, base, emu.colors.nc);
+
+        emu.regs.rax = base;
+    } else {
+        emu.regs.rax = 0x1337; // weird msvcrt has to return a random unallocated pointer, and the program has to do free() on it
+    }
 }
 
 fn __p__acmdln(emu: &mut emu::Emu) {
@@ -290,12 +290,44 @@ fn realloc(emu: &mut emu::Emu) {
     let addr = emu.maps.read_dword(emu.regs.get_esp())
         .expect("msvcrt!realloc error reading addr") as u64;
     let size = emu.maps.read_dword(emu.regs.get_esp() + 4)
-        .expect("msvcrt!realloc error reading size");
+        .expect("msvcrt!realloc error reading size") as u64;
+
+    if addr == 0 {
+        if size == 0 {
+            emu.regs.rax = 0;
+            return;
+        } else {
+            let base = emu.maps.alloc(size)
+                .expect("msvcrt!malloc out of memory");
+            
+            emu.maps.create_map(&format!("alloc_{:x}", base), base, size)
+                .expect("msvcrt!malloc cannot create map");
+
+            println!("{}** {} msvcrt!realloc 0x{:x} {} =0x{:x} {}",
+                emu.colors.light_red, emu.pos, addr, size, base, emu.colors.nc);
+
+            emu.regs.rax = base;
+            return;
+        }
+    } 
+
+    if size == 0 {
+        println!("{}** {} msvcrt!realloc 0x{:x} {} =0x1337 {}",
+            emu.colors.light_red, emu.pos, addr, size, emu.colors.nc);
+
+        emu.regs.rax = 0x1337; // weird msvcrt has to return a random unallocated pointer, and the program has to do free() on it
+        return;
+    }
 
     let mem = emu.maps.get_mem_by_addr(addr).expect("msvcrt!realloc error getting mem");
     let prev_size = mem.size();
 
-    let new_addr = emu.alloc("alloc_realloc", size as u64);
+    let new_addr = emu.maps.alloc(size)
+        .expect("msvcrt!realloc out of memory");
+
+    emu.maps.create_map(&format!("alloc_{:x}", new_addr), new_addr, size)
+        .expect("msvcrt!realloc cannot create map");
+
     emu.maps.memcpy(new_addr, addr, prev_size);
     emu.maps.dealloc(addr);
 
@@ -305,4 +337,20 @@ fn realloc(emu: &mut emu::Emu) {
     );
 
     emu.regs.rax = new_addr;
+}
+
+fn strtok(emu: &mut emu::Emu) {
+    let str_ptr = emu.maps.read_dword(emu.regs.get_esp())
+        .expect("msvcrt!strtok error reading str_ptr");
+
+    let delim_ptr = emu.maps.read_dword(emu.regs.get_esp() + 4)
+        .expect("msvcrt!strtok error reading delim");
+
+    let str = emu.maps.read_string(str_ptr as u64);
+    let delim = emu.maps.read_string(delim_ptr as u64);
+
+    println!("{}** {} msvcrt!strtok `{}` `{}` {}",
+        emu.colors.light_red, emu.pos, str, delim, emu.colors.nc);
+
+    emu.regs.rax = 0;
 }

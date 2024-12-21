@@ -8,14 +8,8 @@ use crate::emu::structures::PebLdrData64;
 pub fn init_ldr(emu: &mut emu::Emu) -> u64 {
     let ldr_sz = PebLdrData64::size();
     let ldr_addr = emu.maps.lib64_alloc(ldr_sz as u64).expect("cannot alloc the LDR");
-    let ldr_map = emu.maps.create_map("ldr");
-    ldr_map.set_base(ldr_addr);
-    ldr_map.set_size(ldr_sz as u64);
-
+    emu.maps.create_map("ldr", ldr_addr, ldr_sz as u64).expect("cannot create ldr map");
     let module_entry = create_ldr_entry(emu, 0, 0, "loader.exe", 0, 0);
-    //let ntdll_entry = create_ldr_entry(emu, ntdll_base, 0, "ntdll", module_entry, module_entry);
-
-
     let mut ldr = PebLdrData64::new();
     ldr.initializated = 1;
     ldr.in_load_order_module_list.flink = module_entry;
@@ -35,18 +29,14 @@ pub fn init_peb(emu: &mut emu::Emu) {
     let ldr = init_ldr(emu);
 
     let peb_addr = emu.maps.lib64_alloc(PEB64::size() as u64).expect("cannot alloc the PEB64");
-    let mut peb_map = emu.maps.create_map("peb");
-    peb_map.set_base(peb_addr);
-    peb_map.set_size(PEB64::size() as u64);
+    let mut peb_map = emu.maps.create_map("peb", peb_addr, PEB64::size() as u64).expect("cannot create peb map");
     let process_parameters = 0x521e20;
     let peb = PEB64::new(0, ldr, process_parameters);
     peb.save(&mut peb_map);
     emu.maps.write_byte(peb_addr + 2, 0); // not being_debugged
 
     let teb_addr = emu.maps.lib64_alloc(TEB64::size() as u64).expect("cannot alloc the TEB64");
-    let mut teb_map = emu.maps.create_map("teb");
-    teb_map.set_base(teb_addr);
-    teb_map.set_size(TEB64::size() as u64);
+    let mut teb_map = emu.maps.create_map("teb", teb_addr, TEB64::size() as u64).expect("cannot create teb map");
     let teb = TEB64::new(peb_addr);
     teb.save(&mut teb_map);
 
@@ -353,6 +343,7 @@ pub fn dynamic_link_module(base: u64, pe_off: u32, libname: &str, emu: &mut emu:
     let mut flink = Flink::new(emu);
     flink.load(emu);
     let first_flink = flink.get_ptr();
+
     // get last element
     loop {
         //last_flink = flink.get_ptr();
@@ -400,9 +391,12 @@ pub fn create_ldr_entry(
         .expect("cannot alloc few bytes to put the LDR for LoadLibraryA");
     let mut lib = libname.to_string();
     lib.push_str(".ldr");
-    let mem = emu.maps.create_map(lib.as_str());
-    mem.set_base(space_addr);
-    mem.set_size(sz);
+    let mut image_sz = 0;
+    if base > 0 {
+        let pe_hdr = emu.maps.read_dword(base as u64 + 0x3c).unwrap() as u64;
+        image_sz = emu.maps.read_qword(base as u64 + pe_hdr + 0x50).unwrap() as u64;
+    }
+    let mem = emu.maps.create_map(lib.as_str(), space_addr, sz).expect("cannot create ldr entry map");
     mem.write_byte(space_addr + sz - 1, 0x61);
 
     //let full_libname = "\"C:\\Windows\\System32\\".to_string() + &libname.to_string() + "\"\x00";
@@ -416,6 +410,8 @@ pub fn create_ldr_entry(
         ldr.in_memory_order_links.blink = prev_flink+0x10;
         ldr.in_initialization_order_links.flink = next_flink+0x20;
         ldr.in_initialization_order_links.blink = prev_flink+0x20;
+        ldr.hash_links.flink = next_flink+0x7f;
+        ldr.hash_links.blink = prev_flink+0x7f;
     } else {
         ldr.in_load_order_links.flink = space_addr;
         ldr.in_load_order_links.blink = space_addr;
@@ -423,10 +419,12 @@ pub fn create_ldr_entry(
         ldr.in_memory_order_links.blink = space_addr+0x10;
         ldr.in_initialization_order_links.flink = space_addr+0x20;
         ldr.in_initialization_order_links.blink = space_addr+0x20;
+        ldr.hash_links.flink = space_addr+0x7f;
+        ldr.hash_links.blink = space_addr+0x7f;
     }
     ldr.dll_base = base;
     ldr.entry_point = entry_point;
-    ldr.size_of_image = 0;
+    ldr.size_of_image = image_sz;
     ldr.full_dll_name.length = full_libname.len() as u16 * 2;
     ldr.full_dll_name.maximum_length = full_libname.len() as u16 * 2 + 4;
     ldr.full_dll_name.buffer = space_addr + LdrDataTableEntry64::size();

@@ -90,9 +90,7 @@ impl Elf32 {
                     }
                 }*/
 
-                let mem = maps.create_map(&format!("code"));
-                mem.set_base(phdr.p_vaddr.into());
-                mem.set_size(phdr.p_memsz.into());
+                let mem = maps.create_map(&format!("code"), phdr.p_vaddr.into(), phdr.p_memsz.into()).expect("cannot create code map from load_programs elf32");
                 if phdr.p_filesz >phdr.p_memsz {
                     println!("p_filesz > p_memsz bigger in file than in memory.");
                 }

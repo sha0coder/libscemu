@@ -7,23 +7,24 @@ use lazy_static::lazy_static;
 use std::sync::Mutex;
 
 pub fn gateway(addr: u32, emu: &mut emu::Emu) -> String {
-    match addr {
-        0x77483ab2 => WsaStartup(emu),
-        0x7748c82a => WsaSocketA(emu),
-        0x77483eb8 => socket(emu),
-        0x77493c11 => WsaHtons(emu),
-        0x77482d8b => htons(emu),
-        0x7748311b => inet_addr(emu),
-        0x77486bdd => connect(emu),
-        0x77486b0e => recv(emu),
-        0x77486f01 => send(emu),
-        0x77484582 => bind(emu),
-        0x7748b001 => listen(emu),
-        0x774868b6 => accept(emu),
-        0x77483918 => closesocket(emu),
-        0x774841b6 => setsockopt(emu),
-        0x7748737d => getsockopt(emu),
-        0x774868d6 => WsaAccept(emu),
+    let api = kernel32::guess_api_name(emu, addr);
+    match api.as_str() {
+        "WsaStartup" => WsaStartup(emu),
+        "WsaSocketA" => WsaSocketA(emu),
+        "socket" => socket(emu),
+        "WsaHtons" => WsaHtons(emu),
+        "htons" => htons(emu),
+        "inet_addr" => inet_addr(emu),
+        "connect" => connect(emu),
+        "recv" => recv(emu),
+        "send" => send(emu),
+        "bind" => bind(emu),
+        "listen" => listen(emu),
+        "accept" => accept(emu),
+        "closesocket" => closesocket(emu),
+        "setsockopt" => setsockopt(emu),
+        "getsockopt" => getsockopt(emu),
+        "WsaAccept" => WsaAccept(emu),
 
         /*
         0x774834b5 => sendto(emu),
@@ -33,9 +34,8 @@ pub fn gateway(addr: u32, emu: &mut emu::Emu) -> String {
         0x7748cc3f => WsaConnect(emu),
         */
         _ => {
-            let apiname = kernel32::guess_api_name(emu, addr);
-            println!("calling unimplemented ws2_32 API 0x{:x} {}", addr, apiname);
-            return apiname;
+            println!("calling unimplemented ws2_32 API 0x{:x} {}", addr, api);
+            return api;
         }
     }
 

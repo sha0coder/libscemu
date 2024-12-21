@@ -8,16 +8,17 @@ use crate::emu::console;
 */
 
 pub fn gateway(addr: u32, emu: &mut emu::Emu) -> String {
-    match addr {
-        0x719b1540 => PkiInitializeCriticalSection(emu),
-        0x75805d77 => CryptStringToBinaryA(emu),
+    let api = kernel32::guess_api_name(emu, addr);
+    match api.as_str() {
+        "PkiInitializeCriticalSection" => PkiInitializeCriticalSection(emu),
+        "CryptStringToBinaryA" => CryptStringToBinaryA(emu),
+
         _ => {
-            let apiname = kernel32::guess_api_name(emu, addr);
             println!(
-                "calling unimplemented kernel32 API 0x{:x} {}",
-                addr, apiname
+                "calling unimplemented crypt32 API 0x{:x} {}",
+                addr, api
             );
-            return apiname;
+            return api;
         }
     }
 

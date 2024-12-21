@@ -8,43 +8,43 @@ use crate::emu::winapi32::kernel32;
 use scan_fmt::scan_fmt_some;
 
 pub fn gateway(addr: u32, emu: &mut emu::Emu) -> String {
-    match addr {
-        0x775b52d8 => NtAllocateVirtualMemory(emu),
-        0x775b5a18 => NtGetContextThread(emu),
-        0x7757f774 => RtlVectoredExceptionHandler(emu),
-        0x775d22b8 => LdrLoadDll(emu),
-        0x775b6258 => NtQueryVirtualMemory(emu),
-        0x775d531f => stricmp(emu),
-        0x7759f611 => RtlExitUserThread(emu),
-        0x7763a4dd => sscanf(emu),
-        0x7761b3de => NtGetTickCount(emu),
-        0x775b6158 => NtQueryPerformanceCounter(emu),
-        0x775eabd1 => RtlGetProcessHeaps(emu),
-        0x775d27e0 => RtlDosPathNameToNtPathName_U(emu),
-        0x775b55c8 => NtCreateFile(emu),
-        0x775c2c6a => RtlFreeHeap(emu),
-        0x775b6018 => NtQueryInformationFile(emu),
-        0x775c2dd6 => RtlAllocateHeap(emu),
-        0x775b62b8 => NtReadFile(emu),
-        0x775b54c8 => NtClose(emu),
-        0x775cee8d => RtlInitializeCriticalSectionAndSpinCount(emu),
-        0x775b5f18 => NtProtectVirtualMemory(emu),
-        0x775b77a0 => RtlEnterCriticalSection(emu),
-        0x775b7760 => RtlLeaveCriticalSection(emu),
-        0x775d65e3 => RtlGetVersion(emu),
-        0x775c6db9 => RtlInitializeCriticalSectionEx(emu),
-        0x775a5340 => memset(emu),
-        0x775d7de2 => RtlSetUnhandledExceptionFilter(emu),
-        0x775a55c0 => strlen(emu),
-        0x77593030 => VerSetConditionMask(emu),
-        0x775a53d0 => strcat(emu),
-        0x775a4cc0 => memcpy(emu), 
-        0x775d22bd => LdrLoadDll_gul(emu),
+    let api = kernel32::guess_api_name(emu, addr);
+    match api.as_str() {
+        "NtAllocateVirtualMemory" => NtAllocateVirtualMemory(emu),
+        "NtGetContextThread" => NtGetContextThread(emu),
+        "RtlVectoredExceptionHandler" => RtlVectoredExceptionHandler(emu),
+        "LdrLoadDll" => LdrLoadDll(emu),
+        "NtQueryVirtualMemory" => NtQueryVirtualMemory(emu),
+        "stricmp" => stricmp(emu),
+        "RtlExitUserThread" => RtlExitUserThread(emu),
+        "sscanf" => sscanf(emu),
+        "NtGetTickCount" => NtGetTickCount(emu),
+        "NtQueryPerformanceCounter" => NtQueryPerformanceCounter(emu),
+        "RtlGetProcessHeaps" => RtlGetProcessHeaps(emu),
+        "RtlDosPathNameToNtPathName_U" => RtlDosPathNameToNtPathName_U(emu),
+        "NtCreateFile" => NtCreateFile(emu),
+        "RtlFreeHeap" => RtlFreeHeap(emu),
+        "NtQueryInformationFile" => NtQueryInformationFile(emu),
+        "RtlAllocateHeap" => RtlAllocateHeap(emu),
+        "NtReadFile" => NtReadFile(emu),
+        "NtClose" => NtClose(emu),
+        "RtlInitializeCriticalSectionAndSpinCount" => RtlInitializeCriticalSectionAndSpinCount(emu),
+        "NtProtectVirtualMemory" => NtProtectVirtualMemory(emu),
+        "RtlEnterCriticalSection" => RtlEnterCriticalSection(emu),
+        "RtlLeaveCriticalSection" => RtlLeaveCriticalSection(emu),
+        "RtlGetVersion" => RtlGetVersion(emu),
+        "RtlInitializeCriticalSectionEx" => RtlInitializeCriticalSectionEx(emu),
+        "memset" => memset(emu),
+        "RtlSetUnhandledExceptionFilter" => RtlSetUnhandledExceptionFilter(emu),
+        "strlen" => strlen(emu),
+        "VerSetConditionMask" => VerSetConditionMask(emu),
+        "strcat" => strcat(emu),
+        "memcpy" => memcpy(emu),
+        "LdrLoadDll_gul" => LdrLoadDll_gul(emu),
 
         _ => {
-            let apiname = kernel32::guess_api_name(emu, addr);
-            println!("calling unimplemented ntdll API 0x{:x} {}", addr, apiname);
-            return apiname;
+            println!("calling unimplemented ntdll API 0x{:x} {}", addr, api);
+            return api;
         }
     }
 
@@ -108,12 +108,7 @@ fn NtAllocateVirtualMemory(emu: &mut emu::Emu) {
         emu.colors.light_red, emu.pos, addr, size, alloc_addr, emu.colors.nc
     );
 
-    let alloc = emu
-        .maps
-        .create_map(format!("valloc_{:x}", alloc_addr).as_str());
-    alloc.set_base(alloc_addr);
-    alloc.set_size(size);
-    //alloc.set_bottom(alloc_addr + size);
+    emu.maps.create_map(format!("valloc_{:x}", alloc_addr).as_str(), alloc_addr, size).expect("ntdll!NtAllocateVirtualMemory cannot create map");
 
     if !emu.maps.write_dword(addr_ptr, alloc_addr as u32) {
         panic!("NtAllocateVirtualMemory: cannot write on address pointer");
@@ -231,18 +226,8 @@ fn LdrLoadDll(emu: &mut emu::Emu) {
         emu.colors.light_red, emu.pos, libname, emu.colors.nc
     );
 
-    if libname == "user32.dll" {
-        let user32 = emu.maps.create_map("user32");
-        user32.set_base(0x773b0000);
-        user32.load("maps32/user32.bin");
-        let user32_text = emu.maps.create_map("user32_text");
-        user32_text.set_base(0x773b1000);
-        user32_text.load("maps32/user32_text.bin");
-
-        if !emu.maps.write_dword(libaddr_ptr, 0x773b0000) {
-            panic!("ntdll_LdrLoadDll: cannot write in addr param");
-        }
-    }
+    let base = kernel32::load_library(emu, &libname);
+    emu.maps.write_dword(libname_ptr, base as u32);
 
     for _ in 0..4 {
         emu.stack_pop32(false);
@@ -277,11 +262,9 @@ fn LdrLoadDll_gul(emu: &mut emu::Emu) {
 
 
     if libname == "user32.dll" {
-        let user32 = emu.maps.create_map("user32");
-        user32.set_base(0x773b0000);
+        let user32 = emu.maps.create_map("user32", 0x773b0000, 0x1000).expect("ntdll!LdrLoadDll_gul cannot create map");
         user32.load("maps32/user32.bin");
-        let user32_text = emu.maps.create_map("user32_text");
-        user32_text.set_base(0x773b1000);
+        let user32_text = emu.maps.create_map("user32_text", 0x773b1000, 0x1000).expect("ntdll!LdrLoadDll_gul cannot create map");
         user32_text.load("maps32/user32_text.bin");
 
         if !emu.maps.write_dword(libaddr_ptr, 0x773b0000) {
@@ -554,9 +537,7 @@ fn RtlDosPathNameToNtPathName_U(emu: &mut emu::Emu) {
         } else {
             let addr = match emu.maps.alloc(255) {
                 Some(a) => {
-                    let mem = emu.maps.create_map("nt_alloc");
-                    mem.set_base(a);
-                    mem.set_size(255);
+                    emu.maps.create_map("nt_alloc", a, 255).expect("ntdll!RtlDosPathNameToNtPathName_U cannot create map");
                     emu.maps.write_dword(nt_path_name_ptr, a as u32);
                     emu.maps.memcpy(
                         a,
@@ -773,9 +754,7 @@ fn RtlAllocateHeap(emu: &mut emu::Emu) {
         .maps
         .alloc(size)
         .expect("ntdll!RtlAllocateHeap out of memory");
-    let alloc = emu.maps.create_map(format!("alloc_{:x}", base).as_str());
-    alloc.set_base(base);
-    alloc.set_size(size);
+    emu.maps.create_map(format!("alloc_{:x}", base).as_str(), base, size).expect("ntdll!RtlAllocateHeap cannot create map");
 
     println!(
         "{}** {} ntdll!RtlAllocateHeap sz: {} addr: 0x{:x} {}",

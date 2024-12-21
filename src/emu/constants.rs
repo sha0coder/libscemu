@@ -1,6 +1,18 @@
 // https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-erref/596a1078-e883-4972-9bbc-49e60bebca55
 #![allow(dead_code)]
-pub const LIB64_BARRIER: u64 = 0x07fefff00000;
+//pub const LIB64_BARRIER: u64 = 0x07fefff00000;
+//pub const LIB32_BARRIER: u32 = 0x7f000000;
+
+//pub const LIBS32_BARRIER: u64 = 0x80000000;
+//pub const LIBS64_BARRIER: u64 = 0x7f0000000000;
+
+
+pub const LIBS32_MIN: u64 = 0x70000000;
+pub const LIBS32_MAX: u64 = 0x7FFFFFFF;
+pub const LIBS64_MIN: u64 = 0x7FF000000000;
+pub const LIBS64_MAX: u64 = 0x7FFFFFFFFFFF;
+
+
 pub const STATUS_SUCCESS: u64 = 0x00000000;
 pub const STATUS_ACCESS_DENIED: u64 = 0xC0000022;
 pub const STATUS_INVALID_HANDLE: u64 = 0xC0000008;

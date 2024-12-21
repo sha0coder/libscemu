@@ -205,7 +205,6 @@ impl Elf64 {
                 i+=1;
 
                 let vaddr: u64;
-                let map = maps.create_map(&format!("{}_{}", name, i));
 
                 if is_lib {
                     if name.contains("libc") {
@@ -227,9 +226,7 @@ impl Elf64 {
                     }
                 }
 
-                map.set_base(vaddr);
-                map.set_size(phdr.p_memsz);
-
+                let map = maps.create_map(&format!("{}_{}", name, i), vaddr, phdr.p_memsz).expect("cannot create map from load_programs elf64");
                 let start = phdr.p_offset as usize;
                 let end = (phdr.p_offset + phdr.p_filesz) as usize;
 
@@ -249,10 +246,7 @@ impl Elf64 {
                 elf64_base = force_base;
             }
             // elf executable need to map the header.
-            let hdr = maps.create_map("elf64.hdr");
-            hdr.set_base(elf64_base);
-            //hdr.set_size(0x200);
-            hdr.set_size(0x4000);
+            let hdr = maps.create_map("elf64.hdr", elf64_base, 0x4000).expect("cannot create elf64.hdr map");
             hdr.write_bytes(elf64_base, &self.bin[..0x4000]);
         }
 
@@ -313,17 +307,18 @@ impl Elf64 {
                     }
 
                     //println!("loading map {} 0x{:x} sz:{}", &map_name, shdr.sh_addr, shdr.sh_size);
-                    let mem = maps.create_map(&map_name);
+                    let base:u64;
                     if dynamic_linking {
                         if shdr.sh_addr < 0x8000 {
-                            mem.set_base(shdr.sh_addr + ELF64_DYN_BASE + 0x4000);
+                            base = shdr.sh_addr + ELF64_DYN_BASE + 0x4000;
                         } else {
-                            mem.set_base(shdr.sh_addr + ELF64_DYN_BASE);
+                            base = shdr.sh_addr + ELF64_DYN_BASE;
                         }
                     } else {
-                        mem.set_base(shdr.sh_addr);
+                        base = shdr.sh_addr;
                     }
-                    mem.set_size(shdr.sh_size.into());
+
+                    let mem = maps.create_map(&map_name, base, shdr.sh_size.into()).expect("cannot create map from load_programs elf64");
 
                     let mut end_off = (shdr.sh_offset + shdr.sh_size) as usize;
                     if end_off > self.bin.len() {

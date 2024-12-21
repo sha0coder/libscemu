@@ -450,15 +450,12 @@ fn gethostbyname(emu: &mut emu::Emu) {
     );
 
     let addr = emu.maps.alloc(1024).expect("low memory");
-    let map = emu.maps.create_map("hostent");
     let str_addr = addr + 1024 - 100;
-
-    map.set_base(addr);
-    map.set_size(1024);
-    map.write_dword(addr, 0x04030201);
-    map.write_qword(addr + 8, addr);
-    map.write_qword(addr + 16, 0);
-    map.write_string(str_addr, &domain_name);
+    let mem = emu.maps.create_map("hostent", addr, 1024).expect("cannot create hostent map");
+    mem.write_dword(addr, 0x04030201);
+    mem.write_qword(addr + 8, addr);
+    mem.write_qword(addr + 16, 0);
+    mem.write_string(str_addr, &domain_name);
 
     let mut hostent = Hostent::new();
     hostent.hname = str_addr;
