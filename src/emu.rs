@@ -1325,13 +1325,13 @@ impl Emu {
                 pos: self.pos,
                 rip: self.regs.rip,
                 op: "read".to_string(),
-                bits: 64,
+                bits: 32,
                 address: self.regs.rsp,
                 value: value as u64,
                 name: name.clone(),
             };
             self.memory_operations.push(memory_operation);
-            println!("\tmem_trace: pos = {} rip = {:x} op = read bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, 64, self.regs.rsp, value, name);
+            println!("\tmem_trace: pos = {} rip = {:x} op = read bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, 32, self.regs.rsp, value, name);
         }
 
         self.regs.rsp += 8;
