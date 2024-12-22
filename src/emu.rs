@@ -1640,7 +1640,7 @@ impl Emu {
                 name: name.clone(),
             };
             self.memory_operations.push(memory_operation);
-            println!("\tmem_trace: pos = {} rip = {:x} op = write bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, operand, addr, value, name);
+            println!("\tmem_trace: pos = {} rip = {:x} op = write bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, 32, addr, value, name);
         }
 
         let bits = self.get_size(operand);
