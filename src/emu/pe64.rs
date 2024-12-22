@@ -559,7 +559,6 @@ impl PE64 {
                 }
                 let func_name = PE32::read_string(&self.raw, off2 + 2);
                 let real_addr = emu::winapi64::kernel32::resolve_api_name(emu, &func_name);
-                println!("IAT: 0x{:x} {}!{} 0x{:x}", iim.first_thunk, iim.name, func_name, self.opt.image_base + iim.first_thunk as u64);
                 if real_addr == 0 {
                     break;
                 }
@@ -568,10 +567,6 @@ impl PE64 {
                     println!("binded 0x{:x} {}", real_addr, func_name);
                 }*/
 
-                if real_addr == 0x7ff000210180 {
-                    let fake_addr = read_u64_le!(self.raw, off_addr);
-                    println!("name: {} fake addr: 0x{:x}", func_name, fake_addr);
-                }
                 write_u64_le!(self.raw, off_addr, real_addr);
 
                 off_name += pe32::HintNameItem::size();
