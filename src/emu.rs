@@ -1103,7 +1103,7 @@ impl Emu {
                 op: "write".to_string(),
                 bits: 32,
                 address: self.regs.get_esp(),
-                old_value: 0, // TODO
+                old_value: self.maps.read_dword(self.regs.get_esp()).unwrap_or(0) as u64,
                 new_value: value as u64,
                 name: name.clone(),
             };
@@ -1164,7 +1164,7 @@ impl Emu {
                 op: "write".to_string(),
                 bits: 64,
                 address: self.regs.rsp,
-                old_value: 0, // TODO
+                old_value: self.maps.read_qword(self.regs.rsp).unwrap_or(0) as u64,
                 new_value: value as u64,
                 name: name.clone(),
             };
@@ -1172,7 +1172,7 @@ impl Emu {
             println!("\tmem_trace: pos = {} rip = {:x} op = write bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, 64, self.regs.rsp, value, name);
         }
 
-        self.regs.rsp -= 8;
+        self.regs.rsp = self.regs.rsp - 8;
         /*
         let stack = self.maps.get_mem("stack");
         if stack.inside(self.regs.rsp) {
@@ -1267,7 +1267,7 @@ impl Emu {
                 op: "read".to_string(),
                 bits: 32,
                 address: self.regs.get_esp(),
-                old_value: 0, // TODO
+                old_value: 0, // not needed for read?
                 new_value: value as u64,
                 name: name.clone(),
             };
@@ -1330,7 +1330,7 @@ impl Emu {
                 op: "read".to_string(),
                 bits: 32,
                 address: self.regs.rsp,
-                old_value: 0, // TODO
+                old_value: 0, // not needed for read?
                 new_value: value as u64,
                 name: name.clone(),
             };
@@ -1524,7 +1524,7 @@ impl Emu {
                             op: "read".to_string(),
                             bits: 64,
                             address: addr,
-                            old_value: 0, // TODO
+                            old_value: 0, // not needed for read?
                             new_value: v as u64,
                             name: name.clone(),
                         };
@@ -1548,7 +1548,7 @@ impl Emu {
                             op: "read".to_string(),
                             bits: 32,
                             address: addr,
-                            old_value: 0, // TODO
+                            old_value: 0, // not needed for read?
                             new_value: v as u64,
                             name: name.clone(),
                         };
@@ -1572,7 +1572,7 @@ impl Emu {
                             op: "read".to_string(),
                             bits: 16,
                             address: addr,
-                            old_value: 0, // TODO
+                            old_value: 0, // not needed for read?
                             new_value: v as u64,
                             name: name.clone(),
                         };
@@ -1596,7 +1596,7 @@ impl Emu {
                             op: "read".to_string(),
                             bits: 8,
                             address: addr,
-                            old_value: 0, // TODO
+                            old_value: 0, // not needed for read?
                             new_value: v as u64,
                             name: name.clone(),
                         };
@@ -1646,7 +1646,13 @@ impl Emu {
                 op: "write".to_string(),
                 bits: bits as u32,
                 address: addr,
-                old_value: 0, // TODO
+                old_value: match bits {
+                    64 => self.maps.read_qword(addr).unwrap_or(0),
+                    32 => self.maps.read_dword(addr).unwrap_or(0) as u64,
+                    16 => self.maps.read_word(addr).unwrap_or(0) as u64, 
+                    8 => self.maps.read_byte(addr).unwrap_or(0) as u64,
+                    _ => unreachable!("weird size: {}", operand),
+                },
                 new_value: value as u64,
                 name: name.clone(),
             };
@@ -3600,7 +3606,7 @@ impl Emu {
                             op: "read".to_string(),
                             bits: sz,
                             address: mem_addr,
-                            old_value: 0, // TODO
+                            old_value: 0, // not needed for read?
                             new_value: value,
                             name: name.clone(),
                         };
@@ -3687,6 +3693,18 @@ impl Emu {
                         None => value,
                     };
 
+                    let old_value = if self.cfg.trace_mem {
+                        match sz {
+                            64 => self.maps.read_qword(mem_addr).unwrap_or(0),
+                            32 => self.maps.read_dword(mem_addr).unwrap_or(0) as u64,
+                            16 => self.maps.read_word(mem_addr).unwrap_or(0) as u64,
+                            8 => self.maps.read_byte(mem_addr).unwrap_or(0) as u64,
+                            _ => unreachable!("weird size: {}", sz),
+                        }
+                    } else {
+                        0
+                    };
+
                     match sz {
                         64 => {
                             if !self.maps.write_qword(mem_addr, value2) {
@@ -3766,7 +3784,7 @@ impl Emu {
                             op: "write".to_string(),
                             bits: sz,
                             address: mem_addr,
-                            old_value: 0, // TODO
+                            old_value: old_value,
                             new_value: value2,
                             name: name.clone(),
                         };
