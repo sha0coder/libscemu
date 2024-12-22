@@ -323,15 +323,14 @@ impl Emu {
     }
 
     pub fn init_stack32(&mut self) {
-
+        // default if not set via clap args
         if self.cfg.stack_addr == 0 {
             self.cfg.stack_addr = 0x212000;
+            self.regs.set_esp(self.cfg.stack_addr + 0x1c000 + 4);
+            self.regs.set_ebp(self.cfg.stack_addr + 0x1c000 + 4 + 0x1000);
         }
 
         let stack = self.maps.create_map("stack", self.cfg.stack_addr, 0x030000).expect("cannot create stack map");
-        self.regs.set_esp(self.cfg.stack_addr + 0x1c000 + 4);
-        self.regs
-            .set_ebp(self.cfg.stack_addr + 0x1c000 + 4 + 0x1000);
 
         assert!(self.regs.get_esp() < self.regs.get_ebp());
         assert!(self.regs.get_esp() > stack.get_base());
@@ -349,13 +348,12 @@ impl Emu {
     }
 
     pub fn init_stack64(&mut self) {
+        // default if not set via clap args
         if self.cfg.stack_addr == 0 {
             self.cfg.stack_addr = 0x22a000;
+            self.regs.rsp = self.cfg.stack_addr + 0x4000;
+            self.regs.rbp = self.cfg.stack_addr + 0x4000 + 0x1000;
         }
-
-        self.regs.rsp = self.cfg.stack_addr + 0x4000;
-        self.regs.rbp = self.cfg.stack_addr + 0x4000 + 0x1000;
-
 
         let stack = self.maps.create_map("stack", self.cfg.stack_addr, 0x6000).expect("cannot create stack map");
 
@@ -414,7 +412,7 @@ impl Emu {
         self.flags.f_nt = false;
     }
 
-    pub fn init(&mut self) {
+    pub fn init(&mut self, clear_registers: bool) {
         self.pos = 0;
 
         if !atty::is(Stream::Stdout) {
@@ -425,7 +423,9 @@ impl Emu {
         }
 
         //println!("initializing regs");
-        self.regs.clear::<64>();
+        if clear_registers {
+            self.regs.clear::<64>();
+        }
         //self.regs.rand();
 
         if self.cfg.is_64bits {
