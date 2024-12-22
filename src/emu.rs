@@ -417,12 +417,14 @@ impl Emu {
             //self.init_stack64_tests();
             //self.init_flags_tests();
 
+            /*/
             let teb_map = self.maps.get_mem("teb");
             //let mut teb = structures::TEB64::load(teb_map.get_base(), &self.maps);
             let mut teb = structures::TEB64::load(teb_map.get_base(), &self.maps);
             teb.nt_tib.stack_base = self.cfg.stack_addr;
             teb.nt_tib.stack_limit = self.cfg.stack_addr + 0x6000;
             teb.save(teb_map);
+            */
         } else {
             // 32bits
             self.regs.rip = self.cfg.entry_point;
