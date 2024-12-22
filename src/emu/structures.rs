@@ -325,6 +325,18 @@ impl NtTib32 {
         }
     }
 
+    pub fn load_map(addr: u64, map: &Mem64) -> NtTib32 {
+        NtTib32 {
+            exception_list: map.read_dword(addr),
+            stack_base: map.read_dword(addr + 4),
+            stack_limit: map.read_dword(addr + 8),
+            sub_system_tib: map.read_dword(addr + 12),
+            fiber_data: map.read_dword(addr + 16),
+            arbitrary_user_pointer: map.read_dword(addr + 20),
+            self_pointer: map.read_dword(addr + 24),
+        }
+    }
+
     pub fn save(&self, addr: u64, mem: &mut Mem64) {
         mem.write_dword(addr, self.exception_list);
         mem.write_dword(addr + 4, self.stack_base);
@@ -417,6 +429,32 @@ impl TEB {
             activation_context_stack_pointer: maps.read_dword(addr + 86).unwrap(),
             spare_bytes: [0; 24],
             tx_fs_context: maps.read_dword(addr + 190).unwrap(),
+        }
+    }
+
+    pub fn load_map(addr: u64, map: &Mem64) -> TEB {
+        TEB {
+            nt_tib: NtTib32::load_map(addr, map),
+            environment_pointer: map.read_dword(addr + 28),
+            process_id: map.read_dword(addr + 32),
+            thread_id: map.read_dword(addr + 36),
+            active_rpc_handle: map.read_dword(addr + 40),
+            thread_local_storage_pointer: map.read_dword(addr + 44),
+            process_environment_block: map.read_dword(addr + 48),
+            last_error_value: map.read_dword(addr + 52),
+            count_of_owned_critical_sections: map.read_dword(addr + 56),
+            csr_client_thread: map.read_dword(addr + 60),
+            win32_thread_info: map.read_dword(addr + 64),
+            user32_reserved: [0; 26],
+            user_reserved: [0; 6],
+            wow32_reserved: map.read_dword(addr + 70),
+            current_locale: map.read_dword(addr + 74),
+            fp_software_status_register: map.read_dword(addr + 78),
+            system_reserved1: [0; 54],
+            exception_code: map.read_dword(addr + 82),
+            activation_context_stack_pointer: map.read_dword(addr + 86),
+            spare_bytes: [0; 24],
+            tx_fs_context: map.read_dword(addr + 190),
         }
     }
 
@@ -931,6 +969,19 @@ impl NtTib64 {
         }
     }
 
+
+    pub fn load_map(addr: u64, map: &Mem64) -> NtTib64 {
+        NtTib64 {
+            exception_list: map.read_qword(addr),
+            stack_base: map.read_qword(addr + 8),
+            stack_limit: map.read_qword(addr + 16),
+            sub_system_tib: map.read_qword(addr + 24),
+            fiber_data: map.read_qword(addr + 32),
+            arbitrary_user_pointer: map.read_qword(addr + 40),
+            self_pointer: map.read_qword(addr + 48),
+        }
+    }
+
     pub fn save(&self, base: u64, mem: &mut Mem64) {
         mem.write_qword(base, self.exception_list);
         mem.write_qword(base + 8, self.stack_base);
@@ -1015,6 +1066,30 @@ impl TEB64 {
             system_reserved1: [0; 54],
             exception_code: maps.read_dword(addr + 0x2c0).unwrap(),
             activation_context_stack_pointer: maps.read_qword(addr + 0x2c8).unwrap(),
+        }
+    }
+
+    pub fn load_map(addr: u64, map: &Mem64) -> TEB64 {
+        TEB64 {
+            nt_tib: NtTib64::load_map(addr, map),
+            environment_pointer: map.read_qword(addr + 0x38),
+            process_id: map.read_qword(addr + 0x40),
+            thread_id: map.read_qword(addr + 0x48),
+            active_rpc_handle: map.read_qword(addr + 0x50),
+            thread_local_storage_pointer: map.read_qword(addr + 0x58),
+            process_environment_block: map.read_qword(addr + 0x60),
+            last_error_value: map.read_dword(addr + 0x68),
+            count_of_owned_critical_sections: map.read_dword(addr + 0x6c),
+            csr_client_thread: map.read_qword(addr + 0x70),
+            win32_thread_info: map.read_qword(addr + 0x78),
+            user32_reserved: [0; 26],
+            user_reserved: [0; 6],
+            wow32_reserved: map.read_qword(addr + 0x100),
+            current_locale: map.read_dword(addr + 0x108),
+            fp_software_status_register: map.read_dword(addr + 0x10c),
+            system_reserved1: [0; 54],
+            exception_code: map.read_dword(addr + 0x2c0),
+            activation_context_stack_pointer: map.read_qword(addr + 0x2c8),
         }
     }
 

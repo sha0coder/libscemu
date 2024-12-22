@@ -332,6 +332,12 @@ impl Emu {
         assert!(self.regs.get_ebp() < stack.get_bottom());
         assert!(stack.inside(self.regs.get_esp()));
         assert!(stack.inside(self.regs.get_ebp()));
+
+        let teb_map = self.maps.get_mem("teb");
+        let mut teb = structures::TEB::load_map(teb_map.get_base(), &teb_map);
+        teb.nt_tib.stack_base = self.cfg.stack_addr as u32;
+        teb.nt_tib.stack_limit = (self.cfg.stack_addr + 0x30000) as u32;
+        teb.save(teb_map);
     }
 
     pub fn init_stack64(&mut self) {
@@ -352,6 +358,12 @@ impl Emu {
         assert!(self.regs.rbp < stack.get_bottom());
         assert!(stack.inside(self.regs.rsp));
         assert!(stack.inside(self.regs.rbp));
+
+        let teb_map = self.maps.get_mem("teb");
+        let mut teb = structures::TEB64::load_map(teb_map.get_base(), &teb_map);
+        teb.nt_tib.stack_base = self.cfg.stack_addr;
+        teb.nt_tib.stack_limit = self.cfg.stack_addr + 0x6000;
+        teb.save(teb_map);
 
     }
 
@@ -417,14 +429,8 @@ impl Emu {
             //self.init_stack64_tests();
             //self.init_flags_tests();
 
-            /*/
-            let teb_map = self.maps.get_mem("teb");
-            //let mut teb = structures::TEB64::load(teb_map.get_base(), &self.maps);
-            let mut teb = structures::TEB64::load(teb_map.get_base(), &self.maps);
-            teb.nt_tib.stack_base = self.cfg.stack_addr;
-            teb.nt_tib.stack_limit = self.cfg.stack_addr + 0x6000;
-            teb.save(teb_map);
-            */
+
+
         } else {
             // 32bits
             self.regs.rip = self.cfg.entry_point;
