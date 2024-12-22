@@ -1103,7 +1103,8 @@ impl Emu {
                 op: "write".to_string(),
                 bits: 32,
                 address: self.regs.get_esp(),
-                value: value as u64,
+                old_value: 0, // TODO
+                new_value: value as u64,
                 name: name.clone(),
             };
             self.memory_operations.push(memory_operation);
@@ -1163,7 +1164,8 @@ impl Emu {
                 op: "write".to_string(),
                 bits: 64,
                 address: self.regs.rsp,
-                value: value as u64,
+                old_value: 0, // TODO
+                new_value: value as u64,
                 name: name.clone(),
             };
             self.memory_operations.push(memory_operation);
@@ -1265,7 +1267,8 @@ impl Emu {
                 op: "read".to_string(),
                 bits: 32,
                 address: self.regs.get_esp(),
-                value: value as u64,
+                old_value: 0, // TODO
+                new_value: value as u64,
                 name: name.clone(),
             };
             self.memory_operations.push(memory_operation);
@@ -1327,7 +1330,8 @@ impl Emu {
                 op: "read".to_string(),
                 bits: 32,
                 address: self.regs.rsp,
-                value: value as u64,
+                old_value: 0, // TODO
+                new_value: value as u64,
                 name: name.clone(),
             };
             self.memory_operations.push(memory_operation);
@@ -1520,7 +1524,8 @@ impl Emu {
                             op: "read".to_string(),
                             bits: 64,
                             address: addr,
-                            value: v as u64,
+                            old_value: 0, // TODO
+                            new_value: v as u64,
                             name: name.clone(),
                         };
                         self.memory_operations.push(memory_operation);
@@ -1543,7 +1548,8 @@ impl Emu {
                             op: "read".to_string(),
                             bits: 32,
                             address: addr,
-                            value: v as u64,
+                            old_value: 0, // TODO
+                            new_value: v as u64,
                             name: name.clone(),
                         };
                         self.memory_operations.push(memory_operation);
@@ -1566,7 +1572,8 @@ impl Emu {
                             op: "read".to_string(),
                             bits: 16,
                             address: addr,
-                            value: v as u64,
+                            old_value: 0, // TODO
+                            new_value: v as u64,
                             name: name.clone(),
                         };
                         self.memory_operations.push(memory_operation);
@@ -1589,7 +1596,8 @@ impl Emu {
                             op: "read".to_string(),
                             bits: 8,
                             address: addr,
-                            value: v as u64,
+                            old_value: 0, // TODO
+                            new_value: v as u64,
                             name: name.clone(),
                         };
                         self.memory_operations.push(memory_operation);
@@ -1636,7 +1644,8 @@ impl Emu {
                 op: "write".to_string(),
                 bits: 32,
                 address: addr,
-                value: value as u64,
+                old_value: 0, // TODO
+                new_value: value as u64,
                 name: name.clone(),
             };
             self.memory_operations.push(memory_operation);
@@ -3590,7 +3599,8 @@ impl Emu {
                             op: "read".to_string(),
                             bits: sz,
                             address: mem_addr,
-                            value: value,
+                            old_value: 0, // TODO
+                            new_value: value,
                             name: name.clone(),
                         };
                         self.memory_operations.push(memory_operation);
@@ -3755,7 +3765,8 @@ impl Emu {
                             op: "write".to_string(),
                             bits: sz,
                             address: mem_addr,
-                            value: value2,
+                            old_value: 0, // TODO
+                            new_value: value2,
                             name: name.clone(),
                         };
                         self.memory_operations.push(memory_operation);
@@ -4183,9 +4194,11 @@ impl Emu {
         self.post_op_flags = self.flags.clone();
     }
 
-    pub fn diff_pre_op_post_op(&mut self) {
+    pub fn write_to_trace_file(&mut self) {
         // 00,00007FFBEF4E5FF0,EB 08,jmp 7FFBEF4E5FFA,rax: 7FFBEF4E5FF0-> 7FFBEF4E5FF0 rbx: 7FFE0385-> 7FFE0385 rcx: 7FFBEE4B0000-> 7FFBEE4B0000 rdx: 1-> 1 rsp: 98EB5DDFF8-> 98EB5DDFF8 rbp: 98EB5DE338-> 98EB5DE338 rsi: 1-> 1 rdi: 7FFE0384-> 7FFE0384 r8: 0-> 0 r9: 0-> 0 r10: A440AE23305F3A70-> A440AE23305F3A70 r11: 98EB5DE068-> 98EB5DE068 r12: 7FFBEF4E5FF0-> 7FFBEF4E5FF0 r13: 1FC18C72DC0-> 1FC18C72DC0 r14: 7FFBEE4B0000-> 7FFBEE4B0000 r15: 0-> 0 rflags: 344-> 246,,OptionalHeader.AddressOfEntryPoint
         // 01,00007FFBEF4E5FFA,50,push rax,rsp: 98EB5DDFF8-> 98EB5DDFF0,00000098EB5DDFF0: 7FFC65FF8B8F-> 7FFBEF4E5FF0,rax:GetMsgProc+102D07D
+        let index = self.pos - 1;
+
         let instruction = self.instruction.unwrap();
         let instruction_bytes = &self.instruction_bytes;
 
@@ -4203,22 +4216,30 @@ impl Emu {
         );
 
         let mut memory = String::new();
-        for op in self.memory_operations.iter() {
-            memory += &format!("{:?}", op);
+        for memory_op in self.memory_operations.iter() {
+            if memory_op.op == "read" {
+                continue;
+            }
+            // 00000098EB5DDFF0: 7FFC65FF8B8F-> 7FFBEF4E5FF0
+            memory = format!("{} {:x}: {:x}-> {:x}", memory, memory_op.address, memory_op.old_value, memory_op.new_value);
         }
 
         let mut trace_file = self.cfg.trace_file.as_ref().unwrap();
         writeln!(
             trace_file,
             "{index:02X},{address:016X},{bytes:02x?},{disassembly},{registers},{memory},{comments}", 
-            index = self.pos - 1, 
+            index = index, 
             address = self.pre_op_regs.rip, 
             bytes = instruction_bytes, 
             disassembly = self.out, 
             registers = format!("{} {}", registers, flags), 
             memory = memory, 
             comments = ""
-        );
+        ).expect("failed to write to trace file");
+
+        if index > 10 {
+            panic!("OUT");
+        }
     }
 
     fn trace_registers_64bit(&mut self) {
@@ -4556,7 +4577,7 @@ impl Emu {
 
                     if self.cfg.trace_file.is_some() {
                         self.capture_post_op();
-                        self.diff_pre_op_post_op();
+                        self.write_to_trace_file();
                     }
 
                     if !emulation_ok {

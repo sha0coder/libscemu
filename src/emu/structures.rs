@@ -2055,8 +2055,10 @@ pub struct MemoryOperation {
     pub bits: u32,
     /// Memory address being accessed
     pub address: u64,
-    /// Value being read or written
-    pub value: u64,
+    /// Old value before the operation
+    pub old_value: u64,
+    /// New value after the operation
+    pub new_value: u64,
     /// Name of the memory region being accessed
     pub name: String,
 }

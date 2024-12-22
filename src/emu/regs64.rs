@@ -269,7 +269,7 @@ impl Regs64 {
     }
 
     pub fn diff(rip: u64, pos: u64, a: Regs64, b: Regs64) -> String {
-        let mut output = format!("\tdiff_reg: pos = {} rip = {:x} ", pos, rip);
+        let mut output = String::new();
         if a.dr0 != b.dr0 {
             output = format!("{}{} {:x} -> {:x}; ", output, "dr0", a.dr0, b.dr0);
         }
