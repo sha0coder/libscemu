@@ -1261,22 +1261,39 @@ impl Emu {
         */
 
         if self.cfg.trace_mem {
+            // Record the read from stack memory
             let name = match self.maps.get_addr_name(self.regs.get_esp()) {
                 Some(n) => n,
                 None => "not mapped".to_string(),
             };
-            let memory_operation = MemoryOperation {
+            let read_operation = MemoryOperation {
                 pos: self.pos,
                 rip: self.regs.rip,
                 op: "read".to_string(),
                 bits: 32,
                 address: self.regs.get_esp(),
-                old_value: 0, // not needed for read?
+                old_value: 0, // not needed for read
                 new_value: value as u64,
                 name: name.clone(),
             };
-            self.memory_operations.push(memory_operation);
-            println!("\tmem_trace: pos = {} rip = {:x} op = read bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, 32, self.regs.get_esp(), value, name);
+            self.memory_operations.push(read_operation);
+            println!("\tmem_trace: pos = {} rip = {:x} op = read bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", 
+                self.pos, self.regs.rip, 32, self.regs.get_esp(), value, name);
+    
+            // Record the write to register
+            let write_operation = MemoryOperation {
+                pos: self.pos,
+                rip: self.regs.rip,
+                op: "write".to_string(),
+                bits: 32,
+                address: self.regs.get_esp(),
+                old_value: self.maps.read_dword(self.regs.get_esp()).unwrap_or(0) as u64,
+                new_value: value as u64,  // new value being written
+                name: "register".to_string(),
+            };
+            self.memory_operations.push(write_operation);
+            println!("\tmem_trace: pos = {} rip = {:x} op = write bits = {} address = 0x{:x} value = 0x{:x} name = 'register'", 
+                self.pos, self.regs.rip, 32, self.regs.get_esp(), value);
         }
 
         self.regs.set_esp(self.regs.get_esp() + 4);
@@ -1324,22 +1341,39 @@ impl Emu {
         };
 
         if self.cfg.trace_mem {
+            // Record the read from stack memory
             let name = match self.maps.get_addr_name(self.regs.rsp) {
                 Some(n) => n,
                 None => "not mapped".to_string(),
             };
-            let memory_operation = MemoryOperation {
+            let read_operation = MemoryOperation {
                 pos: self.pos,
                 rip: self.regs.rip,
                 op: "read".to_string(),
-                bits: 32,
+                bits: 64,  // Changed from 32 to 64 for 64-bit operations
                 address: self.regs.rsp,
-                old_value: 0, // not needed for read?
+                old_value: 0, // not needed for read
                 new_value: value as u64,
                 name: name.clone(),
             };
-            self.memory_operations.push(memory_operation);
-            println!("\tmem_trace: pos = {} rip = {:x} op = read bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, 32, self.regs.rsp, value, name);
+            self.memory_operations.push(read_operation);
+            println!("\tmem_trace: pos = {} rip = {:x} op = read bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", 
+                self.pos, self.regs.rip, 64, self.regs.rsp, value, name);
+        
+            // Record the write to register
+            let write_operation = MemoryOperation {
+                pos: self.pos,
+                rip: self.regs.rip,
+                op: "write".to_string(),
+                bits: 64,  // Changed from 32 to 64 for 64-bit operations
+                address: self.regs.rsp,
+                old_value: self.maps.read_qword(self.regs.rsp).unwrap_or(0) as u64,
+                new_value: value as u64,  // new value being written
+                name: "register".to_string(),
+            };
+            self.memory_operations.push(write_operation);
+            println!("\tmem_trace: pos = {} rip = {:x} op = write bits = {} address = 0x{:x} value = 0x{:x} name = 'register'", 
+                self.pos, self.regs.rip, 64, self.regs.rsp, value);
         }
 
         self.regs.rsp += 8;
