@@ -4202,18 +4202,53 @@ impl Emu {
         let instruction = self.instruction.unwrap();
         let instruction_bytes = &self.instruction_bytes;
 
-        let registers = Regs64::diff(
-            self.pre_op_regs.rip,
-            self.pos - 1,
-            self.pre_op_regs,
-            self.post_op_regs,
-        );
-        let flags = Flags::diff(
-            self.pre_op_regs.rip,
-            self.pos - 1,
-            self.pre_op_flags,
-            self.post_op_flags,
-        );
+        let mut registers = String::new();
+        if index == 0 {
+            /*
+            rax: 7FFBEF4E5FF0->7FFBEF4E5FF0
+            rbx: 7FFE0385->7FFE0385
+            rcx: 7FFBEE4B0000->7FFBEE4B0000
+            rdx: 1->1
+            rsp: 98EB5DDFF8->98EB5DDFF8
+            rbp: 98EB5DE338->98EB5DE338
+            rsi: 1->1 
+            rdi: 7FFE0384->7FFE0384 
+            r8: 0->0 
+            r9: 0->0 
+            r10: A440AE23305F3A70->A440AE23305F3A70 
+            r11: 98EB5DE068->98EB5DE068 
+            r12: 7FFBEF4E5FF0->7FFBEF4E5FF0
+            r13: 1FC18C72DC0->1FC18C72DC0
+            r14: 7FFBEE4B0000->7FFBEE4B0000
+            r15: 0->0 
+            rflags: 344->246
+            */
+            registers = format!("{} rax: {:x}-> {:x}", registers, self.pre_op_regs.rax, self.post_op_regs.rax);
+            registers = format!("{} rbx: {:x}-> {:x}", registers, self.pre_op_regs.rbx, self.post_op_regs.rbx);
+            registers = format!("{} rcx: {:x}-> {:x}", registers, self.pre_op_regs.rcx, self.post_op_regs.rcx);
+            registers = format!("{} rdx: {:x}-> {:x}", registers, self.pre_op_regs.rdx, self.post_op_regs.rdx);
+            registers = format!("{} rsp: {:x}-> {:x}", registers, self.pre_op_regs.rsp, self.post_op_regs.rsp);
+            registers = format!("{} rbp: {:x}-> {:x}", registers, self.pre_op_regs.rbp, self.post_op_regs.rbp);
+            registers = format!("{} rsi: {:x}-> {:x}", registers, self.pre_op_regs.rsi, self.post_op_regs.rsi);
+            registers = format!("{} rdi: {:x}-> {:x}", registers, self.pre_op_regs.rdi, self.post_op_regs.rdi);
+            registers = format!("{} r8: {:x}-> {:x}", registers, self.pre_op_regs.r8, self.post_op_regs.r8);
+            registers = format!("{} r9: {:x}-> {:x}", registers, self.pre_op_regs.r9, self.post_op_regs.r9);
+            registers = format!("{} r10: {:x}-> {:x}", registers, self.pre_op_regs.r10, self.post_op_regs.r10);
+            registers = format!("{} r11: {:x}-> {:x}", registers, self.pre_op_regs.r11, self.post_op_regs.r11);
+            registers = format!("{} r12: {:x}-> {:x}", registers, self.pre_op_regs.r12, self.post_op_regs.r12);
+            registers = format!("{} r13: {:x}-> {:x}", registers, self.pre_op_regs.r13, self.post_op_regs.r13);
+            registers = format!("{} r14: {:x}-> {:x}", registers, self.pre_op_regs.r14, self.post_op_regs.r14);
+            registers = format!("{} r15: {:x}-> {:x}", registers, self.pre_op_regs.r15, self.post_op_regs.r15);
+        } else {
+            registers = Regs64::diff(
+                self.pre_op_regs.rip,
+                self.pos - 1,
+                self.pre_op_regs,
+                self.post_op_regs,
+            );
+        }
+
+        let flags = format!("rflags: {:x}-> {:x}", self.pre_op_flags.dump(), self.post_op_flags.dump());
 
         let mut memory = String::new();
         for memory_op in self.memory_operations.iter() {
