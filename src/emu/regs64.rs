@@ -1607,6 +1607,29 @@ impl Regs64 {
         };
     }
 
+    pub fn set_reg_by_name(&mut self, reg_name: &str, value: u64) {
+        let reg = match reg_name {
+            "rax" => Register::RAX,
+            "rbx" => Register::RBX,
+            "rcx" => Register::RCX,
+            "rdx" => Register::RDX,
+            "rsp" => Register::RSP,
+            "rbp" => Register::RBP,
+            "rsi" => Register::RSI,
+            "rdi" => Register::RDI,
+            "r8" => Register::R8,
+            "r9" => Register::R9,
+            "r10" => Register::R10,
+            "r11" => Register::R11,
+            "r12" => Register::R12,
+            "r13" => Register::R13,
+            "r14" => Register::R14,
+            "r15" => Register::R15,
+            _ => unimplemented!("unimplemented register {:?}", reg_name),
+        };
+        self.set_reg(reg, value);
+    }
+    
     pub fn is_fpu(&self, reg: Register) -> bool {
         match reg {
             Register::ST0 => true,
