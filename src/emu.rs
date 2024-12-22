@@ -412,7 +412,7 @@ impl Emu {
         self.flags.f_nt = false;
     }
 
-    pub fn init(&mut self, clear_registers: bool) {
+    pub fn init(&mut self, clear_registers: bool, clear_flags: bool) {
         self.pos = 0;
 
         if !atty::is(Stream::Stdout) {
@@ -426,12 +426,16 @@ impl Emu {
         if clear_registers {
             self.regs.clear::<64>();
         }
+        if clear_flags {
+            self.flags.clear();
+        }
         //self.regs.rand();
 
         if self.cfg.is_64bits {
             self.regs.rip = self.cfg.entry_point;
             self.maps.is_64bits = true;
-            self.init_regs_tests();
+
+            //self.init_regs_tests(); // TODO: not sure why this was on
             self.init_mem64();
             self.init_stack64();
             //self.init_stack64_tests();
@@ -1102,7 +1106,7 @@ impl Emu {
                 rip: self.regs.rip,
                 op: "write".to_string(),
                 bits: 32,
-                address: self.regs.get_esp(),
+                address: self.regs.get_esp() - 4,
                 old_value: self.maps.read_dword(self.regs.get_esp()).unwrap_or(0) as u64,
                 new_value: value as u64,
                 name: name.clone(),
@@ -1163,7 +1167,7 @@ impl Emu {
                 rip: self.regs.rip,
                 op: "write".to_string(),
                 bits: 64,
-                address: self.regs.rsp,
+                address: self.regs.rsp - 8,
                 old_value: self.maps.read_qword(self.regs.rsp).unwrap_or(0) as u64,
                 new_value: value as u64,
                 name: name.clone(),
@@ -4283,7 +4287,7 @@ impl Emu {
                 continue;
             }
             // 00000098EB5DDFF0: 7FFC65FF8B8F-> 7FFBEF4E5FF0
-            memory = format!("{} {:x}: {:x}-> {:x}", memory, memory_op.address, memory_op.old_value, memory_op.new_value);
+            memory = format!("{} {:016X}: {:X}-> {:X}", memory, memory_op.address, memory_op.old_value, memory_op.new_value);
         }
 
         let mut trace_file = self.cfg.trace_file.as_ref().unwrap();
