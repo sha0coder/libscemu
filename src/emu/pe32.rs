@@ -787,6 +787,10 @@ impl PE32 {
     pub fn read_string(raw: &[u8], off: usize) -> String {
         let mut last = 0;
 
+        if raw.len() < off + 200 {
+            return String::new();
+        }
+
         for i in off..off + 200 {
             if raw[i] == 0 {
                 last = i;

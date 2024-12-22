@@ -342,6 +342,7 @@ impl Emu {
         self.regs.rsp = self.cfg.stack_addr + 0x4000;
         self.regs.rbp = self.cfg.stack_addr + 0x4000 + 0x1000;
 
+
         let stack = self.maps.create_map("stack", self.cfg.stack_addr, 0x6000).expect("cannot create stack map");
 
         assert!(self.regs.rsp < self.regs.rbp);
@@ -351,6 +352,7 @@ impl Emu {
         assert!(self.regs.rbp < stack.get_bottom());
         assert!(stack.inside(self.regs.rsp));
         assert!(stack.inside(self.regs.rbp));
+
     }
 
     pub fn init_stack64_tests(&mut self) {
@@ -414,6 +416,13 @@ impl Emu {
             self.init_stack64();
             //self.init_stack64_tests();
             //self.init_flags_tests();
+
+            let teb_map = self.maps.get_mem("teb");
+            //let mut teb = structures::TEB64::load(teb_map.get_base(), &self.maps);
+            let mut teb = structures::TEB64::load(teb_map.get_base(), &self.maps);
+            teb.nt_tib.stack_base = self.cfg.stack_addr;
+            teb.nt_tib.stack_limit = self.cfg.stack_addr + 0x6000;
+            teb.save(teb_map);
         } else {
             // 32bits
             self.regs.rip = self.cfg.entry_point;

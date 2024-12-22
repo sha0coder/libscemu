@@ -286,8 +286,61 @@ impl OrdinalTable {
 }
 
 #[derive(Debug)]
+pub struct NtTib32 {
+    pub exception_list: u32,
+    pub stack_base: u32,
+    pub stack_limit: u32,
+    pub sub_system_tib: u32,
+    pub fiber_data: u32,
+    pub arbitrary_user_pointer: u32,
+    pub self_pointer: u32,
+}
+
+impl NtTib32 {
+    pub fn size() -> usize {
+        return 28;
+    }
+
+    pub fn new() -> NtTib32 {
+        NtTib32 {
+            exception_list: 0,
+            stack_base: 0,
+            stack_limit: 0,
+            sub_system_tib: 0,
+            fiber_data: 0,
+            arbitrary_user_pointer: 0,
+            self_pointer: 0,
+        }
+    }
+
+    pub fn load(addr: u64, maps: &Maps) -> NtTib32 {
+        NtTib32 {
+            exception_list: maps.read_dword(addr).unwrap(),
+            stack_base: maps.read_dword(addr + 4).unwrap(),
+            stack_limit: maps.read_dword(addr + 8).unwrap(),
+            sub_system_tib: maps.read_dword(addr + 12).unwrap(),
+            fiber_data: maps.read_dword(addr + 16).unwrap(),
+            arbitrary_user_pointer: maps.read_dword(addr + 20).unwrap(),
+            self_pointer: maps.read_dword(addr + 24).unwrap(),
+        }
+    }
+
+    pub fn save(&self, addr: u64, mem: &mut Mem64) {
+        mem.write_dword(addr, self.exception_list);
+        mem.write_dword(addr + 4, self.stack_base);
+        mem.write_dword(addr + 8, self.stack_limit);
+        mem.write_dword(addr + 12, self.sub_system_tib);
+        mem.write_dword(addr + 16, self.fiber_data);
+        mem.write_dword(addr + 20, self.arbitrary_user_pointer);
+        mem.write_dword(addr + 24, self.self_pointer);
+    }
+}
+
+
+
+#[derive(Debug)]
 pub struct TEB {
-    nt_tib: [u8; 28],
+    pub nt_tib: NtTib32,
     environment_pointer: u32,
     process_id: u32,
     thread_id: u32,
@@ -317,7 +370,7 @@ impl TEB {
 
     pub fn new(peb_addr: u32) -> TEB {
         TEB {
-            nt_tib: [0; 28],
+            nt_tib: NtTib32::new(),
             environment_pointer: 0,
             process_id: 3240,
             thread_id: 1,
@@ -343,7 +396,7 @@ impl TEB {
 
     pub fn load(addr: u64, maps: &Maps) -> TEB {
         TEB {
-            nt_tib: [0; 28],
+            nt_tib: NtTib32::load(addr, maps),
             environment_pointer: maps.read_dword(addr + 28).unwrap(),
             process_id: maps.read_dword(addr + 32).unwrap(),
             thread_id: maps.read_dword(addr + 36).unwrap(),
@@ -369,6 +422,7 @@ impl TEB {
 
     pub fn save(&self, mem: &mut Mem64) {
         let base = mem.get_base();
+        self.nt_tib.save(base, mem);
         mem.write_dword(base + 28, self.environment_pointer);
         mem.write_dword(base + 32, self.process_id);
         mem.write_dword(base + 36, self.thread_id);
@@ -838,8 +892,59 @@ impl PEB64 {
 }
 
 #[derive(Debug)]
+pub struct NtTib64 {
+    pub exception_list: u64,
+    pub stack_base: u64,
+    pub stack_limit: u64,
+    pub sub_system_tib: u64,
+    pub fiber_data: u64,
+    pub arbitrary_user_pointer: u64,
+    pub self_pointer: u64,
+}
+
+impl NtTib64 {
+    pub fn new() -> NtTib64 {
+        NtTib64 {
+            exception_list: 0,
+            stack_base: 0,
+            stack_limit: 0,
+            sub_system_tib: 0,
+            fiber_data: 0,
+            arbitrary_user_pointer: 0,
+            self_pointer: 0,
+        }
+    }
+
+    pub fn size() -> usize {
+        return 56;
+    }
+
+    pub fn load(addr: u64, maps: &Maps) -> NtTib64 {
+        NtTib64 {
+            exception_list: maps.read_qword(addr).unwrap(),
+            stack_base: maps.read_qword(addr + 8).unwrap(),
+            stack_limit: maps.read_qword(addr + 16).unwrap(),
+            sub_system_tib: maps.read_qword(addr + 24).unwrap(),
+            fiber_data: maps.read_qword(addr + 32).unwrap(),
+            arbitrary_user_pointer: maps.read_qword(addr + 40).unwrap(),
+            self_pointer: maps.read_qword(addr + 48).unwrap(),
+        }
+    }
+
+    pub fn save(&self, base: u64, mem: &mut Mem64) {
+        mem.write_qword(base, self.exception_list);
+        mem.write_qword(base + 8, self.stack_base);
+        mem.write_qword(base + 16, self.stack_limit);
+        mem.write_qword(base + 24, self.sub_system_tib);
+        mem.write_qword(base + 32, self.fiber_data);
+        mem.write_qword(base + 40, self.arbitrary_user_pointer);
+        mem.write_qword(base + 48, self.self_pointer);
+    }
+}
+
+#[derive(Debug)]
 pub struct TEB64 {
-    nt_tib: [u8; 56],
+    pub nt_tib: NtTib64,
     environment_pointer: u64,
     process_id: u64,
     thread_id: u64,
@@ -863,7 +968,7 @@ pub struct TEB64 {
 impl TEB64 {
     pub fn new(peb_addr: u64) -> TEB64 {
         TEB64 {
-            nt_tib: [0; 56],
+            nt_tib: NtTib64::new(),
             environment_pointer: 0,
             process_id: 3240,
             thread_id: 1,
@@ -891,7 +996,7 @@ impl TEB64 {
 
     pub fn load(addr: u64, maps: &Maps) -> TEB64 {
         TEB64 {
-            nt_tib: [0; 56],
+            nt_tib: NtTib64::load(addr, maps),
             environment_pointer: maps.read_qword(addr + 0x38).unwrap(),
             process_id: maps.read_qword(addr + 0x40).unwrap(),
             thread_id: maps.read_qword(addr + 0x48).unwrap(),
@@ -915,6 +1020,7 @@ impl TEB64 {
 
     pub fn save(&self, mem: &mut Mem64) {
         let base = mem.get_base();
+        self.nt_tib.save(base, mem);
         mem.write_qword(base + 0x38, self.environment_pointer);
         mem.write_qword(base + 0x40, self.process_id);
         mem.write_qword(base + 0x48, self.thread_id);
