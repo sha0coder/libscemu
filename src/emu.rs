@@ -4336,10 +4336,6 @@ impl Emu {
             memory = memory, 
             comments = ""
         ).expect("failed to write to trace file");
-
-        if index > 32 {
-            panic!("OUT");
-        }
     }
 
     fn trace_registers_64bit(&mut self) {
