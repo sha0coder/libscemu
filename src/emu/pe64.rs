@@ -568,10 +568,6 @@ impl PE64 {
                     println!("binded 0x{:x} {}", real_addr, func_name);
                 }*/
 
-                if real_addr == 0x7ff000210180 {
-                    let fake_addr = read_u64_le!(self.raw, off_addr);
-                    println!("name: {} fake addr: 0x{:x}", func_name, fake_addr);
-                }
                 write_u64_le!(self.raw, off_addr, real_addr);
 
                 off_name += pe32::HintNameItem::size();
