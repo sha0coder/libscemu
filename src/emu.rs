@@ -4338,53 +4338,6 @@ impl Emu {
         ).expect("failed to write to trace file");
     }
 
-    fn trace_registers_64bit(&mut self) {
-        println!(
-            "\trax: 0x{:x} rbx: 0x{:x} rcx: 0x{:x} rdx: 0x{:x} rsi: 0x{:x} rdi: 0x{:x} rbp: 0x{:x} rsp: 0x{:x}",
-            self.regs.rax, self.regs.rbx, self.regs.rcx,
-            self.regs.rdx, self.regs.rsi, self.regs.rdi, self.regs.rbp, self.regs.rsp
-        );
-        println!(
-            "\tr8: 0x{:x} r9: 0x{:x} r10: 0x{:x} r11: 0x{:x} r12: 0x{:x} r13: 0x{:x} r14: 0x{:x} r15: 0x{:x}",
-            self.regs.r8, self.regs.r9, self.regs.r10, self.regs.r11, self.regs.r12, self.regs.r13, self.regs.r14,
-            self.regs.r15,
-        );
-        println!(
-            "\tr8u: 0x{:x} r9u: 0x{:x} r10u: 0x{:x} r11u: 0x{:x} r12u: 0x{:x} r13u: 0x{:x} r14u: 0x{:x} r15u: 0x{:x}",
-            self.regs.get_r8u(), self.regs.get_r9u(), self.regs.get_r10u(), self.regs.get_r11u(), self.regs.get_r12u(), self.regs.get_r13u(), self.regs.get_r14u(),
-            self.regs.get_r15u(),
-        );
-        println!(
-            "\tr8d: 0x{:x} r9d: 0x{:x} r10d: 0x{:x} r11d: 0x{:x} r12d: 0x{:x} r13d: 0x{:x} r14d: 0x{:x} r15d: 0x{:x}",
-            self.regs.get_r8d(), self.regs.get_r9d(), self.regs.get_r10d(), self.regs.get_r11d(), self.regs.get_r12d(), self.regs.get_r13d(), self.regs.get_r14d(),
-            self.regs.get_r15d(),
-        );
-        println!(
-            "\tr8w: 0x{:x} r9w: 0x{:x} r10w: 0x{:x} r11w: 0x{:x} r12w: 0x{:x} r13w: 0x{:x} r14w: 0x{:x} r15w: 0x{:x}",
-            self.regs.get_r8w(), self.regs.get_r9w(), self.regs.get_r10w(), self.regs.get_r11w(), self.regs.get_r12w(), self.regs.get_r13w(), self.regs.get_r14w(),
-            self.regs.get_r15w(),
-        );
-        println!(
-            "\tr8l: 0x{:x} r9l: 0x{:x} r10l: 0x{:x} r11l: 0x{:x} r12l: 0x{:x} r13l: 0x{:x} r14l: 0x{:x} r15l: 0x{:x}",
-            self.regs.get_r8l(), self.regs.get_r9l(), self.regs.get_r10l(), self.regs.get_r11l(), self.regs.get_r12l(), self.regs.get_r13l(), self.regs.get_r14l(),
-            self.regs.get_r15l(),
-        );
-        println!(
-            "\tzf: {:?} pf: {:?} af: {:?} of: {:?} sf: {:?} df: {:?} cf: {:?} tf: {:?} if: {:?} nt: {:?}",
-            self.flags.f_zf, self.flags.f_pf, self.flags.f_af,
-            self.flags.f_of, self.flags.f_sf, self.flags.f_df,
-            self.flags.f_cf, self.flags.f_tf, self.flags.f_if,
-            self.flags.f_nt
-        );
-    }
-
-    fn trace_registers_32bit(&mut self) {
-        println!("\teax: 0x{:x} ebx: 0x{:x} ecx: 0x{:x} edx: 0x{:x} esi: 0x{:x} edi: 0x{:x} ebp: 0x{:x} esp: 0x{:x}",
-          self.regs.get_eax() as u32, self.regs.get_ebx() as u32, self.regs.get_ecx() as u32,
-          self.regs.get_edx() as u32, self.regs.get_esi() as u32, self.regs.get_edi() as u32,
-          self.regs.get_ebp() as u32, self.regs.get_esp() as u32);
-    }
-
     fn trace_specific_register(&self, reg: &str) {
         match reg {
             "rax" => self.regs.show_rax(&self.maps, self.pos),
