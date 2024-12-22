@@ -5087,36 +5087,31 @@ impl Emu {
 
             Mnemonic::Sbb => {
                 self.show_instruction(&self.colors.cyan, &ins);
-
+            
                 assert!(ins.op_count() == 2);
-
-                let cf: u64;
-                if self.flags.f_cf {
-                    cf = 1;
-                } else {
-                    cf = 0;
-                }
-
+            
+                let cf: u64 = if self.flags.f_cf { 1 } else { 0 };
+            
                 let value0 = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
                     None => return false,
                 };
-
+            
                 let value1 = match self.get_operand_value(&ins, 1, true) {
                     Some(v) => v,
                     None => return false,
                 };
-
+            
                 let res: u64;
                 let sz = self.get_operand_sz(&ins, 1);
                 match sz {
-                    64 => res = self.flags.sub64(value0, value1 + cf),
-                    32 => res = self.flags.sub32(value0, value1 + cf),
-                    16 => res = self.flags.sub16(value0, value1 + cf),
-                    8 => res = self.flags.sub8(value0, value1 + cf),
+                    64 => res = self.flags.sub64(value0, value1.wrapping_add(cf)),
+                    32 => res = self.flags.sub32(value0, value1.wrapping_add(cf)),
+                    16 => res = self.flags.sub16(value0, value1.wrapping_add(cf)),
+                    8 => res = self.flags.sub8(value0, value1.wrapping_add(cf)),
                     _ => panic!("weird size"),
                 }
-
+            
                 if !self.set_operand_value(&ins, 0, res) {
                     return false;
                 }
