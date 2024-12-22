@@ -1637,12 +1637,14 @@ impl Emu {
             self.force_break = true;
         }
 
+        let bits = self.get_size(operand);
+
         if self.cfg.trace_mem {
             let memory_operation = MemoryOperation {
                 pos: self.pos,
                 rip: self.regs.rip,
                 op: "write".to_string(),
-                bits: 32,
+                bits: bits as u32,
                 address: addr,
                 old_value: 0, // TODO
                 new_value: value as u64,
@@ -1651,8 +1653,7 @@ impl Emu {
             self.memory_operations.push(memory_operation);
             println!("\tmem_trace: pos = {} rip = {:x} op = write bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, 32, addr, value, name);
         }
-
-        let bits = self.get_size(operand);
+        
         let ret = match bits {
             64 => self.maps.write_qword(addr, value),
             32 => self.maps.write_dword(addr, (value & 0xffffffff) as u32),
@@ -4202,6 +4203,7 @@ impl Emu {
         let instruction = self.instruction.unwrap();
         let instruction_bytes = &self.instruction_bytes;
 
+        // dump all registers on first, only differences on next
         let mut registers = String::new();
         if index == 0 {
             /*
@@ -4248,7 +4250,14 @@ impl Emu {
             );
         }
 
-        let flags = format!("rflags: {:x}-> {:x}", self.pre_op_flags.dump(), self.post_op_flags.dump());
+        let mut flags = String::new();
+        if index == 0 {
+            flags = format!("rflags: {:x}-> {:x}", self.pre_op_flags.dump(), self.post_op_flags.dump());
+        } else {
+            if self.pre_op_flags.dump() != self.post_op_flags.dump() {
+                flags = format!("rflags: {:x}-> {:x}", self.pre_op_flags.dump(), self.post_op_flags.dump());
+            }
+        }
 
         let mut memory = String::new();
         for memory_op in self.memory_operations.iter() {
@@ -4262,7 +4271,7 @@ impl Emu {
         let mut trace_file = self.cfg.trace_file.as_ref().unwrap();
         writeln!(
             trace_file,
-            "{index:02X},{address:016X},{bytes:02x?},{disassembly},{registers},{memory},{comments}", 
+            r#""{index:02X}","{address:016X}","{bytes:02x?}","{disassembly}","{registers}","{memory}","{comments}""#, 
             index = index, 
             address = self.pre_op_regs.rip, 
             bytes = instruction_bytes, 
@@ -4272,7 +4281,7 @@ impl Emu {
             comments = ""
         ).expect("failed to write to trace file");
 
-        if index > 10 {
+        if index > 32 {
             panic!("OUT");
         }
     }
@@ -4423,19 +4432,22 @@ impl Emu {
         let mut formatter = IntelFormatter::new();
         formatter.options_mut().set_digit_separator("");
         formatter.options_mut().set_first_operand_char_index(6);
+
         // get first instruction from iterator
-        let ins = decoder.iter().next().unwrap();
-        // size
+        let ins = decoder.decode();
         let sz = ins.len();
+        let addr = ins.ip();
+        let position = decoder.position();
+        let instruction_bytes = block[position-sz..position].to_vec();
 
         // clear
         self.out.clear();
+        self.memory_operations.clear();
 
         // format
         formatter.format(&ins, &mut self.out);
         self.instruction = Some(ins);
-        self.instruction_bytes = vec![]; // TODO
-        self.memory_operations.clear();
+        self.instruction_bytes = instruction_bytes;
 
         // emulate
         let result_ok = self.emulate_instruction(&ins, sz, true);
@@ -4509,16 +4521,16 @@ impl Emu {
                         Decoder::with_ip(32, &block, self.regs.get_eip(), DecoderOptions::NONE);
                 }
 
-                for ins in decoder.iter() {
+                while decoder.can_decode() {
+                    let ins = decoder.decode();
                     let sz = ins.len();
                     let addr = ins.ip();
-                    let position = ins.ip() - self.regs.rip;
-                    let instruction_bytes = block[position as usize..position as usize + sz].to_vec();
+                    let position = decoder.position();
+                    let instruction_bytes = block[position-sz..position].to_vec();
 
                     if !end_addr.is_none() && Some(addr) == end_addr {
                         return Ok(self.regs.rip);
                     }
-
 
                     self.out.clear();
                     formatter.format(&ins, &mut self.out);

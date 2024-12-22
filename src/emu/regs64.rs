@@ -271,263 +271,263 @@ impl Regs64 {
     pub fn diff(rip: u64, pos: u64, a: Regs64, b: Regs64) -> String {
         let mut output = String::new();
         if a.dr0 != b.dr0 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "dr0", a.dr0, b.dr0);
+            output = format!("{}{}: {:x} -> {:x} ", output, "dr0", a.dr0, b.dr0);
         }
         if a.dr1 != b.dr1 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "dr1", a.dr1, b.dr1);
+            output = format!("{}{}: {:x} -> {:x} ", output, "dr1", a.dr1, b.dr1);
         }
         if a.dr2 != b.dr2 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "dr2", a.dr2, b.dr2);
+            output = format!("{}{}: {:x} -> {:x} ", output, "dr2", a.dr2, b.dr2);
         }
         if a.dr3 != b.dr3 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "dr3", a.dr3, b.dr3);
+            output = format!("{}{}: {:x} -> {:x} ", output, "dr3", a.dr3, b.dr3);
         }
         if a.dr6 != b.dr6 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "dr6", a.dr6, b.dr6);
+            output = format!("{}{}: {:x} -> {:x} ", output, "dr6", a.dr6, b.dr6);
         }
         if a.dr7 != b.dr7 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "dr7", a.dr7, b.dr7);
+            output = format!("{}{}: {:x} -> {:x} ", output, "dr7", a.dr7, b.dr7);
         }
         if a.rax != b.rax {
-            output = format!("{}{} {:x} -> {:x}; ", output, "rax", a.rax, b.rax);
+            output = format!("{}{}: {:x} -> {:x} ", output, "rax", a.rax, b.rax);
         }
         if a.rbx != b.rbx {
-            output = format!("{}{} {:x} -> {:x}; ", output, "rbx", a.rbx, b.rbx);
+            output = format!("{}{}: {:x} -> {:x} ", output, "rbx", a.rbx, b.rbx);
         }
         if a.rcx != b.rcx {
-            output = format!("{}{} {:x} -> {:x}; ", output, "rcx", a.rcx, b.rcx);
+            output = format!("{}{}: {:x} -> {:x} ", output, "rcx", a.rcx, b.rcx);
         }
         if a.rdx != b.rdx {
-            output = format!("{}{} {:x} -> {:x}; ", output, "rdx", a.rdx, b.rdx);
+            output = format!("{}{}: {:x} -> {:x} ", output, "rdx", a.rdx, b.rdx);
         }
         if a.rsi != b.rsi {
-            output = format!("{}{} {:x} -> {:x}; ", output, "rsi", a.rsi, b.rsi);
+            output = format!("{}{}: {:x} -> {:x} ", output, "rsi", a.rsi, b.rsi);
         }
         if a.rdi != b.rdi {
-            output = format!("{}{} {:x} -> {:x}; ", output, "rdi", a.rdi, b.rdi);
+            output = format!("{}{}: {:x} -> {:x} ", output, "rdi", a.rdi, b.rdi);
         }
         if a.rbp != b.rbp {
-            output = format!("{}{} {:x} -> {:x}; ", output, "rbp", a.rbp, b.rbp);
+            output = format!("{}{}: {:x} -> {:x} ", output, "rbp", a.rbp, b.rbp);
         }
         if a.rsp != b.rsp {
-            output = format!("{}{} {:x} -> {:x}; ", output, "rsp", a.rsp, b.rsp);
+            output = format!("{}{}: {:x} -> {:x} ", output, "rsp", a.rsp, b.rsp);
         }
-        //if a.rip != b.rip { output = format!("{}{} {:x} -> {:x}; ", output, "rip", a.rip, b.rip); }
+        //if a.rip != b.rip { output = format!("{}{}: {:x} -> {:x} ", output, "rip", a.rip, b.rip) }
         if a.r8 != b.r8 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "r8", a.r8, b.r8);
+            output = format!("{}{}: {:x} -> {:x} ", output, "r8", a.r8, b.r8);
         }
         if a.r9 != b.r9 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "r9", a.r9, b.r9);
+            output = format!("{}{}: {:x} -> {:x} ", output, "r9", a.r9, b.r9);
         }
         if a.r10 != b.r10 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "r10", a.r10, b.r10);
+            output = format!("{}{}: {:x} -> {:x} ", output, "r10", a.r10, b.r10);
         }
         if a.r11 != b.r11 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "r11", a.r11, b.r11);
+            output = format!("{}{}: {:x} -> {:x} ", output, "r11", a.r11, b.r11);
         }
         if a.r12 != b.r12 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "r12", a.r12, b.r12);
+            output = format!("{}{}: {:x} -> {:x} ", output, "r12", a.r12, b.r12);
         }
         if a.r13 != b.r13 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "r13", a.r13, b.r13);
+            output = format!("{}{}: {:x} -> {:x} ", output, "r13", a.r13, b.r13);
         }
         if a.r14 != b.r14 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "r14", a.r14, b.r14);
+            output = format!("{}{}: {:x} -> {:x} ", output, "r14", a.r14, b.r14);
         }
         if a.r15 != b.r15 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "r15", a.r15, b.r15);
+            output = format!("{}{}: {:x} -> {:x} ", output, "r15", a.r15, b.r15);
         }
         if a.cr0 != b.cr0 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "cr0", a.cr0, b.cr0);
+            output = format!("{}{}: {:x} -> {:x} ", output, "cr0", a.cr0, b.cr0);
         }
         if a.cr1 != b.cr1 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "cr1", a.cr1, b.cr1);
+            output = format!("{}{}: {:x} -> {:x} ", output, "cr1", a.cr1, b.cr1);
         }
         if a.cr2 != b.cr2 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "cr2", a.cr2, b.cr2);
+            output = format!("{}{}: {:x} -> {:x} ", output, "cr2", a.cr2, b.cr2);
         }
         if a.cr3 != b.cr3 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "cr3", a.cr3, b.cr3);
+            output = format!("{}{}: {:x} -> {:x} ", output, "cr3", a.cr3, b.cr3);
         }
         if a.cr4 != b.cr4 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "cr4", a.cr4, b.cr4);
+            output = format!("{}{}: {:x} -> {:x} ", output, "cr4", a.cr4, b.cr4);
         }
         if a.cr5 != b.cr5 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "cr5", a.cr5, b.cr5);
+            output = format!("{}{}: {:x} -> {:x} ", output, "cr5", a.cr5, b.cr5);
         }
         if a.cr6 != b.cr6 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "cr6", a.cr6, b.cr6);
+            output = format!("{}{}: {:x} -> {:x} ", output, "cr6", a.cr6, b.cr6);
         }
         if a.cr7 != b.cr7 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "cr7", a.cr7, b.cr7);
+            output = format!("{}{}: {:x} -> {:x} ", output, "cr7", a.cr7, b.cr7);
         }
         if a.cr8 != b.cr8 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "cr8", a.cr8, b.cr8);
+            output = format!("{}{}: {:x} -> {:x} ", output, "cr8", a.cr8, b.cr8);
         }
         if a.cr9 != b.cr9 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "cr9", a.cr9, b.cr9);
+            output = format!("{}{}: {:x} -> {:x} ", output, "cr9", a.cr9, b.cr9);
         }
         if a.cr10 != b.cr10 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "cr10", a.cr10, b.cr10);
+            output = format!("{}{}: {:x} -> {:x} ", output, "cr10", a.cr10, b.cr10);
         }
         if a.cr11 != b.cr11 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "cr11", a.cr11, b.cr11);
+            output = format!("{}{}: {:x} -> {:x} ", output, "cr11", a.cr11, b.cr11);
         }
         if a.cr12 != b.cr12 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "cr12", a.cr12, b.cr12);
+            output = format!("{}{}: {:x} -> {:x} ", output, "cr12", a.cr12, b.cr12);
         }
         if a.cr13 != b.cr13 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "cr13", a.cr13, b.cr13);
+            output = format!("{}{}: {:x} -> {:x} ", output, "cr13", a.cr13, b.cr13);
         }
         if a.cr14 != b.cr14 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "cr14", a.cr14, b.cr14);
+            output = format!("{}{}: {:x} -> {:x} ", output, "cr14", a.cr14, b.cr14);
         }
         if a.cr15 != b.cr15 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "cr15", a.cr15, b.cr15);
+            output = format!("{}{}: {:x} -> {:x} ", output, "cr15", a.cr15, b.cr15);
         }
         if a.msr != b.msr {
-            output = format!("{}{} {:x} -> {:x}; ", output, "msr", a.msr, b.msr);
+            output = format!("{}{}: {:x} -> {:x} ", output, "msr", a.msr, b.msr);
         }
         if a.tr3 != b.tr3 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "tr3", a.tr3, b.tr3);
+            output = format!("{}{}: {:x} -> {:x} ", output, "tr3", a.tr3, b.tr3);
         }
         if a.tr4 != b.tr4 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "tr4", a.tr4, b.tr4);
+            output = format!("{}{}: {:x} -> {:x} ", output, "tr4", a.tr4, b.tr4);
         }
         if a.tr5 != b.tr5 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "tr5", a.tr5, b.tr5);
+            output = format!("{}{}: {:x} -> {:x} ", output, "tr5", a.tr5, b.tr5);
         }
         if a.tr6 != b.tr6 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "tr6", a.tr6, b.tr6);
+            output = format!("{}{}: {:x} -> {:x} ", output, "tr6", a.tr6, b.tr6);
         }
         if a.tr7 != b.tr7 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "tr7", a.tr7, b.tr7);
+            output = format!("{}{}: {:x} -> {:x} ", output, "tr7", a.tr7, b.tr7);
         }
         if a.xmm0 != b.xmm0 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "xmm0", a.xmm0, b.xmm0);
+            output = format!("{}{}: {:x} -> {:x} ", output, "xmm0", a.xmm0, b.xmm0);
         }
         if a.xmm1 != b.xmm1 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "xmm1", a.xmm1, b.xmm1);
+            output = format!("{}{}: {:x} -> {:x} ", output, "xmm1", a.xmm1, b.xmm1);
         }
         if a.xmm2 != b.xmm2 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "xmm2", a.xmm2, b.xmm2);
+            output = format!("{}{}: {:x} -> {:x} ", output, "xmm2", a.xmm2, b.xmm2);
         }
         if a.xmm3 != b.xmm3 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "xmm3", a.xmm3, b.xmm3);
+            output = format!("{}{}: {:x} -> {:x} ", output, "xmm3", a.xmm3, b.xmm3);
         }
         if a.xmm4 != b.xmm4 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "xmm4", a.xmm4, b.xmm4);
+            output = format!("{}{}: {:x} -> {:x} ", output, "xmm4", a.xmm4, b.xmm4);
         }
         if a.xmm5 != b.xmm5 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "xmm5", a.xmm5, b.xmm5);
+            output = format!("{}{}: {:x} -> {:x} ", output, "xmm5", a.xmm5, b.xmm5);
         }
         if a.xmm6 != b.xmm6 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "xmm6", a.xmm6, b.xmm6);
+            output = format!("{}{}: {:x} -> {:x} ", output, "xmm6", a.xmm6, b.xmm6);
         }
         if a.xmm7 != b.xmm7 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "xmm7", a.xmm7, b.xmm7);
+            output = format!("{}{}: {:x} -> {:x} ", output, "xmm7", a.xmm7, b.xmm7);
         }
         if a.xmm8 != b.xmm8 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "xmm8", a.xmm8, b.xmm8);
+            output = format!("{}{}: {:x} -> {:x} ", output, "xmm8", a.xmm8, b.xmm8);
         }
         if a.xmm9 != b.xmm9 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "xmm9", a.xmm9, b.xmm9);
+            output = format!("{}{}: {:x} -> {:x} ", output, "xmm9", a.xmm9, b.xmm9);
         }
         if a.xmm10 != b.xmm10 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "xmm10", a.xmm10, b.xmm10);
+            output = format!("{}{}: {:x} -> {:x} ", output, "xmm10", a.xmm10, b.xmm10);
         }
         if a.xmm11 != b.xmm11 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "xmm11", a.xmm11, b.xmm11);
+            output = format!("{}{}: {:x} -> {:x} ", output, "xmm11", a.xmm11, b.xmm11);
         }
         if a.xmm12 != b.xmm12 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "xmm12", a.xmm12, b.xmm12);
+            output = format!("{}{}: {:x} -> {:x} ", output, "xmm12", a.xmm12, b.xmm12);
         }
         if a.xmm13 != b.xmm13 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "xmm13", a.xmm13, b.xmm13);
+            output = format!("{}{}: {:x} -> {:x} ", output, "xmm13", a.xmm13, b.xmm13);
         }
         if a.xmm14 != b.xmm14 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "xmm14", a.xmm14, b.xmm14);
+            output = format!("{}{}: {:x} -> {:x} ", output, "xmm14", a.xmm14, b.xmm14);
         }
         if a.xmm15 != b.xmm15 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "xmm15", a.xmm15, b.xmm15);
+            output = format!("{}{}: {:x} -> {:x} ", output, "xmm15", a.xmm15, b.xmm15);
         }
         if a.ymm0 != b.ymm0 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "ymm0", a.ymm0, b.ymm0);
+            output = format!("{}{}: {:x} -> {:x} ", output, "ymm0", a.ymm0, b.ymm0);
         }
         if a.ymm1 != b.ymm1 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "ymm1", a.ymm1, b.ymm1);
+            output = format!("{}{}: {:x} -> {:x} ", output, "ymm1", a.ymm1, b.ymm1);
         }
         if a.ymm2 != b.ymm2 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "ymm2", a.ymm2, b.ymm2);
+            output = format!("{}{}: {:x} -> {:x} ", output, "ymm2", a.ymm2, b.ymm2);
         }
         if a.ymm3 != b.ymm3 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "ymm3", a.ymm3, b.ymm3);
+            output = format!("{}{}: {:x} -> {:x} ", output, "ymm3", a.ymm3, b.ymm3);
         }
         if a.ymm4 != b.ymm4 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "ymm4", a.ymm4, b.ymm4);
+            output = format!("{}{}: {:x} -> {:x} ", output, "ymm4", a.ymm4, b.ymm4);
         }
         if a.ymm5 != b.ymm5 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "ymm5", a.ymm5, b.ymm5);
+            output = format!("{}{}: {:x} -> {:x} ", output, "ymm5", a.ymm5, b.ymm5);
         }
         if a.ymm6 != b.ymm6 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "ymm6", a.ymm6, b.ymm6);
+            output = format!("{}{}: {:x} -> {:x} ", output, "ymm6", a.ymm6, b.ymm6);
         }
         if a.ymm7 != b.ymm7 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "ymm7", a.ymm7, b.ymm7);
+            output = format!("{}{}: {:x} -> {:x} ", output, "ymm7", a.ymm7, b.ymm7);
         }
         if a.ymm8 != b.ymm8 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "ymm8", a.ymm8, b.ymm8);
+            output = format!("{}{}: {:x} -> {:x} ", output, "ymm8", a.ymm8, b.ymm8);
         }
         if a.ymm9 != b.ymm9 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "ymm9", a.ymm9, b.ymm9);
+            output = format!("{}{}: {:x} -> {:x} ", output, "ymm9", a.ymm9, b.ymm9);
         }
         if a.ymm10 != b.ymm10 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "ymm10", a.ymm10, b.ymm10);
+            output = format!("{}{}: {:x} -> {:x} ", output, "ymm10", a.ymm10, b.ymm10);
         }
         if a.ymm11 != b.ymm11 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "ymm11", a.ymm11, b.ymm11);
+            output = format!("{}{}: {:x} -> {:x} ", output, "ymm11", a.ymm11, b.ymm11);
         }
         if a.ymm12 != b.ymm12 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "ymm12", a.ymm12, b.ymm12);
+            output = format!("{}{}: {:x} -> {:x} ", output, "ymm12", a.ymm12, b.ymm12);
         }
         if a.ymm13 != b.ymm13 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "ymm13", a.ymm13, b.ymm13);
+            output = format!("{}{}: {:x} -> {:x} ", output, "ymm13", a.ymm13, b.ymm13);
         }
         if a.ymm14 != b.ymm14 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "ymm14", a.ymm14, b.ymm14);
+            output = format!("{}{}: {:x} -> {:x} ", output, "ymm14", a.ymm14, b.ymm14);
         }
         if a.ymm15 != b.ymm15 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "ymm15", a.ymm15, b.ymm15);
+            output = format!("{}{}: {:x} -> {:x} ", output, "ymm15", a.ymm15, b.ymm15);
         }
         if a.mm0 != b.mm0 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "mm0", a.mm0, b.mm0);
+            output = format!("{}{}: {:x} -> {:x} ", output, "mm0", a.mm0, b.mm0);
         }
         if a.mm1 != b.mm1 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "mm1", a.mm1, b.mm1);
+            output = format!("{}{}: {:x} -> {:x} ", output, "mm1", a.mm1, b.mm1);
         }
         if a.mm2 != b.mm2 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "mm2", a.mm2, b.mm2);
+            output = format!("{}{}: {:x} -> {:x} ", output, "mm2", a.mm2, b.mm2);
         }
         if a.mm3 != b.mm3 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "mm3", a.mm3, b.mm3);
+            output = format!("{}{}: {:x} -> {:x} ", output, "mm3", a.mm3, b.mm3);
         }
         if a.mm4 != b.mm4 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "mm4", a.mm4, b.mm4);
+            output = format!("{}{}: {:x} -> {:x} ", output, "mm4", a.mm4, b.mm4);
         }
         if a.mm5 != b.mm5 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "mm5", a.mm5, b.mm5);
+            output = format!("{}{}: {:x} -> {:x} ", output, "mm5", a.mm5, b.mm5);
         }
         if a.mm6 != b.mm6 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "mm6", a.mm6, b.mm6);
+            output = format!("{}{}: {:x} -> {:x} ", output, "mm6", a.mm6, b.mm6);
         }
         if a.mm7 != b.mm7 {
-            output = format!("{}{} {:x} -> {:x}; ", output, "mm7", a.mm7, b.mm7);
+            output = format!("{}{}: {:x} -> {:x} ", output, "mm7", a.mm7, b.mm7);
         }
         if a.gs != b.gs {
-            output = format!("{}{} {:x} -> {:x}; ", output, "gs", a.gs, b.gs);
+            output = format!("{}{}: {:x} -> {:x} ", output, "gs", a.gs, b.gs);
         }
         if a.fs != b.fs {
-            output = format!("{}{} {:x} -> {:x}; ", output, "fs", a.fs, b.fs);
+            output = format!("{}{}: {:x} -> {:x} ", output, "fs", a.fs, b.fs);
         }
         output
     }
