@@ -6,7 +6,7 @@ pub fn gateway(addr: u64, emu: &mut emu::Emu) -> String {
         /*"StartServiceCtrlDispatcherA" => StartServiceCtrlDispatcherA(emu),
         "StartServiceCtrlDispatcherW" => StartServiceCtrlDispatcherW(emu),*/
         _ => {
-            println!("calling unimplemented winhttp API 0x{:x} {}", addr, apiname);
+            log::info!("calling unimplemented winhttp API 0x{:x} {}", addr, apiname);
             return apiname;
         }
     }

@@ -52,7 +52,7 @@ pub fn handler_close(hndl: u64) -> bool {
 pub fn handler_print() {
     let hndls = HANDLERS.lock().unwrap();
     for h in hndls.iter() {
-        println!("{:x} {}", h.id, h.uri);
+        log::info!("{:x} {}", h.id, h.uri);
     }
 }
 

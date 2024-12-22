@@ -9,7 +9,7 @@ pub fn gateway(addr: u64, emu: &mut emu::Emu) -> String {
         "PathFindSuffixArrayA" => PathFindSuffixArrayA(emu),
 
         _ => {
-            println!(
+            log::info!(
                 "calling unimplemented shlwapi API 0x{:x} {}",
                 addr, apiname
             );
@@ -24,7 +24,7 @@ pub fn PathIsContentTypeW(emu: &mut emu::Emu) {
     let path = emu.maps.read_wide_string(emu.regs.rcx);
     let content_type = emu.maps.read_wide_string(emu.regs.rdx);
 
-    println!(
+    log::info!(
         "{}** {} shlwapi!PathIsContentTypeW path: {} content-type: {} {}",
         emu.colors.light_red, emu.pos, path, content_type, emu.colors.nc
     );
@@ -36,7 +36,7 @@ pub fn PathFindSuffixArrayA(emu: &mut emu::Emu) {
     let path = emu.maps.read_string(emu.regs.rcx);
     let suffixes = emu.maps.read_string(emu.regs.rdx);
 
-    println!(
+    log::info!(
         "{}** {} shlwapi!PathFindSuffixArrayA path: {} suffixes: {} {}",
         emu.colors.light_red, emu.pos, path, suffixes, emu.colors.nc
     );

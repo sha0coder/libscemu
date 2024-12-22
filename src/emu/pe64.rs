@@ -82,7 +82,7 @@ impl ImageDataDirectory64 {
     }
 
     pub fn print(&self) {
-        println!("{:#x?}", self);
+        log::info!("{:#x?}", self);
     }
 }*/
 
@@ -129,7 +129,7 @@ impl ImageOptionalHeader64 {
         let mut pos = 112; //+ 144;   //108;
         for i in 0..pe32::IMAGE_NUMBEROF_DIRECTORY_ENTRIES {
             let idd = pe32::ImageDataDirectory::load(raw, off + pos);
-            //println!("{} 0x{:x} {}", i, idd.virtual_address, idd.size);
+            //log::info!("{} 0x{:x} {}", i, idd.virtual_address, idd.size);
             dd.push(idd);
             pos += 8;
         }
@@ -170,7 +170,7 @@ impl ImageOptionalHeader64 {
     }
 
     pub fn print(&self) {
-        println!("{:#x?}", self);
+        log::info!("{:#x?}", self);
     }
 }
 
@@ -197,7 +197,7 @@ impl TlsDirectory64 {
     }
 
     pub fn print(&self) {
-        println!("{:#x?}", self);
+        log::info!("{:#x?}", self);
     }
 }
 
@@ -232,7 +232,7 @@ pub struct PE64 {
 
 impl PE64 {
     pub fn is_pe64(filename: &str) -> bool {
-        // println!("checking if pe64: {}", filename);
+        // log::info!("checking if pe64: {}", filename);
         let mut fd = File::open(filename).expect("file not found");
         let mut raw = vec![0u8; pe32::ImageDosHeader::size()];
         fd.read_exact(&mut raw).expect("couldnt read the file");
@@ -250,7 +250,7 @@ impl PE64 {
     }
 
     pub fn load(filename: &str) -> PE64 {
-        //println!("loading pe64: {}", filename);
+        //log::info!("loading pe64: {}", filename);
         let mut fd = File::open(filename).expect("pe64 binary not found");
         let mut raw: Vec<u8> = Vec::new();
         fd.read_to_end(&mut raw)
@@ -282,12 +282,12 @@ impl PE64 {
         let mut delay_load_dir: Vec<pe32::DelayLoadDirectory> = Vec::new();
 
         if delay_load_va > 0 {
-            //println!("delay load detected!");
+            //log::info!("delay load detected!");
             delay_load_off = PE32::vaddr_to_off(&sect, delay_load_va) as usize;
             if delay_load_off > 0 {
                 loop {
                     let mut delay_load = pe32::DelayLoadDirectory::load(&raw, delay_load_off);
-                    //println!("{:#x?}", delay_load);
+                    //log::info!("{:#x?}", delay_load);
                     if delay_load.handle == 0 || delay_load.name_ptr == 0 {
                         break;
                     }
@@ -325,10 +325,10 @@ impl PE64 {
                     import_off += pe32::ImageImportDescriptor::size();
                 }
             } else {
-                //println!("no import directory at va 0x{:x}.", import_va);
+                //log::info!("no import directory at va 0x{:x}.", import_va);
             }
         } else {
-            //println!("no import directory at va 0x{:x}", import_va);
+            //log::info!("no import directory at va 0x{:x}", import_va);
         }
 
         PE64 {
@@ -406,7 +406,7 @@ impl PE64 {
         let off = self.sect_hdr[id].pointer_to_raw_data as usize;
         let sz = self.sect_hdr[id].size_of_raw_data as usize; //TODO: coger sz en disk
         if off + sz > self.raw.len() {
-            println!(
+            log::info!(
                 "/!\\ warning: id:{} name:{} raw sz:{} off:{} sz:{}  off+sz:{}",
                 id,
                 self.sect_hdr[id].get_name(),
@@ -435,7 +435,7 @@ impl PE64 {
         //if tls_off == 0 {
 
         if self.opt.data_directory.len() < pe32::IMAGE_DIRECTORY_ENTRY_TLS {
-            println!("/!\\ alert there is .tls section but not tls directory entry");
+            log::info!("/!\\ alert there is .tls section but not tls directory entry");
             return callbacks;
         }
 
@@ -456,7 +456,7 @@ impl PE64 {
             if callback == 0 {
                 break;
             }
-            println!("0x{:x} TLS Callback: 0x{:x}", cb_off, callback);
+            log::info!("0x{:x} TLS Callback: 0x{:x}", cb_off, callback);
             callbacks.push(callback);
             cb_off += 8;
         }
@@ -465,7 +465,7 @@ impl PE64 {
     }
 
     pub fn delay_load_binding(&mut self, emu: &mut emu::Emu) {
-        println!("Delay load binding started ...");
+        log::info!("Delay load binding started ...");
         for i in 0..self.delay_load_dir.len() {
             let dld = &self.delay_load_dir[i];
             if dld.name.len() == 0 {
@@ -493,7 +493,7 @@ impl PE64 {
                     continue;
                 }
                 let func_name = PE32::read_string(&self.raw, off2 + 2);
-                //println!("IAT: 0x{:x} {}!{}", addr, iim.name, func_name);
+                //log::info!("IAT: 0x{:x} {}!{}", addr, iim.name, func_name);
 
                 let real_addr = emu::winapi64::kernel32::resolve_api_name(emu, &func_name);
                 if real_addr == 0 {
@@ -501,7 +501,7 @@ impl PE64 {
                 }
                 /*
                 if emu.cfg.verbose >= 1 {
-                    println!("binded 0x{:x} {}", real_addr, func_name);
+                    log::info!("binded 0x{:x} {}", real_addr, func_name);
                 }*/
                 write_u64_le!(self.raw, off_addr, real_addr);
 
@@ -509,7 +509,7 @@ impl PE64 {
                 off_addr += 8;
             }
         }
-        println!("delay load bound!");
+        log::info!("delay load bound!");
     }
 
     pub fn iat_binding(&mut self, emu: &mut emu::Emu) {
@@ -519,7 +519,7 @@ impl PE64 {
 
         // https://docs.microsoft.com/en-us/archive/msdn-magazine/2002/march/inside-windows-an-in-depth-look-into-the-win32-portable-executable-file-format-part-2#Binding
 
-        println!(
+        log::info!(
             "IAT binding started image_import_descriptor.len() = {} ...",
             self.image_import_descriptor.len()
         );
@@ -532,7 +532,7 @@ impl PE64 {
             }
 
             if emu::winapi64::kernel32::load_library(emu, &iim.name) == 0 {
-                println!("cannot found the library {} on maps64/", &iim.name);
+                log::info!("cannot found the library {} on maps64/", &iim.name);
                 return;
             }
 
@@ -540,7 +540,7 @@ impl PE64 {
             let mut off_name =
                 PE32::vaddr_to_off(&self.sect_hdr, iim.original_first_thunk) as usize;
 
-            //println!("----> 0x{:x}", iim.first_thunk);
+            //log::info!("----> 0x{:x}", iim.first_thunk);
             let mut off_addr = PE32::vaddr_to_off(&self.sect_hdr, iim.first_thunk) as usize;
             //off_addr += 8;
 
@@ -565,7 +565,7 @@ impl PE64 {
                 }
 
                 /*if emu.cfg.verbose >= 1 {
-                    println!("binded 0x{:x} {}", real_addr, func_name);
+                    log::info!("binded 0x{:x} {}", real_addr, func_name);
                 }*/
 
                 write_u64_le!(self.raw, off_addr, real_addr);
@@ -574,7 +574,7 @@ impl PE64 {
                 off_addr += 8;
             }
         }
-        println!("IAT Bound.");
+        log::info!("IAT Bound.");
     }
 
     pub fn import_addr_to_name(&self, paddr: u64) -> String {
@@ -593,7 +593,7 @@ impl PE64 {
             let mut off_name =
                 PE32::vaddr_to_off(&self.sect_hdr, iim.original_first_thunk) as usize;
 
-            //println!("----> 0x{:x}", iim.first_thunk);
+            //log::info!("----> 0x{:x}", iim.first_thunk);
             let mut off_addr = PE32::vaddr_to_off(&self.sect_hdr, iim.first_thunk) as usize;
             //off_addr += 8;
 

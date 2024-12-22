@@ -605,75 +605,75 @@ impl Regs64 {
     }
 
     pub fn print<const B: usize>(&self) {
-        println!("regs:");
+        log::info!("regs:");
 
         match B {
             64 => {
-                println!("  rax: 0x{:x}", self.rax);
-                println!("  rbx: 0x{:x}", self.rbx);
-                println!("  rcx: 0x{:x}", self.rcx);
-                println!("  rdx: 0x{:x}", self.rdx);
-                println!("  rsi: 0x{:x}", self.rsi);
-                println!("  rdi: 0x{:x}", self.rdi);
-                println!("  rbp: 0x{:x}", self.rbp);
-                println!("  rsp: 0x{:x}", self.rsp);
-                println!("  rip: 0x{:x}", self.rip);
+                log::info!("  rax: 0x{:x}", self.rax);
+                log::info!("  rbx: 0x{:x}", self.rbx);
+                log::info!("  rcx: 0x{:x}", self.rcx);
+                log::info!("  rdx: 0x{:x}", self.rdx);
+                log::info!("  rsi: 0x{:x}", self.rsi);
+                log::info!("  rdi: 0x{:x}", self.rdi);
+                log::info!("  rbp: 0x{:x}", self.rbp);
+                log::info!("  rsp: 0x{:x}", self.rsp);
+                log::info!("  rip: 0x{:x}", self.rip);
             }
             32 => {
-                println!("  eax: 0x{:x}", self.get_eax());
-                println!("  ebx: 0x{:x}", self.get_ebx());
-                println!("  ecx: 0x{:x}", self.get_ecx());
-                println!("  edx: 0x{:x}", self.get_edx());
-                println!("  esi: 0x{:x}", self.get_esi());
-                println!("  edi: 0x{:x}", self.get_edi());
-                println!("  ebp: 0x{:x}", self.get_ebp());
-                println!("  esp: 0x{:x}", self.get_esp());
-                println!("  eip: 0x{:x}", self.get_eip());
+                log::info!("  eax: 0x{:x}", self.get_eax());
+                log::info!("  ebx: 0x{:x}", self.get_ebx());
+                log::info!("  ecx: 0x{:x}", self.get_ecx());
+                log::info!("  edx: 0x{:x}", self.get_edx());
+                log::info!("  esi: 0x{:x}", self.get_esi());
+                log::info!("  edi: 0x{:x}", self.get_edi());
+                log::info!("  ebp: 0x{:x}", self.get_ebp());
+                log::info!("  esp: 0x{:x}", self.get_esp());
+                log::info!("  eip: 0x{:x}", self.get_eip());
             }
             _ => unimplemented!(),
         }
 
-        println!("---");
+        log::info!("---");
     }
 
     pub fn print_xmm(&self) {
-        println!("xmm regs:");
-        println!("  xmm0: {}", self.xmm0);
-        println!("  xmm1: {}", self.xmm1);
-        println!("  xmm2: {}", self.xmm2);
-        println!("  xmm3: {}", self.xmm3);
-        println!("  xmm4: {}", self.xmm4);
-        println!("  xmm5: {}", self.xmm5);
-        println!("  xmm6: {}", self.xmm6);
-        println!("  xmm7: {}", self.xmm7);
-        println!("  xmm8: {}", self.xmm8);
-        println!("  xmm9: {}", self.xmm9);
-        println!("  xmm10: {}", self.xmm10);
-        println!("  xmm11: {}", self.xmm11);
-        println!("  xmm12: {}", self.xmm12);
-        println!("  xmm13: {}", self.xmm13);
-        println!("  xmm14: {}", self.xmm14);
-        println!("  xmm15: {}", self.xmm15);
+        log::info!("xmm regs:");
+        log::info!("  xmm0: {}", self.xmm0);
+        log::info!("  xmm1: {}", self.xmm1);
+        log::info!("  xmm2: {}", self.xmm2);
+        log::info!("  xmm3: {}", self.xmm3);
+        log::info!("  xmm4: {}", self.xmm4);
+        log::info!("  xmm5: {}", self.xmm5);
+        log::info!("  xmm6: {}", self.xmm6);
+        log::info!("  xmm7: {}", self.xmm7);
+        log::info!("  xmm8: {}", self.xmm8);
+        log::info!("  xmm9: {}", self.xmm9);
+        log::info!("  xmm10: {}", self.xmm10);
+        log::info!("  xmm11: {}", self.xmm11);
+        log::info!("  xmm12: {}", self.xmm12);
+        log::info!("  xmm13: {}", self.xmm13);
+        log::info!("  xmm14: {}", self.xmm14);
+        log::info!("  xmm15: {}", self.xmm15);
     }
 
     pub fn print_ymm(&self) {
-        println!("ymm regs:");
-        println!("  ymm0: {}", self.ymm0);
-        println!("  ymm1: {}", self.ymm1);
-        println!("  ymm2: {}", self.ymm2);
-        println!("  ymm3: {}", self.ymm3);
-        println!("  ymm4: {}", self.ymm4);
-        println!("  ymm5: {}", self.ymm5);
-        println!("  ymm6: {}", self.ymm6);
-        println!("  ymm7: {}", self.ymm7);
-        println!("  ymm8: {}", self.ymm8);
-        println!("  ymm9: {}", self.ymm9);
-        println!("  ymm10: {}", self.ymm10);
-        println!("  ymm11: {}", self.ymm11);
-        println!("  ymm12: {}", self.ymm12);
-        println!("  ymm13: {}", self.ymm13);
-        println!("  ymm14: {}", self.ymm14);
-        println!("  ymm15: {}", self.ymm15);
+        log::info!("ymm regs:");
+        log::info!("  ymm0: {}", self.ymm0);
+        log::info!("  ymm1: {}", self.ymm1);
+        log::info!("  ymm2: {}", self.ymm2);
+        log::info!("  ymm3: {}", self.ymm3);
+        log::info!("  ymm4: {}", self.ymm4);
+        log::info!("  ymm5: {}", self.ymm5);
+        log::info!("  ymm6: {}", self.ymm6);
+        log::info!("  ymm7: {}", self.ymm7);
+        log::info!("  ymm8: {}", self.ymm8);
+        log::info!("  ymm9: {}", self.ymm9);
+        log::info!("  ymm10: {}", self.ymm10);
+        log::info!("  ymm11: {}", self.ymm11);
+        log::info!("  ymm12: {}", self.ymm12);
+        log::info!("  ymm13: {}", self.ymm13);
+        log::info!("  ymm14: {}", self.ymm14);
+        log::info!("  ymm15: {}", self.ymm15);
     }
 
     // get 16 bits
@@ -2031,25 +2031,25 @@ impl Regs64 {
 
             if s.len() > 1 {
                 if pos > 0 {
-                    println!(
+                    log::info!(
                         "\t{} {}: 0x{:x} {} '{}' {}",
                         pos, sreg, value, value, s, name
                     );
                 } else {
-                    println!("\t{}: 0x{:x} {} '{}' {}", sreg, value, value, s, name);
+                    log::info!("\t{}: 0x{:x} {} '{}' {}", sreg, value, value, s, name);
                 }
             } else {
                 if pos > 0 {
-                    println!("\t{} {}: 0x{:x} {} {}", pos, sreg, value, value, name);
+                    log::info!("\t{} {}: 0x{:x} {} {}", pos, sreg, value, value, name);
                 } else {
-                    println!("\t{}: 0x{:x} {} {}", sreg, value, value, name);
+                    log::info!("\t{}: 0x{:x} {} {}", sreg, value, value, name);
                 }
             }
         } else {
             if pos > 0 {
-                println!("\t{} {}: 0x{:x} {}", pos, sreg, value, value);
+                log::info!("\t{} {}: 0x{:x} {}", pos, sreg, value, value);
             } else {
-                println!("\t{}: 0x{:x} {}", sreg, value, value);
+                log::info!("\t{}: 0x{:x} {}", sreg, value, value);
             }
         }
     }
@@ -2074,31 +2074,31 @@ impl Regs64 {
 
             if s.len() > 1 {
                 if pos > 0 {
-                    println!(
+                    log::info!(
                         "\t{} {}: 0x{:x} {} '{}' {}",
                         pos, sreg, value as u32, value as u32, s, name
                     );
                 } else {
-                    println!(
+                    log::info!(
                         "\t{}: 0x{:x} {} '{}' {}",
                         sreg, value as u32, value as u32, s, name
                     );
                 }
             } else {
                 if pos > 0 {
-                    println!(
+                    log::info!(
                         "\t{} {}: 0x{:x} {} {}",
                         pos, sreg, value as u32, value as u32, name
                     );
                 } else {
-                    println!("\t{}: 0x{:x} {} {}", sreg, value as u32, value as u32, name);
+                    log::info!("\t{}: 0x{:x} {} {}", sreg, value as u32, value as u32, name);
                 }
             }
         } else {
             if pos > 0 {
-                println!("\t{} {}: 0x{:x} {}", pos, sreg, value as u32, value as u32);
+                log::info!("\t{} {}: 0x{:x} {}", pos, sreg, value as u32, value as u32);
             } else {
-                println!("\t{}: 0x{:x} {}", sreg, value as u32, value as u32);
+                log::info!("\t{}: 0x{:x} {}", sreg, value as u32, value as u32);
             }
         }
     }

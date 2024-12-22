@@ -7,7 +7,7 @@ pub fn gateway(addr: u32, emu: &mut emu::Emu) -> String {
         "_CorExeMain" => _CorExeMain(emu),
 
         _ => {
-            println!("calling unimplemented mscoree API 0x{:x} {}", addr, api);
+            log::info!("calling unimplemented mscoree API 0x{:x} {}", addr, api);
             return api;
         }
     }
@@ -16,7 +16,7 @@ pub fn gateway(addr: u32, emu: &mut emu::Emu) -> String {
 }
 
 pub fn _CorExeMain(emu: &mut emu::Emu) {
-    println!(
+    log::info!(
         "{}** {} mscoree!_CorExeMain {}",
         emu.colors.light_red, emu.pos, emu.colors.nc
     );

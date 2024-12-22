@@ -142,7 +142,7 @@ impl Elf64 {
         for phdr in &self.elf_phdr {
             if phdr.p_type == constants::PT_LOAD {
                 if phdr.p_vaddr > 0 && (phdr.p_vaddr <= addr || addr <= (phdr.p_vaddr+phdr.p_memsz)) {
-                    //println!("vaddr 0x{:x}", phdr.p_vaddr);
+                    //log::info!("vaddr 0x{:x}", phdr.p_vaddr);
                     return true;
                 }
             }
@@ -161,7 +161,7 @@ impl Elf64 {
 
     pub fn sym_get_addr_from_name(&self, name: &str) -> Option<u64> {
         for sym in self.elf_dynsym.iter() {
-            println!("{} == {}", &sym.st_dynstr_name, name);
+            log::info!("{} == {}", &sym.st_dynstr_name, name);
             if &sym.st_dynstr_name == name {
                 return Some(sym.st_value);
             }
@@ -306,7 +306,7 @@ impl Elf64 {
                         self.init = Some(shdr.sh_addr.into());
                     }
 
-                    //println!("loading map {} 0x{:x} sz:{}", &map_name, shdr.sh_addr, shdr.sh_size);
+                    //log::info!("loading map {} 0x{:x} sz:{}", &map_name, shdr.sh_addr, shdr.sh_size);
                     let base:u64;
                     if dynamic_linking {
                         if shdr.sh_addr < 0x8000 {
@@ -347,10 +347,10 @@ impl Elf64 {
             if sym_name.contains("libc") {
                 sym_addr += LIBC_BASE;
             }
-            println!("crafting got 0x{:x} <- 0x{:x} {}", addr, sym_addr, sym_name);
+            log::info!("crafting got 0x{:x} <- 0x{:x} {}", addr, sym_addr, sym_name);
             got.write_qword(addr, sym_addr);
         } else {
-            println!("crafting got error, no symbol {}", sym_name);
+            log::info!("crafting got error, no symbol {}", sym_name);
         }
     }
 
@@ -395,7 +395,7 @@ impl Elf64 {
                 }
 
                 if off_strtab == 0 {
-                    println!("dt_strtab not found");
+                    log::info!("dt_strtab not found");
                     return libs;
                 }
 
@@ -415,7 +415,7 @@ impl Elf64 {
                             .expect("error searching on DT_STRTAB");
                         let lib_name = std::str::from_utf8(&self.bin[off_lib..off_lib + off_lib_end])
                             .expect("libname on DT_STRTAB is not utf-8");
-                        println!("lib: {}", lib_name);
+                        log::info!("lib: {}", lib_name);
                         libs.push(lib_name.to_string());
                     }
                     off += 16;
@@ -429,7 +429,7 @@ impl Elf64 {
     }
 
     pub fn is_elf64(filename:&str) -> bool {
-        //println!("checking if elf64: {}", filename);
+        //log::info!("checking if elf64: {}", filename);
         let mut fd = File::open(filename).expect("file not found");
         let mut raw = vec![0u8; 5];
         fd.read_exact(&mut raw).expect("couldnt read the file");

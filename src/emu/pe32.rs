@@ -126,7 +126,7 @@ impl ImageDosHeader {
     }
 
     pub fn print(&self) {
-        println!("{:#x?}", self);
+        log::info!("{:#x?}", self);
     }
 }
 
@@ -143,7 +143,7 @@ impl ImageNtHeaders {
     }
 
     pub fn print(&self) {
-        println!("{:#x?}", self);
+        log::info!("{:#x?}", self);
     }
 }
 
@@ -172,7 +172,7 @@ impl ImageFileHeader {
     }
 
     pub fn print(&self) {
-        println!("{:#x?}", self);
+        log::info!("{:#x?}", self);
     }
 }
 
@@ -191,7 +191,7 @@ impl ImageDataDirectory {
     }
 
     pub fn print(&self) {
-        println!("{:#x?}", self);
+        log::info!("{:#x?}", self);
     }
 }
 
@@ -275,7 +275,7 @@ impl ImageOptionalHeader {
     }
 
     pub fn print(&self) {
-        println!("{:#x?}", self);
+        log::info!("{:#x?}", self);
     }
 }
 
@@ -337,7 +337,7 @@ impl ImageSectionHeader {
     }
 
     pub fn print(&self) {
-        println!("{:#x?}", self);
+        log::info!("{:#x?}", self);
     }
 }
 
@@ -356,7 +356,7 @@ impl ImageResourceDirectoryEntry {
     }
 
     pub fn print(&self) {
-        println!("{:#x?}", self);
+        log::info!("{:#x?}", self);
     }
 }
 
@@ -383,7 +383,7 @@ impl ImageResourceDirectory {
     }
 
     pub fn print(&self) {
-        println!("{:#x?}", self);
+        log::info!("{:#x?}", self);
     }
 }
 
@@ -406,7 +406,7 @@ impl ImageResourceDataEntry {
     }
 
     pub fn print(&self) {
-        println!("{:#x?}", self);
+        log::info!("{:#x?}", self);
     }
 }
 
@@ -425,7 +425,7 @@ impl ImageResourceDirStringU {
     }
 
     pub fn print(&self) {
-        println!("{:#x?}", self);
+        log::info!("{:#x?}", self);
     }
 }
 
@@ -462,7 +462,7 @@ impl ImageExportDirectory {
     }
 
     pub fn print(&self) {
-        println!("{:#x?}", self);
+        log::info!("{:#x?}", self);
     }
 }
 
@@ -489,7 +489,7 @@ impl TlsDirectory32 {
     }
 
     pub fn print(&self) {
-        println!("{:#x?}", self);
+        log::info!("{:#x?}", self);
     }
 
     pub fn size() -> usize {
@@ -520,7 +520,7 @@ impl DelayLoadDirectory {
     }
 
     pub fn print(&self) {
-        println!("{:#x?}", self);
+        log::info!("{:#x?}", self);
     }
 
     pub fn load(raw: &Vec<u8>, off: usize) -> DelayLoadDirectory {
@@ -580,7 +580,7 @@ impl ImageImportDirectory {
     }
 
     pub fn print(&self) {
-        println!("{:#x?}", self);
+        log::info!("{:#x?}", self);
     }
 }
 
@@ -683,7 +683,7 @@ impl TagImportDirectory {
     }
 
     pub fn print(&self) {
-        println!("{:#x?}", self);
+        log::info!("{:#x?}", self);
     }
 }
 
@@ -714,7 +714,7 @@ impl ImageDebugDirectory {
     }
 
     pub fn print(&self) {
-        println!("{:#x?}", self);
+        log::info!("{:#x?}", self);
     }
 }
 
@@ -733,7 +733,7 @@ impl ImageBaseRelocation {
     }
 
     pub fn print(&self) {
-        println!("{:#x?}", self);
+        log::info!("{:#x?}", self);
     }
 }
 
@@ -768,7 +768,7 @@ pub struct PE32 {
 
 impl PE32 {
     pub fn is_pe32(filename: &str) -> bool {
-        //println!("checking if pe32: {}", filename);
+        //log::info!("checking if pe32: {}", filename);
         let mut fd = File::open(filename).expect("file not found");
         let mut raw = vec![0u8; ImageDosHeader::size()];
         fd.read_exact(&mut raw).expect("couldnt read the file");
@@ -812,7 +812,7 @@ impl PE32 {
     }
 
     pub fn load(filename: &str) -> PE32 {
-        //println!("loading pe32: {}", filename);
+        //log::info!("loading pe32: {}", filename);
         let mut fd = File::open(filename).expect("pe32 binary not found");
         let mut raw: Vec<u8> = Vec::new();
         fd.read_to_end(&mut raw)
@@ -844,7 +844,7 @@ impl PE32 {
         let mut delay_load_dir: Vec<DelayLoadDirectory> = Vec::new();
 
         if delay_load_va > 0 {
-            //println!("delay load detected!");
+            //log::info!("delay load detected!");
             delay_load_off = PE32::vaddr_to_off(&sect, delay_load_va) as usize;
             if delay_load_off > 0 {
                 loop {
@@ -885,10 +885,10 @@ impl PE32 {
                     import_off += ImageImportDescriptor::size();
                 }
             } else {
-                //println!("no import directory at va 0x{:x}.", import_va);
+                //log::info!("no import directory at va 0x{:x}.", import_va);
             }
         } else {
-            //println!("no import directory at va 0x{:x}", import_va);
+            //log::info!("no import directory at va 0x{:x}", import_va);
         }
 
         PE32 {
@@ -944,7 +944,7 @@ impl PE32 {
         for sect in sections {
             if vaddr >= sect.virtual_address && vaddr < sect.virtual_address + sect.virtual_size {
                 /*
-                println!("{:x} = vaddr:{:x} - sect.vaddr:{:x} + sect.ptr2rawdata:{:x}",
+                log::info!("{:x} = vaddr:{:x} - sect.vaddr:{:x} + sect.ptr2rawdata:{:x}",
                     (vaddr - sect.virtual_address + sect.pointer_to_raw_data),
                     vaddr, sect.virtual_address, sect.pointer_to_raw_data); */
                 return vaddr - sect.virtual_address + sect.pointer_to_raw_data;
@@ -979,7 +979,7 @@ impl PE32 {
         let off = self.sect_hdr[id].pointer_to_raw_data as usize;
         let mut sz = self.sect_hdr[id].size_of_raw_data as usize; //TODO: coger sz en disk no en va
         if off + sz >= self.raw.len() {
-            //println!("/!\\ warning: raw sz:{} off:{} sz:{}  off+sz:{}", self.raw.len(), off, sz, off+sz);
+            //log::info!("/!\\ warning: raw sz:{} off:{} sz:{}  off+sz:{}", self.raw.len(), off, sz, off+sz);
             sz = self.raw.len() - off - 1;
         }
         if sz == 0 || off > self.raw.len() || off + sz > self.raw.len() {
@@ -999,7 +999,7 @@ impl PE32 {
         let mut callbacks: Vec<u64> = Vec::new();
 
         if self.opt.data_directory.len() < IMAGE_DIRECTORY_ENTRY_TLS {
-            println!("/!\\ alert there is .tls section but not tls directory entry");
+            log::info!("/!\\ alert there is .tls section but not tls directory entry");
             return callbacks;
         }
 
@@ -1009,7 +1009,7 @@ impl PE32 {
 
         tls_off = PE32::vaddr_to_off(&self.sect_hdr, entry_tls) as usize;
 
-        println!("raw {:x} off {:x}", self.raw.len(), tls_off);
+        log::info!("raw {:x} off {:x}", self.raw.len(), tls_off);
         let tls = TlsDirectory32::load(&self.raw, tls_off);
         tls.print();
 
@@ -1020,16 +1020,16 @@ impl PE32 {
         }
         cb_off = (tls.tls_callbacks - self.opt.image_base - 0xf000 + 0xa400) as usize;
 
-        println!("cb_off {:x}", cb_off);
+        log::info!("cb_off {:x}", cb_off);
         //cb_off = (tls.tls_callbacks - iat - self.opt.image_base - align) as usize;
-        println!("cb_off {:x} {:x}", cb_off, self.opt.image_base);
+        log::info!("cb_off {:x} {:x}", cb_off, self.opt.image_base);
 
         loop {
             let callback: u64 = read_u32_le!(&self.raw, cb_off as usize) as u64;
             if callback == 0 {
                 break;
             }
-            println!("TLS Callback: 0x{:x}", callback);
+            log::info!("TLS Callback: 0x{:x}", callback);
             callbacks.push(callback);
             cb_off += 4;
         }
@@ -1038,7 +1038,7 @@ impl PE32 {
     }
 
     pub fn delay_load_binding(&mut self, emu: &mut emu::Emu) {
-        println!("Delay load binding started ...");
+        log::info!("Delay load binding started ...");
         for i in 0..self.delay_load_dir.len() {
             let dld = &self.delay_load_dir[i];
             if dld.name.len() == 0 {
@@ -1067,16 +1067,16 @@ impl PE32 {
                     continue;
                 }
                 let func_name = PE32::read_string(&self.raw, off2 + 2);
-                //println!("IAT: 0x{:x} {}!{}", addr, iim.name, func_name);
+                //log::info!("IAT: 0x{:x} {}!{}", addr, iim.name, func_name);
 
                 let real_addr = emu::winapi32::kernel32::resolve_api_name(emu, &func_name);
                 if real_addr == 0 {
                     break;
                 }
-                //println!("IAT: real addr: 0x{:x}", real_addr);
+                //log::info!("IAT: real addr: 0x{:x}", real_addr);
                 /*
                 if emu.cfg.verbose >= 1 {
-                    println!("binded 0x{:x} {}", real_addr, func_name);
+                    log::info!("binded 0x{:x} {}", real_addr, func_name);
                 }*/
 
                 write_u32_le!(self.raw, off_addr, real_addr);
@@ -1085,14 +1085,14 @@ impl PE32 {
                 off_addr += 4;
             }
         }
-        println!("delay load bound!");
+        log::info!("delay load bound!");
     }
 
     pub fn iat_binding(&mut self, emu: &mut emu::Emu) {
         let dbg = false;
         // https://docs.microsoft.com/en-us/archive/msdn-magazine/2002/march/inside-windows-an-in-depth-look-into-the-win32-portable-executable-file-format-part-2#Binding
 
-        println!(
+        log::info!(
             "IAT binding started image_import_descriptor.len() = {} ...",
             self.image_import_descriptor.len()
         );
@@ -1100,7 +1100,7 @@ impl PE32 {
         for i in 0..self.image_import_descriptor.len() {
             let iim = &self.image_import_descriptor[i];
             if dbg {
-                println!("import: {}", iim.name);
+                log::info!("import: {}", iim.name);
             }
 
             if iim.name.len() == 0 {
@@ -1108,10 +1108,10 @@ impl PE32 {
             }
 
             if emu::winapi32::kernel32::load_library(emu, &iim.name) == 0 {
-                println!("cannot found the library `{}` on maps32/", &iim.name);
+                log::info!("cannot found the library `{}` on maps32/", &iim.name);
                 return;
             } else if dbg {
-                println!("library `{}` loaded", &iim.name);
+                log::info!("library `{}` loaded", &iim.name);
             }
 
             // Walking function names.
@@ -1134,7 +1134,7 @@ impl PE32 {
                 }
                 let func_name = PE32::read_string(&self.raw, off2 + 2);
                 if dbg {
-                    println!("0x{:x} {}!{}", addr, iim.name, func_name);
+                    log::info!("0x{:x} {}!{}", addr, iim.name, func_name);
                 }
 
                 let real_addr = emu::winapi32::kernel32::resolve_api_name(emu, &func_name);
@@ -1143,21 +1143,21 @@ impl PE32 {
                 }
                 if dbg {
                     let old_addr = read_u32_le!(self.raw, off_addr);
-                    //println!("patch addr: 0x{:x}: 0x{:x} -> 0x{:x}", off_addr, old_addr, real_addr);
+                    //log::info!("patch addr: 0x{:x}: 0x{:x} -> 0x{:x}", off_addr, old_addr, real_addr);
                 }
 
                 write_u32_le!(self.raw, off_addr, real_addr);
 
                 /*
                 if emu.cfg.verbose >= 1 {
-                    println!("binded 0x{:x} {}", real_addr, func_name);
+                    log::info!("binded 0x{:x} {}", real_addr, func_name);
                 }*/
 
                 off_name += HintNameItem::size();
                 off_addr += 4;
             }
         }
-        println!("IAT Bound.");
+        log::info!("IAT Bound.");
     }
 
 
@@ -1170,7 +1170,7 @@ impl PE32 {
         for i in 0..self.image_import_descriptor.len() {
             let iim = &self.image_import_descriptor[i];
             if dbg {
-                println!("import: {}", iim.name);
+                log::info!("import: {}", iim.name);
             }
 
             if iim.name.len() == 0 {

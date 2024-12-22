@@ -42,14 +42,14 @@ pub fn gateway(addr: u32, name: String, emu: &mut emu::Emu) {
             emu.pe32.as_ref().unwrap().import_addr_to_name(addr as u32)
         }
         _ => {
-            println!("/!\\ trying to execute on {} at 0x{:x}", name, addr);
+            log::info!("/!\\ trying to execute on {} at 0x{:x}", name, addr);
             name.clone()
         }
     };
 
     if unimplemented_api.len() > 0 {
         let params = emu.banzai.get_params(&unimplemented_api);
-        println!("{} {} parameters", unimplemented_api, params);
+        log::info!("{} {} parameters", unimplemented_api, params);
 
         if name != "msvcrt.text" {
             for _ in 0..params {

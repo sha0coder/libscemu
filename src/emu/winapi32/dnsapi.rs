@@ -12,7 +12,7 @@ pub fn gateway(addr: u32, emu: &mut emu::Emu) -> String {
         "DnsQueryW" => DnsQuery_W(emu),
 
         _ => {
-            println!("calling unimplemented dnsapi API 0x{:x} {}", addr, api);
+            log::info!("calling unimplemented dnsapi API 0x{:x} {}", addr, api);
             return api;
         }
     }
@@ -48,7 +48,7 @@ fn DnsQuery_A(emu: &mut emu::Emu) {
 
     let name = emu.maps.read_string(name_ptr);
 
-    println!(
+    log::info!(
         "{}** {} dnsapi!DnsQuery_A '{}' {}",
         emu.colors.light_red, emu.pos, name, emu.colors.nc
     );
@@ -84,7 +84,7 @@ fn DnsQuery_W(emu: &mut emu::Emu) {
 
     let name = emu.maps.read_wide_string(name_ptr);
 
-    println!(
+    log::info!(
         "{}** {} dnsapi!DnsQuery_W '{}' {}",
         emu.colors.light_red, emu.pos, name, emu.colors.nc
     );

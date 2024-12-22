@@ -116,27 +116,27 @@ impl Flags {
     }
 
     pub fn print(&self) {
-        println!("--- flags ---");
-        println!("0x{:x}", self.dump());
-        println!("cf: {}", self.f_cf);
-        println!("pf: {}", self.f_pf);
-        println!("af: {}", self.f_af);
-        println!("zf: {}", self.f_zf);
-        println!("sf: {}", self.f_sf);
-        println!("tf: {}", self.f_tf);
-        println!("if: {}", self.f_if);
-        println!("df: {}", self.f_df);
-        println!("of: {}", self.f_of);
-        println!("iopl1: {}", self.f_iopl1);
-        println!("iopl2: {}", self.f_iopl2);
-        println!("nt: {}", self.f_nt);
-        println!("rf: {}", self.f_rf);
-        println!("vm: {}", self.f_vm);
-        println!("ac: {}", self.f_ac);
-        println!("vif: {}", self.f_vif);
-        println!("vip: {}", self.f_vip);
-        println!("id: {}", self.f_id);
-        println!("---");
+        log::info!("--- flags ---");
+        log::info!("0x{:x}", self.dump());
+        log::info!("cf: {}", self.f_cf);
+        log::info!("pf: {}", self.f_pf);
+        log::info!("af: {}", self.f_af);
+        log::info!("zf: {}", self.f_zf);
+        log::info!("sf: {}", self.f_sf);
+        log::info!("tf: {}", self.f_tf);
+        log::info!("if: {}", self.f_if);
+        log::info!("df: {}", self.f_df);
+        log::info!("of: {}", self.f_of);
+        log::info!("iopl1: {}", self.f_iopl1);
+        log::info!("iopl2: {}", self.f_iopl2);
+        log::info!("nt: {}", self.f_nt);
+        log::info!("rf: {}", self.f_rf);
+        log::info!("vm: {}", self.f_vm);
+        log::info!("ac: {}", self.f_ac);
+        log::info!("vif: {}", self.f_vif);
+        log::info!("vip: {}", self.f_vip);
+        log::info!("id: {}", self.f_id);
+        log::info!("---");
     }
 
     pub fn dump(&self) -> u32 {

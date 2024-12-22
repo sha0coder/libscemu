@@ -11,7 +11,7 @@ pub fn gateway(addr: u64, emu: &mut emu::Emu) -> String {
         "GetTokenInformation" => GetTokenInformation(emu),
 
         _ => {
-            println!(
+            log::info!(
                 "calling unimplemented kernelbase API 0x{:x} {}",
                 addr, apiname
             );
@@ -27,7 +27,7 @@ pub fn PathCombineA(emu: &mut emu::Emu) {
     let path1 = emu.maps.read_string(emu.regs.rdx);
     let path2 = emu.maps.read_string(emu.regs.r8);
 
-    println!(
+    log::info!(
         "{}** {} kernelbase!PathCombineA path1: {} path2: {} {}",
         emu.colors.light_red, emu.pos, path1, path2, emu.colors.nc
     );
@@ -42,7 +42,7 @@ pub fn PathCombineA(emu: &mut emu::Emu) {
 pub fn IsCharAlphaNumericA(emu: &mut emu::Emu) {
     let c = emu.regs.rcx as u8 as char;
 
-    println!(
+    log::info!(
         "{}** {} kernelbase!IsCharAlphaNumericA char: {} {}",
         emu.colors.light_red, emu.pos, c, emu.colors.nc
     );
@@ -57,7 +57,7 @@ pub fn GetTokenInformation(emu: &mut emu::Emu) {
     let token_information_length = emu.regs.r9;
     let return_length = emu.maps.read_qword(emu.regs.rsp);
 
-    println!(
+    log::info!(
         "{}** {} kernelbase!GetTokenInformation token_information_class: 0x{:x} {}",
         emu.colors.light_red, emu.pos, token_information_class, emu.colors.nc
     );

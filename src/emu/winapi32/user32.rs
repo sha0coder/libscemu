@@ -13,7 +13,7 @@ pub fn gateway(addr: u32, emu: &mut emu::Emu) -> String {
         "CharLowerW" => CharLowerW(emu),
         "wsprintfA" => wsprintfA(emu),
         _ => {
-            println!("calling unimplemented user32 API 0x{:x} {}", addr, api);
+            log::info!("calling unimplemented user32 API 0x{:x} {}", addr, api);
             return api;
         }
     }
@@ -33,7 +33,7 @@ fn MessageBoxA(emu: &mut emu::Emu) {
     let msg = emu.maps.read_string(msgptr);
     let title = emu.maps.read_string(titleptr);
 
-    println!(
+    log::info!(
         "{}** {} user32!MessageBoxA {} {} {}",
         emu.colors.light_red, emu.pos, title, msg, emu.colors.nc
     );
@@ -56,7 +56,7 @@ fn MessageBoxW(emu: &mut emu::Emu) {
     let msg = emu.maps.read_wide_string(msgptr);
     let title = emu.maps.read_wide_string(titleptr);
 
-    println!(
+    log::info!(
         "{}** {} user32!MessageBoxW {} {} {}",
         emu.colors.light_red, emu.pos, title, msg, emu.colors.nc
     );
@@ -68,7 +68,7 @@ fn MessageBoxW(emu: &mut emu::Emu) {
 }
 
 fn GetDesktopWindow(emu: &mut emu::Emu) {
-    println!(
+    log::info!(
         "{}** {} user32!GetDesktopWindow {}",
         emu.colors.light_red, emu.pos, emu.colors.nc
     );
@@ -79,7 +79,7 @@ fn GetDesktopWindow(emu: &mut emu::Emu) {
 fn wsprintfW(emu: &mut emu::Emu) {}
 
 fn GetProcessWindowStation(emu: &mut emu::Emu) {
-    println!(
+    log::info!(
         "{}** {} user32!GetProcessWindowStation {}",
         emu.colors.light_red, emu.pos, emu.colors.nc
     );
@@ -111,7 +111,7 @@ fn GetUserObjectInformationW(emu: &mut emu::Emu) {
 
 
 
-    println!(                                         
+    log::info!(                                         
         "{}** {} user32!GetUserObjectInformationW {}",  
         emu.colors.light_red, emu.pos, emu.colors.nc
     );
@@ -131,7 +131,7 @@ fn CharLowerW(emu: &mut emu::Emu) {
 
     let s = emu.maps.read_wide_string(ptr_str);
 
-    println!(                                         
+    log::info!(                                         
         "{}** {} user32!CharLowerW(`{}`) {}",  
         emu.colors.light_red, emu.pos, s, emu.colors.nc
     );
@@ -204,7 +204,7 @@ fn wsprintfA(emu: &mut emu::Emu) {
         .write_string(out, &result);
 
 
-    println!(
+    log::info!(
         "{}** {} user32!wsprintfA fmt:`{}` out:`{}` {}",
         emu.colors.light_red, emu.pos, fmt, &result, emu.colors.nc
     );

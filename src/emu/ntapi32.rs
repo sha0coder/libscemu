@@ -12,17 +12,17 @@ use std::sync::Mutex;
 pub fn gateway(syscall: u64, argv: u64, emu: &mut emu::Emu) {
     match syscall {
         0xdc => {
-            println!("/!\\ direct syscall: NtAlpcSendWaitReceivePort");
+            log::info!("/!\\ direct syscall: NtAlpcSendWaitReceivePort");
             emu.regs.rax = 0;
         }
 
         0x10f => {
-            println!("/!\\ direct syscall: NtOpenFile {:x}", argv);
+            log::info!("/!\\ direct syscall: NtOpenFile {:x}", argv);
             emu.regs.rax = 0;
         }
 
         _ => {
-            println!(
+            log::info!(
                 "{}{} 0x{:x}: {}{}",
                 emu.colors.red,
                 emu.pos,

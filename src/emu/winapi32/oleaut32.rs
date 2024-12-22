@@ -9,7 +9,7 @@ pub fn gateway(addr: u32, emu: &mut emu::Emu) -> String {
         "SysFreeString" => SysFreeString(emu),
 
         _ => {
-            println!("calling unimplemented oleaut32 API 0x{:x} {}", addr, api);
+            log::info!("calling unimplemented oleaut32 API 0x{:x} {}", addr, api);
             return api;
         }
     }
@@ -41,7 +41,7 @@ fn SysAllocStringLen(emu: &mut emu::Emu) {
     emu.maps.create_map(&name, base, size);
     emu.maps.memcpy(base + 8, str_ptr, size as usize - 1);
 
-    println!(
+    log::info!(
         "{}** {} oleaut32!SysAllocStringLen  ={} {} {}",
         emu.colors.light_red,
         emu.pos,
@@ -63,7 +63,7 @@ fn SysFreeString(emu: &mut emu::Emu) {
         .read_dword(emu.regs.get_esp())
         .expect("oleaut32!SysFreeString cannot read host_port") as u64;
 
-    println!(
+    log::info!(
         "{}** {} oleaut32!SysFreeString  0x{:x} {}",
         emu.colors.light_red, emu.pos, str_ptr, emu.colors.nc
     );

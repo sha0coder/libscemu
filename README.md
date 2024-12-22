@@ -61,7 +61,7 @@ while emu.step() {
 }
 
 // check result
-println!("return value: 0x{:x}", emu.regs.get_eax());
+log::info!("return value: 0x{:x}", emu.regs.get_eax());
 emu.maps.dump(param2_out_buff);
 ```
 
@@ -77,7 +77,7 @@ use iced_x86::{Instruction};
 
 fn trace_memory_read(emu:&mut libscemu::emu::Emu, ip_addr:u64, 
                      mem_addr:u64, sz:u8) {
-    println!("0x{:x}: reading {} at 0x{:x}", ip_addr, sz, mem_addr);
+    log::info!("0x{:x}: reading {} at 0x{:x}", ip_addr, sz, mem_addr);
     if mem_addr == 0x22dff0 {
         emu.stop();
     }
@@ -85,20 +85,20 @@ fn trace_memory_read(emu:&mut libscemu::emu::Emu, ip_addr:u64,
 
 fn trace_memory_write(emu:&mut libscemu::emu::Emu, ip_addr:u64, 
                       mem_addr:u64, sz:u8, value:u128) -> u128 {
-    println!("0x{:x}: writing {} '0x{:x}' at 0x{:x}", ip_addr, sz, 
+    log::info!("0x{:x}: writing {} '0x{:x}' at 0x{:x}", ip_addr, sz, 
              value, mem_addr);
     value   // I could change the value to write
 }
 
 fn trace_interrupt(emu:&mut libscemu::emu::Emu, ip_addr:u64, 
                    interrupt:u64) -> bool {
-    println!("interrupt {} triggered at eip: 0x{:x}", interrupt, 
+    log::info!("interrupt {} triggered at eip: 0x{:x}", interrupt, 
              ip_addr);
     true  // do handle interrupts
 }   
 
 fn trace_exceptions(emu:&mut libscemu::emu::Emu, ip_addr:u64) -> bool {
-    println!("0x{:x} triggered an exception", ip_addr);
+    log::info!("0x{:x} triggered an exception", ip_addr);
     true // do handle exceptions
 }
 
@@ -128,6 +128,6 @@ fn main() {
     emu.hook.on_post_instruction(trace_post_instruction);
     emu.hook.on_winapi_call(trace_winapi_call);
     emu.run(None).unwrap();
-    println!("end!");
+    log::info!("end!");
 }
 ```

@@ -18,7 +18,7 @@ pub fn gateway(addr: u32, emu: &mut emu::Emu) -> String {
         "_initterm_e" => _initterm_e(emu),
 
         _ => {
-            println!("calling unimplemented kernelbase API 0x{:x} {}", addr, api);
+            log::info!("calling unimplemented kernelbase API 0x{:x} {}", addr, api);
             return api;
         }
     }
@@ -45,7 +45,7 @@ fn LoadStringW(emu: &mut emu::Emu) {
     let len = emu.maps.read_dword(emu.regs.rsp+12)
         .expect("kernelbase!LoadStringW error reading param");
 
-    println!(
+    log::info!(
         "{}** {} kernelbase!LoadStringW {} 0x{} {}",
         emu.colors.light_red, emu.pos, id, buff, emu.colors.nc,
     );
@@ -62,7 +62,7 @@ fn _initterm(emu: &mut emu::Emu) {
         .expect("kernelbase!_initterm error reading param");
     let ptr2 = emu.maps.read_dword(emu.regs.rsp+4)
         .expect("kernelbase!_initterm error reading param");
-    println!("{}** {} kernelbase!_initterm 0x{:x} 0x{:x} {}", emu.colors.light_red, emu.pos, ptr1, ptr2, emu.colors.nc);
+    log::info!("{}** {} kernelbase!_initterm 0x{:x} 0x{:x} {}", emu.colors.light_red, emu.pos, ptr1, ptr2, emu.colors.nc);
     emu.stack_pop32(false);
     emu.stack_pop32(false);
     emu.regs.rax = 0;
@@ -73,7 +73,7 @@ fn _initterm_e(emu: &mut emu::Emu) {
         .expect("kernelbase!_initterm_e error reading param");
     let ptr2 = emu.maps.read_dword(emu.regs.rsp+4)
         .expect("kernelbase!_initterm_e error reading param");
-    println!("{}** {} kernelbase!_initterm_e 0x{:x} 0x{:x} {}", emu.colors.light_red, emu.pos, ptr1, ptr2, emu.colors.nc);
+    log::info!("{}** {} kernelbase!_initterm_e 0x{:x} 0x{:x} {}", emu.colors.light_red, emu.pos, ptr1, ptr2, emu.colors.nc);
     emu.stack_pop32(false);
     emu.stack_pop32(false);
     emu.regs.rax = 0;

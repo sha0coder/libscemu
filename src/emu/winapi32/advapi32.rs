@@ -26,7 +26,7 @@ pub fn gateway(addr: u32, emu: &mut emu::Emu) -> String {
         "CryptDeriveKey" => CryptDeriveKey(emu),
 
         _ => {
-            println!(
+            log::info!(
                 "calling unimplemented advapi32 API 0x{:x} {}",
                 addr, api
             );
@@ -48,7 +48,7 @@ fn StartServiceCtrlDispatcherA(emu: &mut emu::Emu) {
     let service_name = emu.maps.read_dword((service_table_entry_ptr+4) as u64)
         .expect("advapi32!StartServiceCtrlDispatcherA error reading service_name");*/
 
-    println!(
+    log::info!(
         "{}** {} advapi321!StartServiceCtrlDispatcherA {}",
         emu.colors.light_red, emu.pos, emu.colors.nc
     );
@@ -63,7 +63,7 @@ fn StartServiceCtrlDispatcherW(emu: &mut emu::Emu) {
         .read_dword(emu.regs.get_esp())
         .expect("advapi32!StartServiceCtrlDispatcherW error reading service_table_entry pointer");
 
-    println!(
+    log::info!(
         "{}** {} advapi321!StartServiceCtrlDispatcherW {}",
         emu.colors.light_red, emu.pos, emu.colors.nc
     );
@@ -121,7 +121,7 @@ fn CryptAcquireContextA(emu: &mut emu::Emu) {
         sflags.push_str("CRYPT_DEFAULT_CONTAINER_OPTIONAL ");
     }
 
-    println!(
+    log::info!(
         "{}** {} advapi321!CryptAcquireContextA =0x{:x} type: {} flags: `{}` {}",
         emu.colors.light_red, emu.pos, hndl, prov_type, &sflags, emu.colors.nc
     );
@@ -178,7 +178,7 @@ fn CryptAcquireContextW(emu: &mut emu::Emu) {
         sflags.push_str("CRYPT_DEFAULT_CONTAINER_OPTIONAL ");
     }
 
-    println!(
+    log::info!(
         "{}** {} advapi321!CryptAcquireContextW =0x{:x} type: {} flags: `{}` {}",
         emu.colors.light_red, emu.pos, hndl, prov_type, &sflags, emu.colors.nc
     );
@@ -207,7 +207,7 @@ fn LookupPrivilegeValueW(emu: &mut emu::Emu) {
     let name = emu.maps.read_wide_string(ptr_name);
     emu.maps.write_dword(ptr_uid, 123);
 
-    println!(
+    log::info!(
         "{}** {} advapi321!LookupPrivilegeValueW `{}` `{}` {}",
         emu.colors.light_red, emu.pos, sysname, name, emu.colors.nc
     );
@@ -248,7 +248,7 @@ fn CryptEncrypt(emu: &mut emu::Emu) {
             .read_dword(emu.regs.get_esp()+24)
             .expect("advapi32!CryptEncrypt error reading param") as u64;
 
-    println!(
+    log::info!(
         "{}** {} advapi32!CryptEncrypt  {}",
         emu.colors.light_red, emu.pos,  emu.colors.nc
     );
@@ -291,7 +291,7 @@ fn CryptDecrypt(emu: &mut emu::Emu) {
             .read_dword(emu.regs.get_esp()+24)
             .expect("advapi32!CryptDecrypt error reading param") as u64;
 
-    println!(
+    log::info!(
         "{}** {} advapi32!CryptDecrypt  {}",
         emu.colors.light_red, emu.pos,  emu.colors.nc
     );
@@ -314,7 +314,7 @@ fn CryptReleaseContext(emu: &mut emu::Emu) {
             .read_dword(emu.regs.get_esp()+4)
             .expect("advapi32!CryptReleaseContext error reading param") as u64;
 
-    println!(
+    log::info!(
         "{}** {} advapi32!CryptReleaseContext  {}",
         emu.colors.light_red, emu.pos,  emu.colors.nc
     );
@@ -349,7 +349,7 @@ fn CryptCreateHash(emu: &mut emu::Emu) {
             .expect("advapi32!CryptCreateHash error reading param") as u64;
 
 
-    println!(
+    log::info!(
         "{}** {} advapi32!CryptCreateHash {} {}",
         emu.colors.light_red, emu.pos, get_cryptoalgorithm_name(algid),
         emu.colors.nc
@@ -384,7 +384,7 @@ fn CryptGenKey(emu: &mut emu::Emu) {
             .expect("advapi32!CryptGenKey error reading param");
 
 
-    println!(
+    log::info!(
         "{}** {} advapi32!CryptGenKey {} {}",
         emu.colors.light_red, emu.pos, get_cryptoalgorithm_name(algid), 
         emu.colors.nc
@@ -419,7 +419,7 @@ fn CryptGetHashParam(emu: &mut emu::Emu) {
             .expect("advapi32!CryptGetHashParam error reading param") as u64;
 
 
-    println!(
+    log::info!(
         "{}** {} advapi32!CryptGetHashParam {}",
         emu.colors.light_red, emu.pos,  emu.colors.nc
     );
@@ -454,7 +454,7 @@ fn CryptGetKeyParam(emu: &mut emu::Emu) {
             .expect("advapi32!CryptGetKeyParam error reading param") as u64;
 
 
-    println!(
+    log::info!(
         "{}** {} advapi32!CryptGetKeyParam {}",
         emu.colors.light_red, emu.pos,  emu.colors.nc
     );
@@ -492,7 +492,7 @@ fn CryptImportKey(emu: &mut emu::Emu) {
             .expect("advapi32!CryptImportKey error reading param") as u64;
 
 
-    println!(
+    log::info!(
         "{}** {} advapi32!CryptImportKey {}",
         emu.colors.light_red, emu.pos,  emu.colors.nc
     );
@@ -530,7 +530,7 @@ fn CryptSignHashA(emu: &mut emu::Emu) {
             .expect("advapi32!CryptSignHashA error reading param") as u64;
 
 
-    println!(
+    log::info!(
         "{}** {} advapi32!CryptSignHashA {}",
         emu.colors.light_red, emu.pos,  emu.colors.nc
     );
@@ -568,7 +568,7 @@ fn CryptSignHashW(emu: &mut emu::Emu) {
             .expect("advapi32!CryptSignHashW error reading param") as u64;
 
 
-    println!(
+    log::info!(
         "{}** {} advapi32!CryptSignHashW {}",
         emu.colors.light_red, emu.pos,  emu.colors.nc
     );
@@ -602,7 +602,7 @@ fn CryptHashData(emu: &mut emu::Emu) {
         helper::handler_put_bytes(hhash, b"deadcafebabe");
     }
 
-    println!(
+    log::info!(
         "{}** {} advapi32!CryptHashData {} {}",
         emu.colors.light_red, emu.pos, hex_hash,  emu.colors.nc
     );
@@ -634,7 +634,7 @@ fn CryptDeriveKey(emu: &mut emu::Emu) {
     }
     helper::handler_put_bytes(handle, &vec![0x41u8;alg_len]);
 
-    println!(
+    log::info!(
         "{}** {} advapi32!CryptDeriveKey {} {}",
         emu.colors.light_red, emu.pos, alg,  emu.colors.nc
     );
