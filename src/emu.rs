@@ -1524,7 +1524,7 @@ impl Emu {
                             name: name.clone(),
                         };
                         self.memory_operations.push(memory_operation);
-                        println!("\tmem_trace: pos = {} rip = {:x} op = read bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, operand, addr, v, name);
+                        println!("\tmem_trace: pos = {} rip = {:x} op = read bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, 64, addr, v, name);
                     }
                     return Some(v);
                 }
@@ -1547,7 +1547,7 @@ impl Emu {
                             name: name.clone(),
                         };
                         self.memory_operations.push(memory_operation);
-                        println!("\tmem_trace: pos = {} rip = {:x} op = read bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, operand, addr, v, name);
+                        println!("\tmem_trace: pos = {} rip = {:x} op = read bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, 32, addr, v, name);
                     }
                     return Some(v.into());
                 }
@@ -1570,7 +1570,7 @@ impl Emu {
                             name: name.clone(),
                         };
                         self.memory_operations.push(memory_operation);
-                        println!("\tmem_trace: pos = {} rip = {:x} op = read bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, operand, addr, v, name);
+                        println!("\tmem_trace: pos = {} rip = {:x} op = read bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, 16, addr, v, name);
                     }
                     return Some(v.into());
                 }
@@ -1593,7 +1593,7 @@ impl Emu {
                             name: name.clone(),
                         };
                         self.memory_operations.push(memory_operation);
-                        println!("\tmem_trace: pos = {} rip = {:x} op = read bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, operand, addr, v, name);
+                        println!("\tmem_trace: pos = {} rip = {:x} op = read bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, 8, addr, v, name);
                     }
                     return Some(v.into());
                 }
