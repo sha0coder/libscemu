@@ -58,6 +58,7 @@ pub fn gateway(emu: &mut emu::Emu) {
                     
                     let mut lib_buff: Vec<u8> = Vec::new();
                     
+                    // println!("opening lib: {}", filepath);
                     match File::open(&filepath) {
                         Ok(f) => {
                             let len = f.metadata().unwrap().len();
@@ -713,6 +714,7 @@ pub fn gateway(emu: &mut emu::Emu) {
                 if filepath.contains(".so") {
                     let mut lib_buff: Vec<u8> = Vec::new();
                     
+                    //println!("opening lib: {}", filepath);
                     match File::open(&filepath) {
                         Ok(f) => {
                             let len = f.metadata().unwrap().len();

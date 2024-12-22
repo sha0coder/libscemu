@@ -86,7 +86,7 @@ impl Flags {
         }
     }
 
-    pub fn diff(rip: u64, pos: u64, a: Flags, b: Flags) {
+    pub fn diff(rip: u64, pos: u64, a: Flags, b: Flags) -> String {
         let mut output = format!(
             "\tdiff_flags: pos = {} rip = {:x} in = {:x} out = {:x} ",
             pos,
@@ -202,8 +202,7 @@ impl Flags {
                 output, "f_id", a.f_id as u8, b.f_id as u8
             );
         }
-
-        println!("{}", output);
+        output
     }
 
     pub fn clear(&mut self) {

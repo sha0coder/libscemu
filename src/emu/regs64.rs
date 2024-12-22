@@ -268,7 +268,7 @@ impl Regs64 {
         }
     }
 
-    pub fn diff(rip: u64, pos: u64, a: Regs64, b: Regs64) {
+    pub fn diff(rip: u64, pos: u64, a: Regs64, b: Regs64) -> String {
         let mut output = format!("\tdiff_reg: pos = {} rip = {:x} ", pos, rip);
         if a.dr0 != b.dr0 {
             output = format!("{}{} {:x} -> {:x}; ", output, "dr0", a.dr0, b.dr0);
@@ -529,7 +529,7 @@ impl Regs64 {
         if a.fs != b.fs {
             output = format!("{}{} {:x} -> {:x}; ", output, "fs", a.fs, b.fs);
         }
-        println!("{}", output);
+        output
     }
 
     pub fn clear<const B: usize>(&mut self) {

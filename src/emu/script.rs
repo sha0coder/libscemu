@@ -27,6 +27,7 @@ impl Script {
     }
 
     pub fn load(&mut self, filename: &str) {
+        // println!("loading script: {}", filename);
         let file = File::open(filename).unwrap();
         let buf = BufReader::new(file);
 

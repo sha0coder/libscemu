@@ -429,6 +429,7 @@ impl Elf64 {
     }
 
     pub fn is_elf64(filename:&str) -> bool {
+        //println!("checking if elf64: {}", filename);
         let mut fd = File::open(filename).expect("file not found");
         let mut raw = vec![0u8; 5];
         fd.read_exact(&mut raw).expect("couldnt read the file");

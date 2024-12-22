@@ -1,4 +1,3 @@
-#[derive(Clone)]
 pub struct Config {
     pub filename: String,       // filename with full path included
     pub trace_mem: bool,        // show memory operations in every step.
@@ -26,6 +25,7 @@ pub struct Config {
     pub console_enabled: bool,
     pub skip_unimplemented: bool,
     pub stack_addr: u64,
+    pub trace_file: Option<std::fs::File>,
 }
 
 impl Config {
@@ -57,6 +57,7 @@ impl Config {
             console_enabled: true,
             skip_unimplemented: false,
             stack_addr: 0,
+            trace_file: None,
         }
     }
 }

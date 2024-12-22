@@ -2043,8 +2043,20 @@ impl Hostent {
     }
 }
 
-
-
-
-
-
+#[derive(Debug, Clone)]
+pub struct MemoryOperation {
+    /// Position/step counter in the emulation
+    pub pos: u64,
+    /// Instruction pointer at time of operation
+    pub rip: u64,
+    /// Type of memory operation ("read" or "write")
+    pub op: String,
+    /// Size of the operation in bits (8, 16, 32, 64)
+    pub bits: u32,
+    /// Memory address being accessed
+    pub address: u64,
+    /// Value being read or written
+    pub value: u64,
+    /// Name of the memory region being accessed
+    pub name: String,
+}

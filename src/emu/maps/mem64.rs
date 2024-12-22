@@ -243,6 +243,7 @@ impl Mem64 {
     }
 
     pub fn load_chunk(&mut self, filename: &str, off: u64, sz: usize) -> bool {
+        // println!("loading chunk: {} {} {}", filename, off, sz);
         let mut f = match File::open(&filename) {
             Ok(f) => f,
             Err(_) => {
@@ -263,6 +264,7 @@ impl Mem64 {
     }
 
     pub fn load(&mut self, filename: &str) -> bool {
+        // println!("loading map: {}", filename);
         let f = match File::open(&filename) {
             Ok(f) => f,
             Err(_) => {

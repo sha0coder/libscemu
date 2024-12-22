@@ -53,10 +53,12 @@ use maps::Maps;
 use pe32::PE32;
 use pe64::PE64;
 use regs64::Regs64;
+use structures::MemoryOperation;
 use std::collections::BTreeMap;
 use std::sync::atomic;
 use std::sync::Arc;
 use std::time::Instant;
+use std::io::Write as _;
 //use std::arch::asm;
 
 use iced_x86::{
@@ -126,6 +128,9 @@ pub struct Emu {
     pub tls: Vec<u32>,
     pub fls: Vec<u32>,
     pub out: String,
+    pub instruction: Option<Instruction>,
+    pub instruction_bytes: Vec<u8>,
+    pub memory_operations: Vec<MemoryOperation>,
     main_thread_cont: u64,
     gateway_return: u64,
     is_running: Arc<atomic::AtomicU32>,
@@ -183,7 +188,7 @@ impl Emu {
             break_on_next_cmp: false,
             break_on_next_return: false,
             filename: String::new(),
-            enabled_ctrlc: true,
+            enabled_ctrlc: false, // TODO: make configurable with command line arg
             run_until_ret: false,
             running_script: false,
             banzai: Banzai::new(),
@@ -197,6 +202,9 @@ impl Emu {
             last_instruction_size: 0,
             pe64: None, 
             pe32: None,
+            instruction: None,
+            instruction_bytes: vec![],
+            memory_operations: vec![],
         }
     }
 
@@ -428,9 +436,6 @@ impl Emu {
             self.init_stack64();
             //self.init_stack64_tests();
             //self.init_flags_tests();
-
-
-
         } else {
             // 32bits
             self.regs.rip = self.cfg.entry_point;
@@ -1092,6 +1097,16 @@ impl Emu {
                 Some(n) => n,
                 None => "not mapped".to_string(),
             };
+            let memory_operation = MemoryOperation {
+                pos: self.pos,
+                rip: self.regs.rip,
+                op: "write".to_string(),
+                bits: 32,
+                address: self.regs.get_esp(),
+                value: value as u64,
+                name: name.clone(),
+            };
+            self.memory_operations.push(memory_operation);
             println!("\tmem_trace: pos = {} rip = {:x} op = write bits = {} address = 0x{:x} value = 0x{:x} name = '{}'",
                 self.pos, self.regs.rip, 32, self.regs.get_esp(), value, name);
         }
@@ -1142,6 +1157,16 @@ impl Emu {
                 Some(n) => n,
                 None => "not mapped".to_string(),
             };
+            let memory_operation = MemoryOperation {
+                pos: self.pos,
+                rip: self.regs.rip,
+                op: "write".to_string(),
+                bits: 64,
+                address: self.regs.rsp,
+                value: value as u64,
+                name: name.clone(),
+            };
+            self.memory_operations.push(memory_operation);
             println!("\tmem_trace: pos = {} rip = {:x} op = write bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, 64, self.regs.rsp, value, name);
         }
 
@@ -1234,6 +1259,16 @@ impl Emu {
                 Some(n) => n,
                 None => "not mapped".to_string(),
             };
+            let memory_operation = MemoryOperation {
+                pos: self.pos,
+                rip: self.regs.rip,
+                op: "read".to_string(),
+                bits: 32,
+                address: self.regs.get_esp(),
+                value: value as u64,
+                name: name.clone(),
+            };
+            self.memory_operations.push(memory_operation);
             println!("\tmem_trace: pos = {} rip = {:x} op = read bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, 32, self.regs.get_esp(), value, name);
         }
 
@@ -1286,7 +1321,17 @@ impl Emu {
                 Some(n) => n,
                 None => "not mapped".to_string(),
             };
-            println!("\tmem_trace: pos = {} rip = {:x} op = read bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, 32, self.regs.rsp, value, name);
+            let memory_operation = MemoryOperation {
+                pos: self.pos,
+                rip: self.regs.rip,
+                op: "read".to_string(),
+                bits: 64,
+                address: self.regs.rsp,
+                value: value as u64,
+                name: name.clone(),
+            };
+            self.memory_operations.push(memory_operation);
+            println!("\tmem_trace: pos = {} rip = {:x} op = read bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, 64, self.regs.rsp, value, name);
         }
 
         self.regs.rsp += 8;
@@ -1469,6 +1514,16 @@ impl Emu {
                             Some(n) => n,
                             None => "not mapped".to_string(),
                         };
+                        let memory_operation = MemoryOperation {
+                            pos: self.pos,
+                            rip: self.regs.rip,
+                            op: "read".to_string(),
+                            bits: 64,
+                            address: addr,
+                            value: v as u64,
+                            name: name.clone(),
+                        };
+                        self.memory_operations.push(memory_operation);
                         println!("\tmem_trace: pos = {} rip = {:x} op = read bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, operand, addr, v, name);
                     }
                     return Some(v);
@@ -1482,6 +1537,16 @@ impl Emu {
                             Some(n) => n,
                             None => "not mapped".to_string(),
                         };
+                        let memory_operation = MemoryOperation {
+                            pos: self.pos,
+                            rip: self.regs.rip,
+                            op: "read".to_string(),
+                            bits: 32,
+                            address: addr,
+                            value: v as u64,
+                            name: name.clone(),
+                        };
+                        self.memory_operations.push(memory_operation);
                         println!("\tmem_trace: pos = {} rip = {:x} op = read bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, operand, addr, v, name);
                     }
                     return Some(v.into());
@@ -1495,6 +1560,16 @@ impl Emu {
                             Some(n) => n,
                             None => "not mapped".to_string(),
                         };
+                        let memory_operation = MemoryOperation {
+                            pos: self.pos,
+                            rip: self.regs.rip,
+                            op: "read".to_string(),
+                            bits: 16,
+                            address: addr,
+                            value: v as u64,
+                            name: name.clone(),
+                        };
+                        self.memory_operations.push(memory_operation);
                         println!("\tmem_trace: pos = {} rip = {:x} op = read bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, operand, addr, v, name);
                     }
                     return Some(v.into());
@@ -1508,6 +1583,16 @@ impl Emu {
                             Some(n) => n,
                             None => "not mapped".to_string(),
                         };
+                        let memory_operation = MemoryOperation {
+                            pos: self.pos,
+                            rip: self.regs.rip,
+                            op: "read".to_string(),
+                            bits: 8,
+                            address: addr,
+                            value: v as u64,
+                            name: name.clone(),
+                        };
+                        self.memory_operations.push(memory_operation);
                         println!("\tmem_trace: pos = {} rip = {:x} op = read bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, operand, addr, v, name);
                     }
                     return Some(v.into());
@@ -1545,6 +1630,16 @@ impl Emu {
         }
 
         if self.cfg.trace_mem {
+            let memory_operation = MemoryOperation {
+                pos: self.pos,
+                rip: self.regs.rip,
+                op: "write".to_string(),
+                bits: 32,
+                address: addr,
+                value: value as u64,
+                name: name.clone(),
+            };
+            self.memory_operations.push(memory_operation);
             println!("\tmem_trace: pos = {} rip = {:x} op = write bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, operand, addr, value, name);
         }
 
@@ -3489,6 +3584,16 @@ impl Emu {
                             Some(n) => n,
                             None => "not mapped".to_string(),
                         };
+                        let memory_operation = MemoryOperation {
+                            pos: self.pos,
+                            rip: self.regs.rip,
+                            op: "read".to_string(),
+                            bits: sz,
+                            address: mem_addr,
+                            value: value,
+                            name: name.clone(),
+                        };
+                        self.memory_operations.push(memory_operation);
                         println!("\tmem_trace: pos = {} rip = {:x} op = read bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, sz, mem_addr, value, name);
                     }
 
@@ -3644,6 +3749,16 @@ impl Emu {
                             Some(n) => n,
                             None => "not mapped".to_string(),
                         };
+                        let memory_operation = MemoryOperation {
+                            pos: self.pos,
+                            rip: self.regs.rip,
+                            op: "write".to_string(),
+                            bits: sz,
+                            address: mem_addr,
+                            value: value2,
+                            name: name.clone(),
+                        };
+                        self.memory_operations.push(memory_operation);
                         println!("\tmem_trace: pos = {} rip = {:x} op = write bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, sz, mem_addr, value2, name);
                     }
 
@@ -4069,17 +4184,155 @@ impl Emu {
     }
 
     pub fn diff_pre_op_post_op(&mut self) {
-        Regs64::diff(
+        // 00,00007FFBEF4E5FF0,EB 08,jmp 7FFBEF4E5FFA,rax: 7FFBEF4E5FF0-> 7FFBEF4E5FF0 rbx: 7FFE0385-> 7FFE0385 rcx: 7FFBEE4B0000-> 7FFBEE4B0000 rdx: 1-> 1 rsp: 98EB5DDFF8-> 98EB5DDFF8 rbp: 98EB5DE338-> 98EB5DE338 rsi: 1-> 1 rdi: 7FFE0384-> 7FFE0384 r8: 0-> 0 r9: 0-> 0 r10: A440AE23305F3A70-> A440AE23305F3A70 r11: 98EB5DE068-> 98EB5DE068 r12: 7FFBEF4E5FF0-> 7FFBEF4E5FF0 r13: 1FC18C72DC0-> 1FC18C72DC0 r14: 7FFBEE4B0000-> 7FFBEE4B0000 r15: 0-> 0 rflags: 344-> 246,,OptionalHeader.AddressOfEntryPoint
+        // 01,00007FFBEF4E5FFA,50,push rax,rsp: 98EB5DDFF8-> 98EB5DDFF0,00000098EB5DDFF0: 7FFC65FF8B8F-> 7FFBEF4E5FF0,rax:GetMsgProc+102D07D
+        let instruction = self.instruction.unwrap();
+        let instruction_bytes = &self.instruction_bytes;
+
+        let registers = Regs64::diff(
             self.pre_op_regs.rip,
             self.pos - 1,
             self.pre_op_regs,
             self.post_op_regs,
         );
-        Flags::diff(
+        let flags = Flags::diff(
             self.pre_op_regs.rip,
             self.pos - 1,
             self.pre_op_flags,
             self.post_op_flags,
+        );
+
+        let mut memory = String::new();
+        for op in self.memory_operations.iter() {
+            memory += &format!("{:?}", op);
+        }
+
+        let mut trace_file = self.cfg.trace_file.as_ref().unwrap();
+        writeln!(
+            trace_file,
+            "{index:02X},{address:016X},{bytes:02x?},{disassembly},{registers},{memory},{comments}", 
+            index = self.pos - 1, 
+            address = self.pre_op_regs.rip, 
+            bytes = instruction_bytes, 
+            disassembly = self.out, 
+            registers = format!("{} {}", registers, flags), 
+            memory = memory, 
+            comments = ""
+        );
+    }
+
+    fn trace_registers_64bit(&mut self) {
+        println!(
+            "\trax: 0x{:x} rbx: 0x{:x} rcx: 0x{:x} rdx: 0x{:x} rsi: 0x{:x} rdi: 0x{:x} rbp: 0x{:x} rsp: 0x{:x}",
+            self.regs.rax, self.regs.rbx, self.regs.rcx,
+            self.regs.rdx, self.regs.rsi, self.regs.rdi, self.regs.rbp, self.regs.rsp
+        );
+        println!(
+            "\tr8: 0x{:x} r9: 0x{:x} r10: 0x{:x} r11: 0x{:x} r12: 0x{:x} r13: 0x{:x} r14: 0x{:x} r15: 0x{:x}",
+            self.regs.r8, self.regs.r9, self.regs.r10, self.regs.r11, self.regs.r12, self.regs.r13, self.regs.r14,
+            self.regs.r15,
+        );
+        println!(
+            "\tr8u: 0x{:x} r9u: 0x{:x} r10u: 0x{:x} r11u: 0x{:x} r12u: 0x{:x} r13u: 0x{:x} r14u: 0x{:x} r15u: 0x{:x}",
+            self.regs.get_r8u(), self.regs.get_r9u(), self.regs.get_r10u(), self.regs.get_r11u(), self.regs.get_r12u(), self.regs.get_r13u(), self.regs.get_r14u(),
+            self.regs.get_r15u(),
+        );
+        println!(
+            "\tr8d: 0x{:x} r9d: 0x{:x} r10d: 0x{:x} r11d: 0x{:x} r12d: 0x{:x} r13d: 0x{:x} r14d: 0x{:x} r15d: 0x{:x}",
+            self.regs.get_r8d(), self.regs.get_r9d(), self.regs.get_r10d(), self.regs.get_r11d(), self.regs.get_r12d(), self.regs.get_r13d(), self.regs.get_r14d(),
+            self.regs.get_r15d(),
+        );
+        println!(
+            "\tr8w: 0x{:x} r9w: 0x{:x} r10w: 0x{:x} r11w: 0x{:x} r12w: 0x{:x} r13w: 0x{:x} r14w: 0x{:x} r15w: 0x{:x}",
+            self.regs.get_r8w(), self.regs.get_r9w(), self.regs.get_r10w(), self.regs.get_r11w(), self.regs.get_r12w(), self.regs.get_r13w(), self.regs.get_r14w(),
+            self.regs.get_r15w(),
+        );
+        println!(
+            "\tr8l: 0x{:x} r9l: 0x{:x} r10l: 0x{:x} r11l: 0x{:x} r12l: 0x{:x} r13l: 0x{:x} r14l: 0x{:x} r15l: 0x{:x}",
+            self.regs.get_r8l(), self.regs.get_r9l(), self.regs.get_r10l(), self.regs.get_r11l(), self.regs.get_r12l(), self.regs.get_r13l(), self.regs.get_r14l(),
+            self.regs.get_r15l(),
+        );
+        println!(
+            "\tzf: {:?} pf: {:?} af: {:?} of: {:?} sf: {:?} df: {:?} cf: {:?} tf: {:?} if: {:?} nt: {:?}",
+            self.flags.f_zf, self.flags.f_pf, self.flags.f_af,
+            self.flags.f_of, self.flags.f_sf, self.flags.f_df,
+            self.flags.f_cf, self.flags.f_tf, self.flags.f_if,
+            self.flags.f_nt
+        );
+    }
+
+    fn trace_registers_32bit(&mut self) {
+        println!("\teax: 0x{:x} ebx: 0x{:x} ecx: 0x{:x} edx: 0x{:x} esi: 0x{:x} edi: 0x{:x} ebp: 0x{:x} esp: 0x{:x}",
+          self.regs.get_eax() as u32, self.regs.get_ebx() as u32, self.regs.get_ecx() as u32,
+          self.regs.get_edx() as u32, self.regs.get_esi() as u32, self.regs.get_edi() as u32,
+          self.regs.get_ebp() as u32, self.regs.get_esp() as u32);
+    }
+
+    fn trace_specific_register(&self, reg: &str) {
+        match reg {
+            "rax" => self.regs.show_rax(&self.maps, self.pos),
+            "rbx" => self.regs.show_rbx(&self.maps, self.pos),
+            "rcx" => self.regs.show_rcx(&self.maps, self.pos),
+            "rdx" => self.regs.show_rdx(&self.maps, self.pos),
+            "rsi" => self.regs.show_rsi(&self.maps, self.pos),
+            "rdi" => self.regs.show_rdi(&self.maps, self.pos),
+            "rbp" => println!("\t{} rbp: 0x{:x}", self.pos, self.regs.rbp),
+            "rsp" => println!("\t{} rsp: 0x{:x}", self.pos, self.regs.rsp),
+            "rip" => println!("\t{} rip: 0x{:x}", self.pos, self.regs.rip),
+            "r8" => self.regs.show_r8(&self.maps, self.pos),
+            "r9" => self.regs.show_r9(&self.maps, self.pos),
+            "r10" => self.regs.show_r10(&self.maps, self.pos),
+            "r10d" => self.regs.show_r10d(&self.maps, self.pos),
+            "r11" => self.regs.show_r11(&self.maps, self.pos),
+            "r11d" => self.regs.show_r11d(&self.maps, self.pos),
+            "r12" => self.regs.show_r12(&self.maps, self.pos),
+            "r13" => self.regs.show_r13(&self.maps, self.pos),
+            "r14" => self.regs.show_r14(&self.maps, self.pos),
+            "r15" => self.regs.show_r15(&self.maps, self.pos),
+            "eax" => self.regs.show_eax(&self.maps, self.pos),
+            "ebx" => self.regs.show_ebx(&self.maps, self.pos),
+            "ecx" => self.regs.show_ecx(&self.maps, self.pos),
+            "edx" => self.regs.show_edx(&self.maps, self.pos),
+            "esi" => self.regs.show_esi(&self.maps, self.pos),
+            "edi" => self.regs.show_edi(&self.maps, self.pos),
+            "esp" => println!("\t{} esp: 0x{:x}", self.pos, self.regs.get_esp() as u32),
+            "ebp" => println!("\t{} ebp: 0x{:x}", self.pos, self.regs.get_ebp() as u32),
+            "eip" => println!("\t{} eip: 0x{:x}", self.pos, self.regs.get_eip() as u32),
+            "xmm1" => println!("\t{} xmm1: 0x{:x}", self.pos, self.regs.xmm1),
+            _ => panic!("invalid register."),
+        }
+    }
+
+    fn trace_string(&mut self) {
+        let s = self.maps.read_string(self.cfg.string_addr);
+
+        if s.len() >= 2 && s.len() < 80 {
+            println!("\ttrace string -> 0x{:x}: '{}'", self.cfg.string_addr, s);
+        } else {
+            let w = self.maps.read_wide_string(self.cfg.string_addr);
+            if w.len() < 80 {
+                println!("\ttrace wide string -> 0x{:x}: '{}'", self.cfg.string_addr, w);
+            } else {
+                println!("\ttrace wide string -> 0x{:x}: ''", self.cfg.string_addr);
+            }
+        }
+    }
+
+    fn trace_memory_inspection(&mut self) {
+        let addr: u64 = self.memory_operand_to_address(self.cfg.inspect_seq.clone().as_str());
+        let bits = self.get_size(self.cfg.inspect_seq.clone().as_str());
+        let value = self.memory_read(self.cfg.inspect_seq.clone().as_str()).unwrap_or(0);
+
+        let mut s = self.maps.read_string(addr);
+        self.maps.filter_string(&mut s);
+        println!(
+            "\tmem_inspect: rip = {:x} (0x{:x}): 0x{:x} {} '{}' {{{}}}",
+            self.regs.rip,
+            addr,
+            value,
+            value,
+            s,
+            self.maps.read_string_of_bytes(addr, constants::NUM_BYTES_TRACE)
         );
     }
 
@@ -4121,7 +4374,12 @@ impl Emu {
 
         // clear
         self.out.clear();
+
+        // format
         formatter.format(&ins, &mut self.out);
+        self.instruction = Some(ins);
+        self.instruction_bytes = vec![]; // TODO
+        self.memory_operations.clear();
 
         // emulate
         let result_ok = self.emulate_instruction(&ins, sz, true);
@@ -4198,14 +4456,19 @@ impl Emu {
                 for ins in decoder.iter() {
                     let sz = ins.len();
                     let addr = ins.ip();
+                    let position = ins.ip() - self.regs.rip;
+                    let instruction_bytes = block[position as usize..position as usize + sz].to_vec();
 
                     if !end_addr.is_none() && Some(addr) == end_addr {
                         return Ok(self.regs.rip);
                     }
 
+
                     self.out.clear();
                     formatter.format(&ins, &mut self.out);
-
+                    self.instruction = Some(ins);
+                    self.instruction_bytes = instruction_bytes;
+                    self.memory_operations.clear();
                     self.pos += 1;
 
                     if self.exp == self.pos
@@ -4258,126 +4521,18 @@ impl Emu {
                         //TODO: if more than x addresses remove the bottom ones
                     }
 
-                    if self.cfg.trace_regs {
-                        if self.cfg.is_64bits {
-                            self.capture_pre_op();
-                            println!(
-                              "\trax: 0x{:x} rbx: 0x{:x} rcx: 0x{:x} rdx: 0x{:x} rsi: 0x{:x} rdi: 0x{:x} rbp: 0x{:x} rsp: 0x{:x}",
-                              self.regs.rax, self.regs.rbx, self.regs.rcx,
-                              self.regs.rdx, self.regs.rsi, self.regs.rdi, self.regs.rbp, self.regs.rsp
-                            );
-                            // 64-bits (bytes 0-8)
-                            println!(
-                              "\tr8: 0x{:x} r9: 0x{:x} r10: 0x{:x} r11: 0x{:x} r12: 0x{:x} r13: 0x{:x} r14: 0x{:x} r15: 0x{:x}",
-                              self.regs.r8, self.regs.r9, self.regs.r10, self.regs.r11, self.regs.r12, self.regs.r13, self.regs.r14,
-                              self.regs.r15,
-                            );
-                            // 32-bits (upper, unofficial, bytes 4-7)
-                            println!(
-                              "\tr8u: 0x{:x} r9u: 0x{:x} r10u: 0x{:x} r11u: 0x{:x} r12u: 0x{:x} r13u: 0x{:x} r14u: 0x{:x} r15u: 0x{:x}",
-                              self.regs.get_r8u(), self.regs.get_r9u(), self.regs.get_r10u(), self.regs.get_r11u(), self.regs.get_r12u(), self.regs.get_r13u(), self.regs.get_r14u(),
-                              self.regs.get_r15u(),
-                            );
-                            // 32-bits (lower, bytes 0-3)
-                            println!(
-                              "\tr8d: 0x{:x} r9d: 0x{:x} r10d: 0x{:x} r11d: 0x{:x} r12d: 0x{:x} r13d: 0x{:x} r14d: 0x{:x} r15d: 0x{:x}",
-                              self.regs.get_r8d(), self.regs.get_r9d(), self.regs.get_r10d(), self.regs.get_r11d(), self.regs.get_r12d(), self.regs.get_r13d(), self.regs.get_r14d(),
-                              self.regs.get_r15d(),
-                            );
-                            // 16-bits (bytes 0-1)
-                            println!(
-                              "\tr8w: 0x{:x} r9w: 0x{:x} r10w: 0x{:x} r11w: 0x{:x} r12w: 0x{:x} r13w: 0x{:x} r14w: 0x{:x} r15w: 0x{:x}",
-                              self.regs.get_r8w(), self.regs.get_r9w(), self.regs.get_r10w(), self.regs.get_r11w(), self.regs.get_r12w(), self.regs.get_r13w(), self.regs.get_r14w(),
-                              self.regs.get_r15w(),
-                            );
-                            // 8-bits (bytes 0, should end in b and not l)
-                            println!(
-                              "\tr8l: 0x{:x} r9l: 0x{:x} r10l: 0x{:x} r11l: 0x{:x} r12l: 0x{:x} r13l: 0x{:x} r14l: 0x{:x} r15l: 0x{:x}",
-                              self.regs.get_r8l(), self.regs.get_r9l(), self.regs.get_r10l(), self.regs.get_r11l(), self.regs.get_r12l(), self.regs.get_r13l(), self.regs.get_r14l(),
-                              self.regs.get_r15l(),
-                            );
-                            // flags
-                            println!(
-                              "\tzf: {:?} pf: {:?} af: {:?} of: {:?} sf: {:?} df: {:?} cf: {:?} tf: {:?} if: {:?} nt: {:?}",
-                              self.flags.f_zf, self.flags.f_pf, self.flags.f_af,
-                              self.flags.f_of, self.flags.f_sf, self.flags.f_df,
-                              self.flags.f_cf, self.flags.f_tf, self.flags.f_if,
-                              self.flags.f_nt
-                            );
-                        } else {
-                            // TODO: capture pre_op_registers 32-bits?
-                            println!("\teax: 0x{:x} ebx: 0x{:x} ecx: 0x{:x} edx: 0x{:x} esi: 0x{:x} edi: 0x{:x} ebp: 0x{:x} esp: 0x{:x}",
-                              self.regs.get_eax() as u32, self.regs.get_ebx() as u32, self.regs.get_ecx() as u32,
-                              self.regs.get_edx() as u32, self.regs.get_esi() as u32, self.regs.get_edi() as u32,
-                              self.regs.get_ebp() as u32, self.regs.get_esp() as u32);
-                        }
+                    if self.cfg.trace_file.is_some() {
+                        self.capture_pre_op();
                     }
-
+                
                     if self.cfg.trace_reg {
                         for reg in self.cfg.reg_names.iter() {
-                            match reg.as_str() {
-                                "rax" => self.regs.show_rax(&self.maps, self.pos),
-                                "rbx" => self.regs.show_rbx(&self.maps, self.pos),
-                                "rcx" => self.regs.show_rcx(&self.maps, self.pos),
-                                "rdx" => self.regs.show_rdx(&self.maps, self.pos),
-                                "rsi" => self.regs.show_rsi(&self.maps, self.pos),
-                                "rdi" => self.regs.show_rdi(&self.maps, self.pos),
-                                "rbp" => println!("\t{} rbp: 0x{:x}", self.pos, self.regs.rbp),
-                                "rsp" => println!("\t{} rsp: 0x{:x}", self.pos, self.regs.rsp),
-                                "rip" => println!("\t{} rip: 0x{:x}", self.pos, self.regs.rip),
-                                "r8" => self.regs.show_r8(&self.maps, self.pos),
-                                "r9" => self.regs.show_r9(&self.maps, self.pos),
-                                "r10" => self.regs.show_r10(&self.maps, self.pos),
-                                "r10d" => self.regs.show_r10d(&self.maps, self.pos),
-                                "r11" => self.regs.show_r11(&self.maps, self.pos),
-                                "r11d" => self.regs.show_r11d(&self.maps, self.pos),
-                                "r12" => self.regs.show_r12(&self.maps, self.pos),
-                                "r13" => self.regs.show_r13(&self.maps, self.pos),
-                                "r14" => self.regs.show_r14(&self.maps, self.pos),
-                                "r15" => self.regs.show_r15(&self.maps, self.pos),
-                                "eax" => self.regs.show_eax(&self.maps, self.pos),
-                                "ebx" => self.regs.show_ebx(&self.maps, self.pos),
-                                "ecx" => self.regs.show_ecx(&self.maps, self.pos),
-                                "edx" => self.regs.show_edx(&self.maps, self.pos),
-                                "esi" => self.regs.show_esi(&self.maps, self.pos),
-                                "edi" => self.regs.show_edi(&self.maps, self.pos),
-                                "esp" => println!(
-                                    "\t{} esp: 0x{:x}",
-                                    self.pos,
-                                    self.regs.get_esp() as u32
-                                ),
-                                "ebp" => println!(
-                                    "\t{} ebp: 0x{:x}",
-                                    self.pos,
-                                    self.regs.get_ebp() as u32
-                                ),
-                                "eip" => println!(
-                                    "\t{} eip: 0x{:x}",
-                                    self.pos,
-                                    self.regs.get_eip() as u32
-                                ),
-                                "xmm1" => println!("\t{} xmm1: 0x{:x}", self.pos, self.regs.xmm1),
-                                _ => panic!("invalid register."),
-                            }
+                            self.trace_specific_register(&reg);
                         }
                     }
-
+                
                     if self.cfg.trace_string {
-                        let s = self.maps.read_string(self.cfg.string_addr);
-
-                        if s.len() >= 2 && s.len() < 80 {
-                            println!("\ttrace string -> 0x{:x}: '{}'", self.cfg.string_addr, s);
-                        } else {
-                            let w = self.maps.read_wide_string(self.cfg.string_addr);
-                            if w.len() < 80 {
-                                println!(
-                                    "\ttrace wide string -> 0x{:x}: '{}'",
-                                    self.cfg.string_addr, w
-                                );
-                            } else {
-                                println!("\ttrace wide string -> 0x{:x}: ''", self.cfg.string_addr);
-                            }
-                        }
+                        self.trace_string();
                     }
 
                     //let mut info_factory = InstructionInfoFactory::new();
@@ -4396,35 +4551,12 @@ impl Emu {
                     }
 
                     if self.cfg.inspect {
-                        let addr: u64 =
-                            self.memory_operand_to_address(self.cfg.inspect_seq.clone().as_str());
-                        let bits = self.get_size(self.cfg.inspect_seq.clone().as_str());
-                        let value = self
-                            .memory_read(self.cfg.inspect_seq.clone().as_str())
-                            .unwrap_or(0);
-
-                        let mut s = self.maps.read_string(addr);
-                        self.maps.filter_string(&mut s);
-                        println!(
-                            "\tmem_inspect: rip = {:x} (0x{:x}): 0x{:x} {} '{}' {{{}}}",
-                            self.regs.rip,
-                            addr,
-                            value,
-                            value,
-                            s,
-                            self.maps
-                                .read_string_of_bytes(addr, constants::NUM_BYTES_TRACE)
-                        );
+                        self.trace_memory_inspection();
                     }
 
-                    if self.cfg.trace_regs {
-                        // registers
-                        if self.cfg.is_64bits {
-                            self.capture_post_op();
-                            self.diff_pre_op_post_op();
-                        } else {
-                            // TODO: self.diff_pre_op_post_op_registers_32bits();
-                        }
+                    if self.cfg.trace_file.is_some() {
+                        self.capture_post_op();
+                        self.diff_pre_op_post_op();
                     }
 
                     if !emulation_ok {

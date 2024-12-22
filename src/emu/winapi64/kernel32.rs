@@ -308,6 +308,8 @@ pub fn guess_api_name(emu: &mut emu::Emu, addr: u64) -> String {
 }
 
 pub fn load_library(emu: &mut emu::Emu, libname: &str) -> u64 {
+    // println!("kern32!load_library: {}", libname);
+    
     let mut dll = libname.to_string().to_lowercase();
 
     if dll.len() == 0 {

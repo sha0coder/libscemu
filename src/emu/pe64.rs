@@ -232,8 +232,8 @@ pub struct PE64 {
 
 impl PE64 {
     pub fn is_pe64(filename: &str) -> bool {
+        // println!("checking if pe64: {}", filename);
         let mut fd = File::open(filename).expect("file not found");
-        println!("loading pe64: {}", filename);
         let mut raw = vec![0u8; pe32::ImageDosHeader::size()];
         fd.read_exact(&mut raw).expect("couldnt read the file");
         let dos = pe32::ImageDosHeader::load(&raw, 0);
@@ -250,6 +250,7 @@ impl PE64 {
     }
 
     pub fn load(filename: &str) -> PE64 {
+        //println!("loading pe64: {}", filename);
         let mut fd = File::open(filename).expect("pe64 binary not found");
         let mut raw: Vec<u8> = Vec::new();
         fd.read_to_end(&mut raw)
@@ -519,7 +520,7 @@ impl PE64 {
         // https://docs.microsoft.com/en-us/archive/msdn-magazine/2002/march/inside-windows-an-in-depth-look-into-the-win32-portable-executable-file-format-part-2#Binding
 
         println!(
-            "IAT binding started {} ...",
+            "IAT binding started image_import_descriptor.len() = {} ...",
             self.image_import_descriptor.len()
         );
 
@@ -567,6 +568,10 @@ impl PE64 {
                     println!("binded 0x{:x} {}", real_addr, func_name);
                 }*/
 
+                if real_addr == 0x7ff000210180 {
+                    let fake_addr = read_u64_le!(self.raw, off_addr);
+                    println!("name: {} fake addr: 0x{:x}", func_name, fake_addr);
+                }
                 write_u64_le!(self.raw, off_addr, real_addr);
 
                 off_name += pe32::HintNameItem::size();

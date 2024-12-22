@@ -768,6 +768,7 @@ pub struct PE32 {
 
 impl PE32 {
     pub fn is_pe32(filename: &str) -> bool {
+        //println!("checking if pe32: {}", filename);
         let mut fd = File::open(filename).expect("file not found");
         let mut raw = vec![0u8; ImageDosHeader::size()];
         fd.read_exact(&mut raw).expect("couldnt read the file");
@@ -787,6 +788,7 @@ impl PE32 {
     pub fn read_string(raw: &[u8], off: usize) -> String {
         let mut last = 0;
 
+        // TODO: bounds error?
         if raw.len() < off + 200 {
             return String::new();
         }
@@ -810,6 +812,7 @@ impl PE32 {
     }
 
     pub fn load(filename: &str) -> PE32 {
+        //println!("loading pe32: {}", filename);
         let mut fd = File::open(filename).expect("pe32 binary not found");
         let mut raw: Vec<u8> = Vec::new();
         fd.read_to_end(&mut raw)
@@ -1089,7 +1092,11 @@ impl PE32 {
         let dbg = false;
         // https://docs.microsoft.com/en-us/archive/msdn-magazine/2002/march/inside-windows-an-in-depth-look-into-the-win32-portable-executable-file-format-part-2#Binding
 
-        println!("IAT binding started ...");
+        println!(
+            "IAT binding started image_import_descriptor.len() = {} ...",
+            self.image_import_descriptor.len()
+        );
+        
         for i in 0..self.image_import_descriptor.len() {
             let iim = &self.image_import_descriptor[i];
             if dbg {
