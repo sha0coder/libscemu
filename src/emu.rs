@@ -1112,7 +1112,7 @@ impl Emu {
                 name: name.clone(),
             };
             self.memory_operations.push(memory_operation);
-            log::info!("\tmem_trace: pos = {} rip = {:x} op = write bits = {} address = 0x{:x} value = 0x{:x} name = '{}'",
+            log::debug!("\tmem_trace: pos = {} rip = {:x} op = write bits = {} address = 0x{:x} value = 0x{:x} name = '{}'",
                 self.pos, self.regs.rip, 32, self.regs.get_esp(), value, name);
         }
 
@@ -1173,7 +1173,7 @@ impl Emu {
                 name: name.clone(),
             };
             self.memory_operations.push(memory_operation);
-            log::info!("\tmem_trace: pos = {} rip = {:x} op = write bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, 64, self.regs.rsp, value, name);
+            log::debug!("\tmem_trace: pos = {} rip = {:x} op = write bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, 64, self.regs.rsp, value, name);
         }
 
         self.regs.rsp = self.regs.rsp - 8;
@@ -1277,7 +1277,7 @@ impl Emu {
                 name: name.clone(),
             };
             self.memory_operations.push(read_operation);
-            log::info!("\tmem_trace: pos = {} rip = {:x} op = read bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", 
+            log::debug!("\tmem_trace: pos = {} rip = {:x} op = read bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", 
                 self.pos, self.regs.rip, 32, self.regs.get_esp(), value, name);
     
             // Record the write to register
@@ -1292,7 +1292,7 @@ impl Emu {
                 name: "register".to_string(),
             };
             self.memory_operations.push(write_operation);
-            log::info!("\tmem_trace: pos = {} rip = {:x} op = write bits = {} address = 0x{:x} value = 0x{:x} name = 'register'", 
+            log::debug!("\tmem_trace: pos = {} rip = {:x} op = write bits = {} address = 0x{:x} value = 0x{:x} name = 'register'", 
                 self.pos, self.regs.rip, 32, self.regs.get_esp(), value);
         }
 
@@ -1357,7 +1357,7 @@ impl Emu {
                 name: name.clone(),
             };
             self.memory_operations.push(read_operation);
-            log::info!("\tmem_trace: pos = {} rip = {:x} op = read bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", 
+            log::debug!("\tmem_trace: pos = {} rip = {:x} op = read bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", 
                 self.pos, self.regs.rip, 64, self.regs.rsp, value, name);
         
             // Record the write to register
@@ -1372,7 +1372,7 @@ impl Emu {
                 name: "register".to_string(),
             };
             self.memory_operations.push(write_operation);
-            log::info!("\tmem_trace: pos = {} rip = {:x} op = write bits = {} address = 0x{:x} value = 0x{:x} name = 'register'", 
+            log::debug!("\tmem_trace: pos = {} rip = {:x} op = write bits = {} address = 0x{:x} value = 0x{:x} name = 'register'", 
                 self.pos, self.regs.rip, 64, self.regs.rsp, value);
         }
 
@@ -1567,7 +1567,7 @@ impl Emu {
                             name: name.clone(),
                         };
                         self.memory_operations.push(memory_operation);
-                        log::info!("\tmem_trace: pos = {} rip = {:x} op = read bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, 64, addr, v, name);
+                        log::debug!("\tmem_trace: pos = {} rip = {:x} op = read bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, 64, addr, v, name);
                     }
                     return Some(v);
                 }
@@ -1591,7 +1591,7 @@ impl Emu {
                             name: name.clone(),
                         };
                         self.memory_operations.push(memory_operation);
-                        log::info!("\tmem_trace: pos = {} rip = {:x} op = read bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, 32, addr, v, name);
+                        log::debug!("\tmem_trace: pos = {} rip = {:x} op = read bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, 32, addr, v, name);
                     }
                     return Some(v.into());
                 }
@@ -1615,7 +1615,7 @@ impl Emu {
                             name: name.clone(),
                         };
                         self.memory_operations.push(memory_operation);
-                        log::info!("\tmem_trace: pos = {} rip = {:x} op = read bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, 16, addr, v, name);
+                        log::debug!("\tmem_trace: pos = {} rip = {:x} op = read bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, 16, addr, v, name);
                     }
                     return Some(v.into());
                 }
@@ -1639,7 +1639,7 @@ impl Emu {
                             name: name.clone(),
                         };
                         self.memory_operations.push(memory_operation);
-                        log::info!("\tmem_trace: pos = {} rip = {:x} op = read bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, 8, addr, v, name);
+                        log::debug!("\tmem_trace: pos = {} rip = {:x} op = read bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, 8, addr, v, name);
                     }
                     return Some(v.into());
                 }
@@ -1695,7 +1695,7 @@ impl Emu {
                 name: name.clone(),
             };
             self.memory_operations.push(memory_operation);
-            log::info!("\tmem_trace: pos = {} rip = {:x} op = write bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, 32, addr, value, name);
+            log::debug!("\tmem_trace: pos = {} rip = {:x} op = write bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, 32, addr, value, name);
         }
         
         let ret = match bits {
@@ -3649,7 +3649,7 @@ impl Emu {
                             name: name.clone(),
                         };
                         self.memory_operations.push(memory_operation);
-                        log::info!("\tmem_trace: pos = {} rip = {:x} op = read bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, sz, mem_addr, value, name);
+                        log::debug!("\tmem_trace: pos = {} rip = {:x} op = read bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, sz, mem_addr, value, name);
                     }
 
                     if mem_addr == self.bp.get_mem_read() {
@@ -3827,7 +3827,7 @@ impl Emu {
                             name: name.clone(),
                         };
                         self.memory_operations.push(memory_operation);
-                        log::info!("\tmem_trace: pos = {} rip = {:x} op = write bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, sz, mem_addr, value2, name);
+                        log::debug!("\tmem_trace: pos = {} rip = {:x} op = write bits = {} address = 0x{:x} value = 0x{:x} name = '{}'", self.pos, self.regs.rip, sz, mem_addr, value2, name);
                     }
 
                     /* 
@@ -4147,7 +4147,7 @@ impl Emu {
 
     pub fn show_instruction_taken(&self, color: &str, ins: &Instruction) {
         if self.cfg.verbose >= 2 {
-            log::info!(
+            log::debug!(
                 "{}{} 0x{:x}: {} taken {}",
                 color,
                 self.pos,
@@ -4160,7 +4160,7 @@ impl Emu {
 
     pub fn show_instruction_not_taken(&self, color: &str, ins: &Instruction) {
         if self.cfg.verbose >= 2 {
-            log::info!(
+            log::debug!(
                 "{}{} 0x{:x}: {} not taken {}",
                 color,
                 self.pos,
