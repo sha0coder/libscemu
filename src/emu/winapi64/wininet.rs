@@ -23,7 +23,7 @@ pub fn gateway(addr: u64, emu: &mut emu::Emu) -> String {
         "InternetReadFileExW" => InternetReadFileExW(emu),
         "InternetErrorDlg" => InternetErrorDlg(emu),
         _ => {
-            println!("calling unimplemented wininet API 0x{:x} {}", addr, apiname);
+            log::info!("calling unimplemented wininet API 0x{:x} {}", addr, apiname);
             return apiname;
         }
     }
@@ -59,7 +59,7 @@ pub fn InternetOpenA(emu: &mut emu::Emu) {
         proxy_bypass = emu.maps.read_string(proxybypass_ptr);
     }
 
-    println!(
+    log::info!(
         "{}** {} wininet!InternetOpenA uagent: {} proxy: {} {} {}",
         emu.colors.light_red, emu.pos, uagent, proxy, proxy_bypass, emu.colors.nc
     );
@@ -100,7 +100,7 @@ pub fn InternetOpenW(emu: &mut emu::Emu) {
         proxy_bypass = emu.maps.read_wide_string(proxybypass_ptr);
     }
 
-    println!(
+    log::info!(
         "{}** {} wininet!InternetOpenW uagent: {} proxy: {} {} {}",
         emu.colors.light_red, emu.pos, uagent, proxy, proxy_bypass, emu.colors.nc
     );
@@ -152,13 +152,13 @@ pub fn InternetConnectA(emu: &mut emu::Emu) {
         passw = emu.maps.read_string(passw_ptr);
     }
 
-    println!(
+    log::info!(
         "{}** {} wininet!InternetConnectA host: {} port: {} login: {} passw: {} {}",
         emu.colors.light_red, emu.pos, server, port, login, passw, emu.colors.nc
     );
 
     if !helper::handler_exist(internet_hndl) {
-        println!("\tinvalid handle.");
+        log::info!("\tinvalid handle.");
     }
 
     /*
@@ -206,13 +206,13 @@ pub fn InternetConnectW(emu: &mut emu::Emu) {
         passw = emu.maps.read_wide_string(passw_ptr);
     }
 
-    println!(
+    log::info!(
         "{}** {} wininet!InternetConnectW host: {} port: {} login: {} passw: {} {}",
         emu.colors.light_red, emu.pos, server, port, login, passw, emu.colors.nc
     );
 
     if !helper::handler_exist(internet_hndl) {
-        println!("\tinvalid handle.");
+        log::info!("\tinvalid handle.");
     }
 
     /*
@@ -268,17 +268,17 @@ fn HttpOpenRequestA(emu: &mut emu::Emu) {
         access = emu.maps.read_string(access_ptr);
     }
 
-    println!(
+    log::info!(
         "{}** {} wininet!HttpOpenRequestA method: {} path: {} ver: {} ref: {} access: {} {}",
         emu.colors.light_red, emu.pos, method, path, version, referrer, access, emu.colors.nc
     );
 
     if !helper::handler_exist(conn_hndl) {
-        println!("\tinvalid handle.");
+        log::info!("\tinvalid handle.");
     }
 
     if flags & constants::INTERNET_FLAG_SECURE == 1 {
-        println!("\tssl communication.");
+        log::info!("\tssl communication.");
     }
 
     /*
@@ -346,13 +346,13 @@ fn HttpOpenRequestW(emu: &mut emu::Emu) {
         access = emu.maps.read_wide_string(access_ptr);
     }
 
-    println!(
+    log::info!(
         "{}** {} wininet!HttpOpenRequestW method: {} path: {} ver: {} ref: {} access: {} {}",
         emu.colors.light_red, emu.pos, method, path, version, referrer, access, emu.colors.nc
     );
 
     if !helper::handler_exist(conn_hndl) {
-        println!("\tinvalid handle.");
+        log::info!("\tinvalid handle.");
     }
 
     /*
@@ -389,13 +389,13 @@ fn InternetSetOptionA(emu: &mut emu::Emu) {
     }
     let sbuff = emu.maps.read_string(buffer);
 
-    println!(
+    log::info!(
         "{}** {} wininet!InternetSetOptionA option: 0x{:x} buff: {{{}}} {} {}",
         emu.colors.light_red, emu.pos, option, buffer_content, sbuff, emu.colors.nc
     );
 
     if !helper::handler_exist(inet_hndl) {
-        println!("\tinvalid handle.");
+        log::info!("\tinvalid handle.");
     }
 
     emu.regs.rax = 1; // true
@@ -413,13 +413,13 @@ fn InternetSetOptionW(emu: &mut emu::Emu) {
     }
     let sbuff = emu.maps.read_wide_string(buffer);
 
-    println!(
+    log::info!(
         "{}** {} wininet!InternetSetOptionW option: 0x{:x} buff: {{{}}} {} {}",
         emu.colors.light_red, emu.pos, option, buffer_content, sbuff, emu.colors.nc
     );
 
     if !helper::handler_exist(inet_hndl) {
-        println!("\tinvalid handle.");
+        log::info!("\tinvalid handle.");
     }
 
     emu.regs.rax = 1; // true
@@ -438,13 +438,13 @@ fn HttpSendRequestA(emu: &mut emu::Emu) {
     let hdrs = emu.maps.read_string(hdrs_ptr);
     let opt = emu.maps.read_string(opt_ptr);
 
-    println!(
+    log::info!(
         "{}** {} wininet!HttpSendRequestA hdrs: {} opt: {} {}",
         emu.colors.light_red, emu.pos, hdrs, opt, emu.colors.nc
     );
 
     if !helper::handler_exist(req_hndl) {
-        println!("\tinvalid handle.");
+        log::info!("\tinvalid handle.");
     }
 
     /*
@@ -469,13 +469,13 @@ fn HttpSendRequestW(emu: &mut emu::Emu) {
     let hdrs = emu.maps.read_wide_string(hdrs_ptr);
     let opt = emu.maps.read_wide_string(opt_ptr);
 
-    println!(
+    log::info!(
         "{}** {} wininet!HttpSendRequestW hdrs: {} opt: {} {}",
         emu.colors.light_red, emu.pos, hdrs, opt, emu.colors.nc
     );
 
     if !helper::handler_exist(req_hndl) {
-        println!("\tinvalid handle.");
+        log::info!("\tinvalid handle.");
     }
 
     /*
@@ -490,7 +490,7 @@ fn HttpSendRequestW(emu: &mut emu::Emu) {
 fn InternetErrorDlg(emu: &mut emu::Emu) {
     let err = emu.regs.rcx;
 
-    println!(
+    log::info!(
         "{}** {} wininet!InternetErrorDlg err: {} {}",
         emu.colors.light_red, emu.pos, err, emu.colors.nc
     );
@@ -504,13 +504,13 @@ fn InternetReadFile(emu: &mut emu::Emu) {
     let bytes_to_read = emu.regs.r8;
     let bytes_read_ptr = emu.regs.r9;
 
-    println!(
+    log::info!(
         "{}** {} wininet!InternetReadFile sz: {} buff: 0x{:x} {}",
         emu.colors.light_red, emu.pos, bytes_to_read, buff_ptr, emu.colors.nc
     );
 
     if !helper::handler_exist(file_hndl) {
-        println!("\tinvalid handle.");
+        log::info!("\tinvalid handle.");
     }
 
     if emu.cfg.endpoint {
@@ -540,13 +540,13 @@ fn InternetReadFileExA(emu: &mut emu::Emu) {
     let flags = emu.regs.r8;
     let ctx = emu.regs.r9;
 
-    println!(
+    log::info!(
         "{}** {} wininet!InternetReadFileExA buff: 0x{:x} {}",
         emu.colors.light_red, emu.pos, buff_ptr, emu.colors.nc
     );
 
     if !helper::handler_exist(file_hndl) {
-        println!("\tinvalid handle.");
+        log::info!("\tinvalid handle.");
     }
 
     emu.regs.rax = 1; // true
@@ -558,13 +558,13 @@ fn InternetReadFileExW(emu: &mut emu::Emu) {
     let flags = emu.regs.r8;
     let ctx = emu.regs.r9;
 
-    println!(
+    log::info!(
         "{}** {} wininet!InternetReadFileExW buff: 0x{:x} {}",
         emu.colors.light_red, emu.pos, buff_ptr, emu.colors.nc
     );
 
     if !helper::handler_exist(file_hndl) {
-        println!("\tinvalid handle.");
+        log::info!("\tinvalid handle.");
     }
 
     emu.regs.rax = 1; // true

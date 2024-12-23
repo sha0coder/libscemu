@@ -119,16 +119,16 @@ impl FPU {
     }
 
     pub fn print(&self) {
-        println!("---- fpu ----");
+        log::info!("---- fpu ----");
         for i in 0..self.st.len() {
-            println!("st({}): {}", i, self.st[i]);
+            log::info!("st({}): {}", i, self.st[i]);
         }
 
-        println!("stat: 0x{:x}", self.stat);
-        println!("ctrl: 0x{:x}", self.ctrl);
-        println!("eip:  0x{:x}", self.ip);
+        log::info!("stat: 0x{:x}", self.stat);
+        log::info!("ctrl: 0x{:x}", self.ctrl);
+        log::info!("eip:  0x{:x}", self.ip);
 
-        println!("--------");
+        log::info!("--------");
     }
 
     pub fn set_st(&mut self, i: usize, value: f64) {

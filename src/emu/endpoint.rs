@@ -44,14 +44,14 @@ pub fn warning() {
 
 pub fn sock_connect(host: &str, port: u16) -> bool {
     let mut stream = STREAM.lock().unwrap();
-    println!("\tconnecting to {}:{}...", host, port);
+    log::info!("\tconnecting to {}:{}...", host, port);
     stream.push(match TcpStream::connect((host, port)) {
         Ok(s) => s,
         Err(_) => {
             return false;
         }
     });
-    println!("\tconnected!");
+    log::info!("\tconnected!");
     return true;
 }
 
@@ -145,7 +145,7 @@ pub fn http_send_request() {
         url = format!("http://{}:{}{}", host, port, path);
     }
 
-    println!("\tconnecting to url: {}", url);
+    log::info!("\tconnecting to url: {}", url);
 
     let mut req: RequestBuilder = match method.as_str() {
         "get" => attohttpc::get(url),
@@ -156,7 +156,7 @@ pub fn http_send_request() {
         "patch" => attohttpc::patch(url),
         "trace" => attohttpc::trace(url),
         _ => {
-            println!("\tweird method.");
+            log::info!("\tweird method.");
             return;
         }
     };
@@ -171,11 +171,11 @@ pub fn http_send_request() {
             match header::HeaderName::from_bytes(&key.to_lowercase().as_bytes()) {
                 Ok(h) => h,
                 Err(e) => {
-                    println!("\terror in header {}  err: {}", &key, e);
+                    log::info!("\terror in header {}  err: {}", &key, e);
                     return;
                 }
             };
-        //println!("\tadding header: `{}` value: `{}`", &key, &v);
+        //log::info!("\tadding header: `{}` value: `{}`", &key, &v);
         req = req
             .try_header_append::<header::HeaderName, &str>(hn, &v)
             .expect("cannot add header");
@@ -184,16 +184,16 @@ pub fn http_send_request() {
     let resp = match req.send() {
         Ok(r) => r,
         Err(_) => {
-            println!("\tCannot connect.");
+            log::info!("\tCannot connect.");
             return;
         }
     };
 
     if resp.is_success() {
         *data = resp.bytes().expect("error receiving data");
-        println!("\t{} bytes downloaded", data.len());
+        log::info!("\t{} bytes downloaded", data.len());
     } else {
-        println!("\tURL not Ok.");
+        log::info!("\tURL not Ok.");
     }
 }
 

@@ -35,7 +35,7 @@ pub fn gateway(addr: u64, name: String, emu: &mut emu::Emu) {
     };
 
     if unimplemented_api.len() > 0 {
-        println!(
+        log::info!(
             "{}({}, {}, {}, {}) (unimplemented)",
             unimplemented_api, emu.regs.rcx, emu.regs.rdx, emu.regs.r8, emu.regs.r9
         );

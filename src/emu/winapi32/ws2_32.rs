@@ -34,7 +34,7 @@ pub fn gateway(addr: u32, emu: &mut emu::Emu) -> String {
         0x7748cc3f => WsaConnect(emu),
         */
         _ => {
-            println!("calling unimplemented ws2_32 API 0x{:x} {}", addr, api);
+            log::info!("calling unimplemented ws2_32 API 0x{:x} {}", addr, api);
             return api;
         }
     }
@@ -48,7 +48,7 @@ lazy_static! {
 }
 
 fn WsaStartup(emu: &mut emu::Emu) {
-    println!(
+    log::info!(
         "{}** {} ws2_32!WsaStartup {}",
         emu.colors.light_red, emu.pos, emu.colors.nc
     );
@@ -60,7 +60,7 @@ fn WsaStartup(emu: &mut emu::Emu) {
 }
 
 fn WsaSocketA(emu: &mut emu::Emu) {
-    println!(
+    log::info!(
         "{}** {} ws2_32!WsaSocketA {}",
         emu.colors.light_red, emu.pos, emu.colors.nc
     );
@@ -73,7 +73,7 @@ fn WsaSocketA(emu: &mut emu::Emu) {
 }
 
 fn socket(emu: &mut emu::Emu) {
-    println!(
+    log::info!(
         "{}** {} ws2_32!socket {}",
         emu.colors.light_red, emu.pos, emu.colors.nc
     );
@@ -95,7 +95,7 @@ fn WsaHtons(emu: &mut emu::Emu) {
         .read_dword(emu.regs.get_esp() + 8)
         .expect("ws2_32!WsaHtons cannot read out_port");
 
-    println!(
+    log::info!(
         "{}** {} ws2_32!WsaHtons {} {}",
         emu.colors.light_red, emu.pos, host_port, emu.colors.nc
     );
@@ -115,7 +115,7 @@ fn htons(emu: &mut emu::Emu) {
         None => 0,
     };
 
-    println!(
+    log::info!(
         "{}** {} ws2_32!htons port: {} {}",
         emu.colors.light_red, emu.pos, port, emu.colors.nc
     );
@@ -130,7 +130,7 @@ fn inet_addr(emu: &mut emu::Emu) {
         .read_dword(emu.regs.get_esp())
         .expect("ws2_32!inet_addr: error reading addr");
 
-    println!(
+    log::info!(
         "{}** {} ws2_32!inet_addr {}",
         emu.colors.light_red, emu.pos, emu.colors.nc
     );
@@ -170,7 +170,7 @@ fn connect(emu: &mut emu::Emu) {
         (ip & 0xff0000) >> 16,
         (ip & 0xff000000) >> 24
     );
-    println!(
+    log::info!(
         "{}** {} ws2_32!connect  family: {} {}:{} {}",
         emu.colors.light_red, emu.pos, family, sip, port, emu.colors.nc
     );
@@ -182,16 +182,16 @@ fn connect(emu: &mut emu::Emu) {
     if emu.cfg.endpoint {
         /*
         if endpoint::sock_connect(sip.as_str(), port) {
-            println!("\tconnected to the endpoint.");
+            log::info!("\tconnected to the endpoint.");
         } else {
-            println!("\tcannot connect. dont use -e");
+            log::info!("\tcannot connect. dont use -e");
         }*/
         emu.regs.rax = 0;
     } else {
         // offline mode
 
         if !helper::socket_exist(sock) {
-            println!("\tinvalid socket.");
+            log::info!("\tinvalid socket.");
             emu.regs.rax = 1;
         } else {
             emu.regs.rax = 0;
@@ -217,7 +217,7 @@ fn recv(emu: &mut emu::Emu) {
         .read_dword(emu.regs.get_esp() + 12)
         .expect("ws2_32!recv: error reading flags") as u64;
 
-    println!(
+    log::info!(
         "{}** {} ws2_32!recv   buff: 0x{:x} sz: {} {}",
         emu.colors.light_red, emu.pos, buff, len, emu.colors.nc
     );
@@ -227,7 +227,7 @@ fn recv(emu: &mut emu::Emu) {
     }
 
     if !helper::socket_exist(sock) {
-        println!("\tinvalid socket.");
+        log::info!("\tinvalid socket.");
         emu.regs.rax = 1;
         return;
     }
@@ -239,7 +239,7 @@ fn recv(emu: &mut emu::Emu) {
 
         emu.maps.write_buffer(buff, &rbuff);
 
-        println!("\nreceived {} bytes from the endpoint.", n);
+        log::info!("\nreceived {} bytes from the endpoint.", n);
         emu.regs.rax = n as u64;
         */
     } else {
@@ -286,13 +286,13 @@ fn send(emu: &mut emu::Emu) {
         emu.stack_pop32(false);
     }
 
-    println!(
+    log::info!(
         "{}** {} ws2_32!send {{{}}}   {}",
         emu.colors.light_red, emu.pos, bytes, emu.colors.nc
     );
 
     if !helper::socket_exist(sock) {
-        println!("\tinvalid socket.");
+        log::info!("\tinvalid socket.");
         emu.regs.rax = 0;
         return;
     }
@@ -301,7 +301,7 @@ fn send(emu: &mut emu::Emu) {
         /*
         let buffer = emu.maps.read_buffer(buff, len as usize);
         let n = endpoint::sock_send(&buffer);
-        println!("\tsent {} bytes.", n);
+        log::info!("\tsent {} bytes.", n);
         emu.regs.rax = n as u64;
         */
     } else {
@@ -350,7 +350,7 @@ fn bind(emu: &mut emu::Emu) {
         (ip & 0xff000000) >> 24
     );
 
-    println!(
+    log::info!(
         "{}** {} ws2_32!bind  family: {} {}:{}  {}",
         emu.colors.light_red,
         emu.pos,
@@ -365,7 +365,7 @@ fn bind(emu: &mut emu::Emu) {
     }
 
     if !helper::socket_exist(sock) {
-        println!("\tbad socket.");
+        log::info!("\tbad socket.");
         emu.regs.rax = 1;
     } else {
         emu.regs.rax = 0;
@@ -382,7 +382,7 @@ fn listen(emu: &mut emu::Emu) {
         .read_dword(emu.regs.get_esp() + 4)
         .expect("ws2_32!send: error reading num of connections") as u64;
 
-    println!(
+    log::info!(
         "{}** {} ws2_32!listen  connections: {}  {}",
         emu.colors.light_red, emu.pos, connections, emu.colors.nc
     );
@@ -392,7 +392,7 @@ fn listen(emu: &mut emu::Emu) {
     }
 
     if !helper::socket_exist(sock) {
-        println!("\tinvalid socket.");
+        log::info!("\tinvalid socket.");
         emu.regs.rax = 1;
     } else {
         emu.regs.rax = 0;
@@ -419,7 +419,7 @@ fn accept(emu: &mut emu::Emu) {
 
     let bytes = emu.maps.read_string_of_bytes(saddr, len as usize);
 
-    println!(
+    log::info!(
         "{}** {} ws2_32!accept  connections: {}  {}",
         emu.colors.light_red, emu.pos, bytes, emu.colors.nc
     );
@@ -429,7 +429,7 @@ fn accept(emu: &mut emu::Emu) {
     }
 
     if !helper::socket_exist(sock) {
-        println!("\tinvalid socket.");
+        log::info!("\tinvalid socket.");
         emu.regs.rax = 1;
     } else {
         emu.regs.rax = 0;
@@ -442,7 +442,7 @@ fn closesocket(emu: &mut emu::Emu) {
         .read_dword(emu.regs.get_esp())
         .expect("ws2_32!send: error reading sock") as u64;
 
-    println!(
+    log::info!(
         "{}** {} ws2_32!closesocket {}",
         emu.colors.light_red, emu.pos, emu.colors.nc
     );
@@ -485,7 +485,7 @@ fn setsockopt(emu: &mut emu::Emu) {
         None => 0,
     };
 
-    println!(
+    log::info!(
         "{}** {} ws2_32!setsockopt  lvl: {} opt: {} val: {} {}",
         emu.colors.light_red, emu.pos, level, optname, val, emu.colors.nc
     );
@@ -495,7 +495,7 @@ fn setsockopt(emu: &mut emu::Emu) {
     }
 
     if !helper::socket_exist(sock) {
-        println!("\tinvalid socket.");
+        log::info!("\tinvalid socket.");
         emu.regs.rax = 1;
     } else {
         emu.regs.rax = 0;
@@ -526,7 +526,7 @@ fn getsockopt(emu: &mut emu::Emu) {
 
     emu.maps.write_dword(optval, 1);
 
-    println!(
+    log::info!(
         "{}** {} ws2_32!getsockopt  lvl: {} opt: {} {}",
         emu.colors.light_red, emu.pos, level, optname, emu.colors.nc
     );
@@ -536,7 +536,7 @@ fn getsockopt(emu: &mut emu::Emu) {
     }
 
     if !helper::socket_exist(sock) {
-        println!("\tinvalid socket.");
+        log::info!("\tinvalid socket.");
         emu.regs.rax = 1;
     } else {
         emu.regs.rax = 0;
@@ -567,7 +567,7 @@ fn WsaAccept(emu: &mut emu::Emu) {
 
     let bytes = emu.maps.read_string_of_bytes(saddr, len as usize);
 
-    println!(
+    log::info!(
         "{}** {} ws2_32!WsaAccept  connections: {} callback: {} {}",
         emu.colors.light_red, emu.pos, bytes, callback, emu.colors.nc
     );
@@ -577,7 +577,7 @@ fn WsaAccept(emu: &mut emu::Emu) {
     }
 
     if !helper::socket_exist(sock) {
-        println!("\tinvalid socket.");
+        log::info!("\tinvalid socket.");
         emu.regs.rax = 1;
     } else {
         emu.regs.rax = 0;

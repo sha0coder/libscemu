@@ -518,7 +518,7 @@ pub fn shld(a: u64, b: u64, c: u64, bits: u32, flags: u32) -> (u64, u32) {
             unimplemented!("doesnt exit shld of 8bits");
         }
         _ => {
-            println!("sz: {}", bits);
+            log::info!("sz: {}", bits);
             unimplemented!("weird case");
         }
     }*/
@@ -607,7 +607,7 @@ pub fn shrd(a: u64, b: u64, c: u64, bits: u32, flags: u32) -> (u64, u32) {
             unimplemented!("doesnt exit shrd of 8bits");
         }
         _ => {
-            println!("sz: {}", bits);
+            log::info!("sz: {}", bits);
             unimplemented!("weird case");
         }
     }*/

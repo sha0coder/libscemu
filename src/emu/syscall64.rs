@@ -24,14 +24,14 @@ pub fn gateway(emu: &mut emu::Emu) {
 
     match emu.regs.rax {
         constants::NR64_RESTART_SYSCALL => {
-            println!(
+            log::info!(
                 "{}** {} syscall restart_syscall {}",
                 emu.colors.light_red, emu.pos, emu.colors.nc
             );
         }
 
         constants::NR64_EXIT => {
-            println!(
+            log::info!(
                 "{}** {} syscall exit()  {}",
                 emu.colors.light_red, emu.pos, emu.colors.nc
             );
@@ -39,7 +39,7 @@ pub fn gateway(emu: &mut emu::Emu) {
         }
 
         constants::NR64_FORK => {
-            println!(
+            log::info!(
                 "{}** {} syscall fork()  {}",
                 emu.colors.light_red, emu.pos, emu.colors.nc
             );
@@ -58,6 +58,7 @@ pub fn gateway(emu: &mut emu::Emu) {
                     
                     let mut lib_buff: Vec<u8> = Vec::new();
                     
+                    // log::info!("opening lib: {}", filepath);
                     match File::open(&filepath) {
                         Ok(f) => {
                             let len = f.metadata().unwrap().len();
@@ -67,7 +68,7 @@ pub fn gateway(emu: &mut emu::Emu) {
                                 .expect("kernel64 cannot load dynamic library");
                             f.sync_all();
 
-                            //println!("readed a lib with sz: {} buff:0x{:x}", lib_buff.len(), buff);
+                            //log::info!("readed a lib with sz: {} buff:0x{:x}", lib_buff.len(), buff);
                             
                             let map = emu.maps.get_mem_by_addr(buff)
                                  .expect("buffer send to read syscall point to no map");
@@ -84,7 +85,7 @@ pub fn gateway(emu: &mut emu::Emu) {
                             emu.regs.rax = sz;
                         },
                         Err(_) => {
-                            println!("file not found");
+                            log::info!("file not found");
                             emu.regs.rax = 0;
                         }
                     };
@@ -93,7 +94,7 @@ pub fn gateway(emu: &mut emu::Emu) {
                 emu.regs.rax = sz;
             }
 
-            println!(
+            log::info!(
                 "{}** {} syscall read(fd:{} buf:0x{:x} sz:{}) ={} {}",
                 emu.colors.light_red, emu.pos, fd, buff, sz, emu.regs.rax, emu.colors.nc
             );
@@ -104,17 +105,17 @@ pub fn gateway(emu: &mut emu::Emu) {
             let buff = emu.regs.rsi;
             let sz = emu.regs.rdx;
             emu.regs.rax = sz;
-            println!(
+            log::info!(
                 "{}** {} syscall write() fd: {} buf: 0x{:x} sz: {} {}",
                 emu.colors.light_red, emu.pos, fd, buff, sz, emu.colors.nc
             );
             if fd == 1 {
                 let s = emu.maps.read_string(buff);
-                println!("stdout: `{}`", s)
+                log::info!("stdout: `{}`", s)
             }
             if fd == 2 {
                 let s = emu.maps.read_string(buff);
-                println!("stderr: `{}`", s)
+                log::info!("stderr: `{}`", s)
             }
         }
 
@@ -124,17 +125,17 @@ pub fn gateway(emu: &mut emu::Emu) {
             let buff = emu.regs.rsi;
             let sz = emu.regs.rdx;
             emu.regs.rax = sz;
-            println!(
+            log::info!(
                 "{}** {} syscall write() fd: {} buf: 0x{:x} sz: {} {}",
                 emu.colors.light_red, emu.pos, fd, buff, sz, emu.colors.nc
             );
             if fd == 1 {
                 let s = emu.maps.read_string(buff);
-                println!("stdout: `{}`", s)
+                log::info!("stdout: `{}`", s)
             }
             if fd == 2 {
                 let s = emu.maps.read_string(buff);
-                println!("stderr: `{}`", s)
+                log::info!("stderr: `{}`", s)
             }
         }*/
 
@@ -143,7 +144,7 @@ pub fn gateway(emu: &mut emu::Emu) {
             let fd = helper::handler_create(&file_path);
 
             emu.regs.rax = fd;
-            println!(
+            log::info!(
                 "{}** {} syscall open({}) ={} {}",
                 emu.colors.light_red, emu.pos, file_path, fd, emu.colors.nc
             );
@@ -159,7 +160,7 @@ pub fn gateway(emu: &mut emu::Emu) {
                fd = helper::handler_create(&file_path);
             }
 
-            println!(
+            log::info!(
                 "{}** {} syscall openat({} '{}') ={} {}",
                 emu.colors.light_red, emu.pos, dirfd, file_path, fd as i64, emu.colors.nc
             );
@@ -183,7 +184,7 @@ pub fn gateway(emu: &mut emu::Emu) {
                 endpoint::sock_close();
             }*/
 
-            println!(
+            log::info!(
                 "{}** {} syscall close(fd:{}) ={} {}",
                 emu.colors.light_red, emu.pos, fd, emu.regs.rax, emu.colors.nc
             );
@@ -211,14 +212,14 @@ pub fn gateway(emu: &mut emu::Emu) {
 
             //emu.fs.insert(0xffffffffffffffc8, 0x4b6c50);  
 
-            println!("{}** {} syscall brk({:x}) ={:x} {}", 
+            log::info!("{}** {} syscall brk({:x}) ={:x} {}", 
                 emu.colors.light_red, emu.pos, emu.regs.rdi, emu.regs.rax, emu.colors.nc
             );
         }
 
         constants::NR64_EXECVE => {
             let cmd = emu.maps.read_string(emu.regs.rdi);
-            println!(
+            log::info!(
                 "{}** {} syscall execve()  cmd: {} {}",
                 emu.colors.light_red, emu.pos, cmd, emu.colors.nc
             );
@@ -227,7 +228,7 @@ pub fn gateway(emu: &mut emu::Emu) {
 
         constants::NR64_CHDIR => {
             let path = emu.maps.read_string(emu.regs.rdi);
-            println!(
+            log::info!(
                 "{}** {} syscall chdir() path: {} {}",
                 emu.colors.light_red, emu.pos, path, emu.colors.nc
             );
@@ -236,7 +237,7 @@ pub fn gateway(emu: &mut emu::Emu) {
         constants::NR64_CHMOD => {
             let file_path = emu.maps.read_string(emu.regs.rdi);
             let perm = emu.regs.rsi;
-            println!(
+            log::info!(
                 "{}** {} syscall chmod() file: {} perm: {} {}",
                 emu.colors.light_red, emu.pos, file_path, perm, emu.colors.nc
             );
@@ -244,7 +245,7 @@ pub fn gateway(emu: &mut emu::Emu) {
 
         constants::NR64_LSEEK => {
             let fd = emu.regs.rdi;
-            println!(
+            log::info!(
                 "{}** {} syscall lseek()  fd: {} {}",
                 emu.colors.light_red, emu.pos, fd, emu.colors.nc
             );
@@ -253,7 +254,7 @@ pub fn gateway(emu: &mut emu::Emu) {
         constants::NR64_KILL => {
             let pid = emu.regs.rdi;
             let sig = emu.regs.rsi;
-            println!(
+            log::info!(
                 "{}** {} syscall kill() pid: {} sig: {} {}",
                 emu.colors.light_red, emu.pos, pid, sig, emu.colors.nc
             );
@@ -261,7 +262,7 @@ pub fn gateway(emu: &mut emu::Emu) {
 
         constants::NR64_DUP => {
             let fd = emu.regs.rdi;
-            println!(
+            log::info!(
                 "{}** {} syscall dup() fd: {} {}",
                 emu.colors.light_red, emu.pos, fd, emu.colors.nc
             );
@@ -270,7 +271,7 @@ pub fn gateway(emu: &mut emu::Emu) {
         constants::NR64_DUP2 => {
             let old_fd = emu.regs.rdi;
             let new_fd = emu.regs.rsi;
-            println!(
+            log::info!(
                 "{}** {} syscall dup2() oldfd: {} newfd: {} {}",
                 emu.colors.light_red, emu.pos, old_fd, new_fd, emu.colors.nc
             );
@@ -282,7 +283,7 @@ pub fn gateway(emu: &mut emu::Emu) {
             let typ = emu.regs.rsi;
             let proto = emu.regs.rdx;
 
-            println!(
+            log::info!(
                 "{}** {} syscall socketcall socket()  fam: {} type: {} proto: {} sock: {} {}",
                 emu.colors.light_red, emu.pos, fam, typ, proto, sock, emu.colors.nc
             );
@@ -312,13 +313,13 @@ pub fn gateway(emu: &mut emu::Emu) {
                 (ip & 0xff000000) >> 24
             );
 
-            println!(
+            log::info!(
                 "{}** {} syscall socketcall bind() sock: {} fam: {} {}:{} {}",
                 emu.colors.light_red, emu.pos, sock, fam, sip, port, emu.colors.nc
             );
 
             if !helper::socket_exist(sock) {
-                println!("\tbad socket/");
+                log::info!("\tbad socket/");
                 emu.regs.rax = constants::ENOTSOCK;
             } else {
                 emu.regs.rax = 0;
@@ -348,13 +349,13 @@ pub fn gateway(emu: &mut emu::Emu) {
                 (ip & 0xff000000) >> 24
             );
 
-            println!(
+            log::info!(
                 "{}** {} syscall socketcall connect() sock: {} fam: {} {}:{} {}",
                 emu.colors.light_red, emu.pos, sock, fam, sip, port, emu.colors.nc
             );
 
             if !helper::socket_exist(sock) {
-                println!("\tbad socket/");
+                log::info!("\tbad socket/");
                 emu.regs.rax = constants::ENOTSOCK;
                 return;
             }
@@ -362,9 +363,9 @@ pub fn gateway(emu: &mut emu::Emu) {
             /*
             if emu.cfg.endpoint {
                 if endpoint::sock_connect(sip.as_str(), port) {
-                    println!("\tconnected to the endpoint.");
+                    log::info!("\tconnected to the endpoint.");
                 } else {
-                    println!("\tcannot connect. dont use -e");
+                    log::info!("\tcannot connect. dont use -e");
                 }
             }*/
 
@@ -375,13 +376,13 @@ pub fn gateway(emu: &mut emu::Emu) {
             let sock = emu.regs.rdi;
             let conns = emu.regs.rsi;
 
-            println!(
+            log::info!(
                 "{}** {} syscall socketcall listen() sock: {} conns: {} {}",
                 emu.colors.light_red, emu.pos, sock, conns, emu.colors.nc
             );
 
             if !helper::socket_exist(sock) {
-                println!("\tbad socket/");
+                log::info!("\tbad socket/");
                 emu.regs.rax = constants::ENOTSOCK;
             } else {
                 emu.regs.rax = 0;
@@ -402,13 +403,13 @@ pub fn gateway(emu: &mut emu::Emu) {
                 emu.maps.write_dword(sockaddr + 4, incoming_ip);
             }
 
-            println!(
+            log::info!(
                 "{}** {} syscall socketcall accept() {}",
                 emu.colors.light_red, emu.pos, emu.colors.nc
             );
 
             if !helper::socket_exist(sock) {
-                println!("\tbad socket/");
+                log::info!("\tbad socket/");
                 emu.regs.rax = constants::ENOTSOCK;
             } else {
                 emu.regs.rax = 0;
@@ -417,7 +418,7 @@ pub fn gateway(emu: &mut emu::Emu) {
 
         constants::NR64_GETSOCKNAME => {
             let sock = emu.regs.rdi;
-            println!(
+            log::info!(
                 "{}** {} syscall socketcall getsockname() sock: {} {}",
                 emu.colors.light_red, emu.pos, sock, emu.colors.nc
             );
@@ -425,14 +426,14 @@ pub fn gateway(emu: &mut emu::Emu) {
         }
 
         constants::NR64_GETPEERNAME => {
-            println!(
+            log::info!(
                 "{}** {} syscall socketcall getpeername()  {}",
                 emu.colors.light_red, emu.pos, emu.colors.nc
             );
         }
 
         constants::NR64_SOCKETPAIR => {
-            println!(
+            log::info!(
                 "{}** {} syscall socketcall socketpair()  {}",
                 emu.colors.light_red, emu.pos, emu.colors.nc
             );
@@ -444,10 +445,10 @@ pub fn gateway(emu: &mut emu::Emu) {
             let len = emu.maps.read_dword(emu.regs.rsp+8).expect("send() cannot read len");
             let flags = emu.maps.read_dword(emu.regs.rsp+12).expect("send() cannot read flags");
 
-            println!("{}** {} syscall socketcall send() sock: {} buff: {} len: {} {}", emu.colors.light_red, emu.pos, sock, buf, len, emu.colors.nc);
+            log::info!("{}** {} syscall socketcall send() sock: {} buff: {} len: {} {}", emu.colors.light_red, emu.pos, sock, buf, len, emu.colors.nc);
 
             if !helper::socket_exist(sock) {
-                println!("\tbad socket/");
+                log::info!("\tbad socket/");
                 emu.regs.rax = constants::ENOTSOCK;
                 return;
             }
@@ -455,7 +456,7 @@ pub fn gateway(emu: &mut emu::Emu) {
             if emu.cfg.endpoint {
                 let buffer = emu.maps.read_buffer(buf, len as usize);
                 let n = endpoint::sock_send(&buffer);
-                println!("\tsent {} bytes.", n);
+                log::info!("\tsent {} bytes.", n);
                 emu.regs.rax = n;
             } else {
                 emu.regs.rax = len;
@@ -468,10 +469,10 @@ pub fn gateway(emu: &mut emu::Emu) {
             let len = emu.maps.read_dword(emu.regs.rsp+8).expect("recv() cannot read len");
             let flags = emu.maps.read_dword(emu.regs.rsp+12).expect("recv() cannot read flags");
 
-            println!("{}** {} syscall socketcall recv() sock: {} buff: {} len: {}  {}", emu.colors.light_red, emu.pos, sock, buf, len, emu.colors.nc);
+            log::info!("{}** {} syscall socketcall recv() sock: {} buff: {} len: {}  {}", emu.colors.light_red, emu.pos, sock, buf, len, emu.colors.nc);
 
             if !helper::socket_exist(sock) {
-                println!("\tbad socket/");
+                log::info!("\tbad socket/");
                 emu.regs.rax = constants::ENOTSOCK;
                 return;
             }
@@ -481,7 +482,7 @@ pub fn gateway(emu: &mut emu::Emu) {
                 let mut rbuff:Vec<u8> = vec![0;len as usize];
                 let n = endpoint::sock_recv(&mut rbuff);
                 emu.maps.write_buffer(buf, &rbuff);
-                println!("\nreceived {} bytes from the endpoint.", n);
+                log::info!("\nreceived {} bytes from the endpoint.", n);
                 emu.regs.rax = n;
 
             } else {
@@ -515,16 +516,16 @@ pub fn gateway(emu: &mut emu::Emu) {
                     (ip & 0xff000000) >> 24
                 );
 
-                println!("{}** {} syscall socketcall sendto() sock: {} buff: {} len: {} fam: {} {}:{} {}", emu.colors.light_red, emu.pos, sock, buf, len, fam, sip, port, emu.colors.nc);
+                log::info!("{}** {} syscall socketcall sendto() sock: {} buff: {} len: {} fam: {} {}:{} {}", emu.colors.light_red, emu.pos, sock, buf, len, fam, sip, port, emu.colors.nc);
             } else {
-                println!(
+                log::info!(
                     "{}** {} syscall socketcall sendto() sock: {} buff: {} len: {} {}",
                     emu.colors.light_red, emu.pos, sock, buf, len, emu.colors.nc
                 );
             }
 
             if !helper::socket_exist(sock) {
-                println!("\tbad socket/");
+                log::info!("\tbad socket/");
                 emu.regs.rax = constants::ENOTSOCK;
             } else {
                 emu.regs.rax = len;
@@ -548,13 +549,13 @@ pub fn gateway(emu: &mut emu::Emu) {
                 emu.maps.write_dword(sockaddr + 4, incoming_ip);
             }
 
-            println!(
+            log::info!(
                 "{}** {} syscall socketcall recvfrom() sock: {} buff: {} len: {} {}",
                 emu.colors.light_red, emu.pos, sock, buf, len, emu.colors.nc
             );
 
             if !helper::socket_exist(sock) {
-                println!("\tbad socket/");
+                log::info!("\tbad socket/");
                 emu.regs.rax = constants::ENOTSOCK;
             } else {
                 emu.regs.rax = len; //TODO: avoid loops
@@ -562,7 +563,7 @@ pub fn gateway(emu: &mut emu::Emu) {
         }
 
         constants::NR64_SHUTDOWN => {
-            println!(
+            log::info!(
                 "{}** {} syscall socketcall shutdown()  {}",
                 emu.colors.light_red, emu.pos, emu.colors.nc
             );
@@ -570,49 +571,49 @@ pub fn gateway(emu: &mut emu::Emu) {
         }
 
         constants::NR64_SETSOCKOPT => {
-            println!(
+            log::info!(
                 "{}** {} syscall socketcall setsockopt()  {}",
                 emu.colors.light_red, emu.pos, emu.colors.nc
             );
         }
 
         constants::NR64_GETSOCKOPT => {
-            println!(
+            log::info!(
                 "{}** {} syscall socketcall getsockopt()  {}",
                 emu.colors.light_red, emu.pos, emu.colors.nc
             );
         }
 
         constants::NR64_SENDMSG => {
-            println!(
+            log::info!(
                 "{}** {} syscall socketcall sendmsg()  {}",
                 emu.colors.light_red, emu.pos, emu.colors.nc
             );
         }
 
         constants::NR64_RECVMSG => {
-            println!(
+            log::info!(
                 "{}** {} syscall socketcall recvmsg()  {}",
                 emu.colors.light_red, emu.pos, emu.colors.nc
             );
         }
 
         constants::NR64_ACCEPT4 => {
-            println!(
+            log::info!(
                 "{}** {} syscall socketcall accept4()  {}",
                 emu.colors.light_red, emu.pos, emu.colors.nc
             );
         }
 
         constants::NR64_RECVMMSG => {
-            println!(
+            log::info!(
                 "{}** {} syscall socketcall recvmsg()  {}",
                 emu.colors.light_red, emu.pos, emu.colors.nc
             );
         }
 
         constants::NR64_SENDMMSG => {
-            println!(
+            log::info!(
                 "{}** {} syscall socketcall sendmsg()  {}",
                 emu.colors.light_red, emu.pos, emu.colors.nc
             );
@@ -644,7 +645,7 @@ pub fn gateway(emu: &mut emu::Emu) {
                 _ => {}
             }
 
-            println!(
+            log::info!(
                 "{}** {} syscall arch_prctl({})  {}",
                 emu.colors.light_red, emu.pos, op, emu.colors.nc
             );
@@ -655,7 +656,7 @@ pub fn gateway(emu: &mut emu::Emu) {
             let ptr = emu.regs.rdi;
             emu.maps.write_bytes(ptr, constants::UTSNAME.to_vec());
 
-            println!(
+            log::info!(
                 "{}** {} syscall uname(0x{:x})  {}",
                 emu.colors.light_red, emu.pos, ptr, emu.colors.nc
             );
@@ -664,7 +665,7 @@ pub fn gateway(emu: &mut emu::Emu) {
         constants::NR64_ACCESS => {
             let filename = emu.maps.read_string(emu.regs.rdi);
 
-            println!(
+            log::info!(
                 "{}** {} syscall access({})  {}",
                 emu.colors.light_red, emu.pos, filename, emu.colors.nc
             );
@@ -682,7 +683,7 @@ pub fn gateway(emu: &mut emu::Emu) {
 
             emu.maps.free(&format!("mmap_{:x}",addr));
 
-            println!(
+            log::info!(
                 "{}** {} syscall munmap(0x{:x} sz:{})  {}",
                 emu.colors.light_red, emu.pos, addr,  sz, emu.colors.nc
             );
@@ -700,7 +701,7 @@ pub fn gateway(emu: &mut emu::Emu) {
 
             if addr == 0 {
                 if sz > 0xffffff {
-                    println!("/!\\ Warning trying to allocate {} bytes", sz);
+                    log::info!("/!\\ Warning trying to allocate {} bytes", sz);
                     sz = 0xffffff;
                 }
                 addr = emu.maps.lib64_alloc(sz).expect("syscall64 mmap cannot alloc");
@@ -713,6 +714,7 @@ pub fn gateway(emu: &mut emu::Emu) {
                 if filepath.contains(".so") {
                     let mut lib_buff: Vec<u8> = Vec::new();
                     
+                    //log::info!("opening lib: {}", filepath);
                     match File::open(&filepath) {
                         Ok(f) => {
                             let len = f.metadata().unwrap().len();
@@ -723,7 +725,7 @@ pub fn gateway(emu: &mut emu::Emu) {
                                 .expect("kernel64 cannot load dynamic library");
                             f.sync_all();
 
-                            //println!("readed a lib with sz: {} buff:0x{:x}", lib_buff.len(), addr);
+                            //log::info!("readed a lib with sz: {} buff:0x{:x}", lib_buff.len(), addr);
                             
                             let map = emu.maps.get_mem_by_addr(addr)
                                  .expect("buffer send to read syscall point to no map");
@@ -740,14 +742,14 @@ pub fn gateway(emu: &mut emu::Emu) {
                             emu.regs.rax = sz;
                         },
                         Err(_) => {
-                            println!("file not found");
+                            log::info!("file not found");
                             emu.regs.rax = 0;
                         }
                     };
                 }
             }
 
-            println!(
+            log::info!(
                 "{}** {} syscall mmap(fd:{} sz:{} off:{}) =0x{:x}  {}",
                 emu.colors.light_red, emu.pos, fd as i32, sz, off, addr, emu.colors.nc
             );
@@ -770,7 +772,7 @@ pub fn gateway(emu: &mut emu::Emu) {
 
             stat.save(stat_ptr, &mut emu.maps);
                                                         
-            println!(
+            log::info!(
                 "{}** {} syscall ftat(0x{:x})  =0 {}",
                 emu.colors.light_red, emu.pos, emu.regs.rdi, emu.colors.nc
             );
@@ -791,7 +793,7 @@ pub fn gateway(emu: &mut emu::Emu) {
             stat.size = file_size as i64;
             stat.save(stat_ptr, &mut emu.maps);
                                                         
-            println!(
+            log::info!(
                 "{}** {} syscall stat({})  =0 {}",
                 emu.colors.light_red, emu.pos, filename, emu.colors.nc
             );
@@ -809,7 +811,7 @@ pub fn gateway(emu: &mut emu::Emu) {
                 Ok(link) => link,
                 Err(_) => {
                     emu.regs.rax = 0xffffffffffffffff;
-                    println!(
+                    log::info!(
                         "{}** {} syscall uname({}) err! {}",
                         emu.colors.light_red, emu.pos, link, emu.colors.nc
                     );
@@ -819,7 +821,7 @@ pub fn gateway(emu: &mut emu::Emu) {
 
             emu.maps.write_string(buff, sym_link_dest.to_str().unwrap());
 
-            println!(
+            log::info!(
                 "{}** {} syscall uname({})  {}",
                 emu.colors.light_red, emu.pos, link, emu.colors.nc
             );
@@ -840,7 +842,7 @@ pub fn gateway(emu: &mut emu::Emu) {
             }*/
             emu.regs.rax = 0;
 
-            println!(
+            log::info!(
                 "{}** {} syscall mprotect(0x{:x}) ={:x} {}",
                 emu.colors.light_red, emu.pos, addr, emu.regs.rax, emu.colors.nc
             );
@@ -1211,12 +1213,12 @@ pub fn gateway(emu: &mut emu::Emu) {
             ];
 
             if emu.regs.rax >= data.len() as u64 {
-                println!(
+                log::info!(
                     "{}** interrupt 0x80 bad rax value 0x{:x} {}",
                     emu.colors.light_red, emu.regs.rax, emu.colors.nc
                 );
             } else {
-                println!(
+                log::info!(
                     "{}** interrupt 0x80 function:{} {}",
                     emu.colors.light_red, data[emu.regs.rax as usize], emu.colors.nc
                 );

@@ -5,7 +5,7 @@ pub struct Console {}
 
 impl Console {
     pub fn new() -> Console {
-        println!("--- console ---");
+        log::info!("--- console ---");
         Console {}
     }
 
@@ -67,74 +67,74 @@ impl Console {
     }*/
 
     pub fn help(&self) {
-        println!("--- help ---");
-        println!("q ...................... quit");
-        println!("cls .................... clear screen");
-        println!("h ...................... help");
-        println!("s ...................... stack");
-        println!("v ...................... vars");
-        println!("sv ..................... set verbose level 0, 1 or 2");
-        println!("r ...................... register show all");
-        println!("r reg .................. show reg");
-        println!("rc ..................... register change");
-        println!("f ...................... show all flags");
-        println!("fc ..................... clear all flags");
-        println!("fz ..................... toggle flag zero");
-        println!("fs ..................... toggle flag sign");
-        println!("c ...................... continue");
-        println!("b ...................... breakpoint list");
-        println!("ba ..................... breakpoint on address");
-        println!("bi ..................... breakpoint on instruction number");
-        println!("bmr .................... breakpoint on read memory");
-        println!("bmw .................... breakpoint on write memory");
-        println!("bmx .................... breakpoint on execute memory");
-        println!("bcmp ................... break on next cmp or test");
-        println!("bc ..................... clear breakpoint");
-        println!("n ...................... next instruction");
-        println!("eip .................... change eip");
-        println!("rip .................... change rip");
-        println!("push ................... push dword to the stack");
-        println!("pop .................... pop dword from stack");
-        println!("fpu .................... fpu view");
-        println!("md5 .................... check the md5 of a memory map");
-        println!("seh .................... view SEH");
-        println!("veh .................... view vectored execption pointer");
-        println!("m ...................... memory maps");
-        println!("ms ..................... memory filtered by keyword string");
-        println!("ma ..................... memory allocs");
-        println!("mc ..................... memory create map");
-        println!("mn ..................... memory name of an address");
-        println!("ml ..................... memory load file content to map");
-        println!("mr ..................... memory read, speficy ie: dword ptr [esi]");
-        println!(
+        log::info!("--- help ---");
+        log::info!("q ...................... quit");
+        log::info!("cls .................... clear screen");
+        log::info!("h ...................... help");
+        log::info!("s ...................... stack");
+        log::info!("v ...................... vars");
+        log::info!("sv ..................... set verbose level 0, 1 or 2");
+        log::info!("r ...................... register show all");
+        log::info!("r reg .................. show reg");
+        log::info!("rc ..................... register change");
+        log::info!("f ...................... show all flags");
+        log::info!("fc ..................... clear all flags");
+        log::info!("fz ..................... toggle flag zero");
+        log::info!("fs ..................... toggle flag sign");
+        log::info!("c ...................... continue");
+        log::info!("b ...................... breakpoint list");
+        log::info!("ba ..................... breakpoint on address");
+        log::info!("bi ..................... breakpoint on instruction number");
+        log::info!("bmr .................... breakpoint on read memory");
+        log::info!("bmw .................... breakpoint on write memory");
+        log::info!("bmx .................... breakpoint on execute memory");
+        log::info!("bcmp ................... break on next cmp or test");
+        log::info!("bc ..................... clear breakpoint");
+        log::info!("n ...................... next instruction");
+        log::info!("eip .................... change eip");
+        log::info!("rip .................... change rip");
+        log::info!("push ................... push dword to the stack");
+        log::info!("pop .................... pop dword from stack");
+        log::info!("fpu .................... fpu view");
+        log::info!("md5 .................... check the md5 of a memory map");
+        log::info!("seh .................... view SEH");
+        log::info!("veh .................... view vectored execption pointer");
+        log::info!("m ...................... memory maps");
+        log::info!("ms ..................... memory filtered by keyword string");
+        log::info!("ma ..................... memory allocs");
+        log::info!("mc ..................... memory create map");
+        log::info!("mn ..................... memory name of an address");
+        log::info!("ml ..................... memory load file content to map");
+        log::info!("mr ..................... memory read, speficy ie: dword ptr [esi]");
+        log::info!(
             "mw ..................... memory write, speficy ie: dword ptr [esi]  and then: 1af"
         );
-        println!("mwb .................... memory write bytes, input spaced bytes");
-        println!("md ..................... memory dump");
-        println!("mrd .................... memory read dwords");
-        println!("mrq .................... memory read qwords");
-        println!("mds .................... memory dump string");
-        println!("mdw .................... memory dump wide string");
-        println!("mdd .................... memory dump to disk");
-        println!("mdda ................... memory dump all allocations to disk");
-        println!("mt ..................... memory test");
-        println!("ss ..................... search string");
-        println!("sb ..................... search bytes");
-        println!("sba .................... search bytes in all the maps");
-        println!("ssa .................... search string in all the maps");
-        println!("ll ..................... linked list walk");
-        println!("d ...................... dissasemble");
-        println!("dt ..................... dump structure");
-        println!("enter .................. step into");
-        println!("tr ..................... trace reg");
-        println!("trc .................... trace regs clear");
-        println!("ldr .................... show ldr linked list");
-        println!("iat .................... find api name in all iat's ");
-        println!("iatx ................... addr to api name");
-        println!("iatd ................... dump the iat of specific module");
+        log::info!("mwb .................... memory write bytes, input spaced bytes");
+        log::info!("md ..................... memory dump");
+        log::info!("mrd .................... memory read dwords");
+        log::info!("mrq .................... memory read qwords");
+        log::info!("mds .................... memory dump string");
+        log::info!("mdw .................... memory dump wide string");
+        log::info!("mdd .................... memory dump to disk");
+        log::info!("mdda ................... memory dump all allocations to disk");
+        log::info!("mt ..................... memory test");
+        log::info!("ss ..................... search string");
+        log::info!("sb ..................... search bytes");
+        log::info!("sba .................... search bytes in all the maps");
+        log::info!("ssa .................... search string in all the maps");
+        log::info!("ll ..................... linked list walk");
+        log::info!("d ...................... dissasemble");
+        log::info!("dt ..................... dump structure");
+        log::info!("enter .................. step into");
+        log::info!("tr ..................... trace reg");
+        log::info!("trc .................... trace regs clear");
+        log::info!("ldr .................... show ldr linked list");
+        log::info!("iat .................... find api name in all iat's ");
+        log::info!("iatx ................... addr to api name");
+        log::info!("iatd ................... dump the iat of specific module");
 
-        //println!("o ...................... step over");
-        println!();
-        println!("---");
+        //log::info!("o ...................... step over");
+        log::info!("");
+        log::info!("---");
     }
 }

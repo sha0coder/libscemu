@@ -5,7 +5,7 @@ pub fn gateway(addr: u64, emu: &mut emu::Emu) -> String {
     match apiname.as_str() {
         "RealShellExecuteA" => RealShellExecuteA(emu),
         _ => {
-            println!("calling unimplemented shell32 API 0x{:x} {}", addr, apiname);
+            log::info!("calling unimplemented shell32 API 0x{:x} {}", addr, apiname);
             return apiname;
         }
     }
@@ -29,7 +29,7 @@ fn RealShellExecuteA(emu: &mut emu::Emu) {
     let file = emu.maps.read_string(file_ptr);
     let params = emu.maps.read_string(params_ptr);
 
-    println!(
+    log::info!(
         "{}** {} shell32!RealShellExecuteA {} {} {}",
         emu.colors.light_red, emu.pos, file, params, emu.colors.nc
     );

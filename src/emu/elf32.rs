@@ -85,16 +85,16 @@ impl Elf32 {
                             let end = self.bin.iter().skip(off)
                                 .position(|&x| x == 0x00).unwrap_or(0) + off;
                             let name = std::str::from_utf8(&self.bin[off..end]).unwrap();
-                            println!("la seccion {} es pt_load", &name);
+                            log::info!("la seccion {} es pt_load", &name);
 
                     }
                 }*/
 
                 let mem = maps.create_map(&format!("code"), phdr.p_vaddr.into(), phdr.p_memsz.into()).expect("cannot create code map from load_programs elf32");
                 if phdr.p_filesz >phdr.p_memsz {
-                    println!("p_filesz > p_memsz bigger in file than in memory.");
+                    log::info!("p_filesz > p_memsz bigger in file than in memory.");
                 }
-                println!("segment {} - {}", phdr.p_offset, (phdr.p_offset+phdr.p_filesz));
+                log::info!("segment {} - {}", phdr.p_offset, (phdr.p_offset+phdr.p_filesz));
                 let segment = &self.bin[phdr.p_offset as usize..
                     (phdr.p_offset + phdr.p_filesz) as usize];
                 mem.write_bytes(phdr.p_vaddr.into(), segment);
@@ -104,6 +104,7 @@ impl Elf32 {
     }
 
     pub fn is_elf32(filename:&str) -> bool {
+        //log::info!("checking if elf32: {}", filename);
         let mut fd = File::open(filename).expect("file not found");
         let mut raw = vec![0u8; 5];
         fd.read_exact(&mut raw).expect("couldnt read the file");

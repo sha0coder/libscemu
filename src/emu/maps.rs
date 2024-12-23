@@ -158,7 +158,7 @@ impl Maps {
                 return true;
             }
         }
-        println!("writing byte on non mapped zone 0x{:x}", addr);
+        log::info!("writing byte on non mapped zone 0x{:x}", addr);
         false
     }
 
@@ -463,7 +463,7 @@ impl Maps {
     }
 
     pub fn print_maps_keyword(&self, kw: &str) {
-        println!("--- maps ---");
+        log::info!("--- maps ---");
         for mem in self.maps.iter() {
             let k = mem.get_name();
             let n;
@@ -477,7 +477,7 @@ impl Maps {
                 spcs.push(' ');
             }
             if k.contains(kw) {
-                println!(
+                log::info!(
                     "{}{}0x{:x} - 0x{:x} ({})",
                     k,
                     spcs,
@@ -487,12 +487,12 @@ impl Maps {
                 );
             }
         }
-        println!("memory usage: {} bytes", self.size());
-        println!("---");
+        log::info!("memory usage: {} bytes", self.size());
+        log::info!("---");
     }
 
     pub fn print_maps(&self) {
-        println!("--- maps ---");
+        log::info!("--- maps ---");
         for mem in self.maps.iter() {
             let k = mem.get_name();
             let n;
@@ -505,7 +505,7 @@ impl Maps {
             for i in 0..n {
                 spcs.push(' ');
             }
-            println!(
+            log::info!(
                 "{}{}0x{:x} - 0x{:x} ({})",
                 k,
                 spcs,
@@ -514,8 +514,8 @@ impl Maps {
                 mem.size()
             );
         }
-        println!("memory usage: {} bytes", self.size());
-        println!("---");
+        log::info!("memory usage: {} bytes", self.size());
+        log::info!("---");
     }
 
     pub fn get_addr_base(&self, addr: u64) -> Option<u64> {
@@ -539,7 +539,7 @@ impl Maps {
     pub fn show_addr_names(&self, addr: u64) {
         for mem in self.maps.iter() {
             if mem.inside(addr) {
-                println!("{}", mem.get_name());
+                log::info!("{}", mem.get_name());
             }
         }
     }
@@ -571,7 +571,7 @@ impl Maps {
                 Err(n) => " -utf8err- ".to_string(),
             };
 
-            println!("    {}", s);
+            log::info!("    {}", s);
         }
     }
 
@@ -586,7 +586,7 @@ impl Maps {
                 count += 1;
                 print!("{:02x} ", b);
                 if count >= amount {
-                    println!("");
+                    log::info!("");
                     return;
                 }
             }
@@ -597,7 +597,7 @@ impl Maps {
                 Err(n) => " -utf8err- ".to_string(),
             };
 
-            println!("    {}", s);
+            log::info!("    {}", s);
         }
     }
 
@@ -611,7 +611,7 @@ impl Maps {
                 let dw = match self.read_dword(addr + count * 4) {
                     Some(v) => v,
                     None => {
-                        println!("bad address");
+                        log::info!("bad address");
                         return;
                     }
                 };
@@ -635,7 +635,7 @@ impl Maps {
                 Err(n) => " -utf8err- ".to_string(),
             };
 
-            println!("{}", s);
+            log::info!("{}", s);
         }
     }
 
@@ -654,7 +654,7 @@ impl Maps {
                 None => "".to_string(),
             };
 
-            println!(
+            log::info!(
                 "0x{:x}: 0x{:x} ({}) '{}'",
                 a,
                 value,
@@ -681,7 +681,7 @@ impl Maps {
                     None => "".to_string(),
                 };
 
-                println!(
+                log::info!(
                     "0x{:x}: 0x{:x} ({}) '{}'",
                     a,
                     value,
@@ -689,7 +689,7 @@ impl Maps {
                     self.filter_replace_string(&self.read_string(value.into()))
                 );
             } else {
-                println!("0x{:x}: 0x{:x}", a, value);
+                log::info!("0x{:x}: 0x{:x}", a, value);
             }
         }
     }
@@ -790,7 +790,7 @@ impl Maps {
                 }
             }
         }
-        println!("map not found");
+        log::info!("map not found");
         None
     }
 
@@ -814,7 +814,7 @@ impl Maps {
             let b = match u8::from_str_radix(bsi, 16) {
                 Ok(b) => b,
                 Err(_) => {
-                    println!("bad hex bytes");
+                    log::info!("bad hex bytes");
                     return bytes;
                 }
             };
@@ -939,9 +939,9 @@ impl Maps {
 
             for addr in results.iter() {
                 if self.is_64bits {
-                    println!("found at 0x{:x} '{}'", addr, self.read_string(*addr));
+                    log::info!("found at 0x{:x} '{}'", addr, self.read_string(*addr));
                 } else {
-                    println!(
+                    log::info!(
                         "found at 0x{:x} '{}'",
                         *addr as u32,
                         self.read_string(*addr)
@@ -952,7 +952,7 @@ impl Maps {
         }
 
         if !found {
-            println!("not found.");
+            log::info!("not found.");
         }
     }
 
@@ -1008,7 +1008,7 @@ impl Maps {
         for mem in self.maps.iter() {
             let name = mem.get_name();
             if name.starts_with("alloc_") || name.starts_with("valloc_") {
-                println!(
+                log::info!(
                     "{} 0x{:x} - 0x{:x} ({})",
                     name,
                     mem.get_base(),
@@ -1022,7 +1022,7 @@ impl Maps {
     pub fn show_maps(&self) {
         for mem in self.maps.iter() {
             let name = mem.get_name();
-            println!(
+            log::info!(
                 "{} 0x{:x} - 0x{:x} ({})",
                 name,
                 mem.get_base(),
@@ -1083,25 +1083,25 @@ impl Maps {
     fn _alloc(&self, sz: u64, bottom: u64, top: u64, lib: bool) -> Option<u64> {
         let mut prev: u64 = bottom;
 
-        //println!("allocating {} bytes from 0x{:x} to 0x{:x}", sz, bottom, top);
+        //log::info!("allocating {} bytes from 0x{:x} to 0x{:x}", sz, bottom, top);
 
         for i in 0..self.maps.len() {
             let mem = &self.maps[i];
             let base = mem.get_base();
 
             if lib && base < bottom {
-                //println!("skipping: 0x{:x}", base);
+                //log::info!("skipping: 0x{:x}", base);
                 continue; // a lib finding allocs that are not lib
             }
 
-            //println!("base: 0x{:x} prev: 0x{:x} sz: 0x{:x}", base, prev, sz);
+            //log::info!("base: 0x{:x} prev: 0x{:x} sz: 0x{:x}", base, prev, sz);
             if prev > base {
                 //self.show_maps();
                 panic!("alloc error");
             }
-            //println!("space: 0x{:x}", base - prev);
+            //log::info!("space: 0x{:x}", base - prev);
             if (base - prev) > sz {
-                //println!("space found: 0x{:x}", prev);
+                //log::info!("space found: 0x{:x}", prev);
                 return Some(prev);
             }
 
@@ -1109,11 +1109,11 @@ impl Maps {
         }
 
         if top - prev > sz {
-            //println!("space found: 0x{:x} sz:{}", prev, sz);
+            //log::info!("space found: 0x{:x} sz:{}", prev, sz);
             return Some(prev);
         }
 
-        println!("no space found");
+        log::info!("no space found");
         None
     }
 
@@ -1160,7 +1160,7 @@ impl Maps {
                 m.save(addr, size as usize, filename);
             }
             None => {
-                println!("this address is not mapped.");
+                log::info!("this address is not mapped.");
             }
         }
     }
@@ -1226,8 +1226,8 @@ impl Maps {
                 if name1 != name2 {
                     for addr1 in mem1.get_base()..mem1.get_bottom() {
                         if mem2.inside(addr1) {
-                            println!("/!\\ {} overlaps with {}", name1, name2);
-                            println!(
+                            log::info!("/!\\ {} overlaps with {}", name1, name2);
+                            log::info!(
                                 "/!\\ 0x{:x}-0x{:x} vs 0x{:x}-0x{:x}",
                                 mem1.get_base(),
                                 mem1.get_bottom(),
@@ -1241,7 +1241,7 @@ impl Maps {
             }
 
             if (mem1.get_base() + (mem1.size() as u64)) != mem1.get_bottom() {
-                println!("/!\\ memory bottom dont match, mem: {}", name1);
+                log::info!("/!\\ memory bottom dont match, mem: {}", name1);
                 return false;
             }
         }

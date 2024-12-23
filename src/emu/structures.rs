@@ -29,7 +29,7 @@ impl ListEntry {
     }
 
     pub fn print(&self) {
-        println!("{:#x?}", self);
+        log::info!("{:#x?}", self);
     }
 }
 
@@ -57,7 +57,7 @@ impl ListEntry64 {
     }
 
     pub fn print(&self) {
-        println!("{:#x?}", self);
+        log::info!("{:#x?}", self);
     }
 }
 
@@ -136,7 +136,7 @@ impl LdrDataTableEntry {
     }
 
     pub fn print(&self) {
-        println!("{:#x?}", self);
+        log::info!("{:#x?}", self);
     }
 }
 
@@ -199,7 +199,7 @@ impl PebLdrData {
     }
 
     pub fn print(&self) {
-        println!("{:#x?}", self);
+        log::info!("{:#x?}", self);
     }
 }
 
@@ -254,7 +254,7 @@ impl PebLdrData64 {
     }
 
     pub fn print(&self) {
-        println!("{:#x?}", self);
+        log::info!("{:#x?}", self);
     }
 }
 
@@ -481,7 +481,7 @@ impl TEB {
     }
 
     pub fn print(&self) {
-        println!("{:#x?}", self);
+        log::info!("{:#x?}", self);
     }
 }
 
@@ -604,7 +604,7 @@ impl PEB {
     }
 
     pub fn print(&self) {
-        println!("{:#x?}", self);
+        log::info!("{:#x?}", self);
     }
 }
 
@@ -925,7 +925,7 @@ impl PEB64 {
     }
 
     pub fn print(&self) {
-        println!("{:#x?}", self);
+        log::info!("{:#x?}", self);
     }
 }
 
@@ -1124,7 +1124,7 @@ impl TEB64 {
     }
 
     pub fn print(&self) {
-        println!("{:#x?}", self);
+        log::info!("{:#x?}", self);
     }
 }
 
@@ -1283,7 +1283,7 @@ impl LdrDataTableEntry64 {
     }
 
     pub fn print(&self) {
-        println!("{:#x?}", self);
+        log::info!("{:#x?}", self);
     }
 }
 
@@ -1320,7 +1320,7 @@ impl ImageExportDirectory {
     }
 
     pub fn print(&self) {
-        println!("{:#x?}", self);
+        log::info!("{:#x?}", self);
     }
 }
 
@@ -1355,7 +1355,7 @@ impl PScopeTableEntry {
     }
 
     pub fn print(&self) {
-        println!("{:#x?}", self);
+        log::info!("{:#x?}", self);
     }
 }
 
@@ -1384,7 +1384,7 @@ impl CppEhRecord {
     }
 
     pub fn print(&self) {
-        println!("{:#x?}", self);
+        log::info!("{:#x?}", self);
     }
 }
 
@@ -1407,7 +1407,7 @@ impl ExceptionPointers {
     }
 
     pub fn print(&self) {
-        println!("{:#x?}", self);
+        log::info!("{:#x?}", self);
     }
 }
 
@@ -1432,7 +1432,7 @@ impl Eh3ExceptionRegistration {
     }
 
     pub fn print(&self) {
-        println!("{:#x?}", self);
+        log::info!("{:#x?}", self);
     }
 }
 
@@ -1503,7 +1503,7 @@ impl MemoryBasicInformation {
     }
 
     pub fn print(&self) {
-        println!("{:#x?}", self);
+        log::info!("{:#x?}", self);
     }
 }
 
@@ -1532,7 +1532,7 @@ impl TlsDirectory32 {
     }
 
     pub fn print(&self) {
-        println!("{:#x?}", self);
+        log::info!("{:#x?}", self);
     }
 }
 
@@ -1559,7 +1559,7 @@ impl TlsDirectory64 {
     }
 
     pub fn print(&self) {
-        println!("{:#x?}", self);
+        log::info!("{:#x?}", self);
     }
 }
 
@@ -2043,8 +2043,22 @@ impl Hostent {
     }
 }
 
-
-
-
-
-
+#[derive(Debug, Clone)]
+pub struct MemoryOperation {
+    /// Position/step counter in the emulation
+    pub pos: u64,
+    /// Instruction pointer at time of operation
+    pub rip: u64,
+    /// Type of memory operation ("read" or "write")
+    pub op: String,
+    /// Size of the operation in bits (8, 16, 32, 64)
+    pub bits: u32,
+    /// Memory address being accessed
+    pub address: u64,
+    /// Old value before the operation
+    pub old_value: u64,
+    /// New value after the operation
+    pub new_value: u64,
+    /// Name of the memory region being accessed
+    pub name: String,
+}

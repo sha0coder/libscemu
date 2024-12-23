@@ -12,7 +12,7 @@ pub fn gateway(addr: u64, emu: &mut emu::Emu) -> String {
         "RegCloseKey" => RegCloseKey(emu),
 
         _ => {
-            println!(
+            log::info!(
                 "calling unimplemented advapi32 API 0x{:x} {}",
                 addr, apiname
             );
@@ -58,7 +58,7 @@ fn RegOpenKeyExA(emu: &mut emu::Emu) {
 
     let subkey = emu.maps.read_string(subkey_ptr);
 
-    println!(
+    log::info!(
         "{}** {} advapi32!RegOpenKeyExA {} {}",
         emu.colors.light_red, emu.pos, subkey, emu.colors.nc
     );
@@ -71,7 +71,7 @@ fn RegOpenKeyExA(emu: &mut emu::Emu) {
 fn RegCloseKey(emu: &mut emu::Emu) {
     let hkey = emu.regs.rcx;
 
-    println!(
+    log::info!(
         "{}** {} advapi32!RegCloseKey {}",
         emu.colors.light_red, emu.pos, emu.colors.nc
     );
@@ -97,7 +97,7 @@ fn RegQueryValueExA(emu: &mut emu::Emu) {
 
     let value = emu.maps.read_string(value_ptr);
 
-    println!(
+    log::info!(
         "{}** {} advapi32!RegQueryValueExA {} {}",
         emu.colors.light_red, emu.pos, value, emu.colors.nc
     );

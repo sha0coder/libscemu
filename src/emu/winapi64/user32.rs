@@ -7,7 +7,7 @@ pub fn gateway(addr: u64, emu: &mut emu::Emu) -> String {
         "GetDesktopWindow" => GetDesktopWindow(emu),
 
         _ => {
-            println!("calling unimplemented user32 API 0x{:x} {}", addr, apiname);
+            log::info!("calling unimplemented user32 API 0x{:x} {}", addr, apiname);
             return apiname;
         }
     }
@@ -20,7 +20,7 @@ fn MessageBoxA(emu: &mut emu::Emu) {
     let msg = emu.maps.read_string(msgptr);
     let title = emu.maps.read_string(titleptr);
 
-    println!(
+    log::info!(
         "{}** {} user32!MessageBoxA {} {} {}",
         emu.colors.light_red, emu.pos, title, msg, emu.colors.nc
     );
@@ -29,7 +29,7 @@ fn MessageBoxA(emu: &mut emu::Emu) {
 }
 
 fn GetDesktopWindow(emu: &mut emu::Emu) {
-    println!(
+    log::info!(
         "{}** {} user32!GetDesktopWindow {}",
         emu.colors.light_red, emu.pos, emu.colors.nc
     );

@@ -55,9 +55,9 @@ impl Breakpoint {
     }
 
     pub fn show(&self) {
-        println!("break on address: 0x{:x}", self.addr);
-        println!("break on instruction: {}", self.instruction);
-        println!("break on memory read: 0x{:x}", self.mem_read_addr);
-        println!("break on memory write: 0x{:x}", self.mem_write_addr);
+        log::info!("break on address: 0x{:x}", self.addr);
+        log::info!("break on instruction: {}", self.instruction);
+        log::info!("break on memory read: 0x{:x}", self.mem_read_addr);
+        log::info!("break on memory write: 0x{:x}", self.mem_write_addr);
     }
 }
