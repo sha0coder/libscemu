@@ -415,6 +415,7 @@ impl Emu {
     pub fn init(&mut self, clear_registers: bool, clear_flags: bool) {
         self.pos = 0;
 
+
         if !atty::is(Stream::Stdout) {
             self.cfg.nocolors = true;
             self.colors.disable();
@@ -430,6 +431,7 @@ impl Emu {
             self.flags.clear();
         }
         //self.regs.rand();
+
 
         if self.cfg.is_64bits {
             self.regs.rip = self.cfg.entry_point;
@@ -463,6 +465,7 @@ impl Emu {
                 self.banzai.add(api, params);
             }
         }
+
         //self.init_tests();
     }
 
@@ -682,7 +685,11 @@ impl Emu {
                 if pe32.opt.image_base >= constants::LIBS32_MIN as u32 {
                     base = self.maps.alloc(pe32.mem_size() as u64 + 0xff).expect("out of memory") as u32; 
                 } else {
-                    base = pe32.opt.image_base;
+                    if self.maps.overlaps(pe32.opt.image_base as u64, pe32.mem_size() as u64) {
+                        base = self.maps.alloc(pe32.mem_size() as u64 + 0xff).expect("out of memory") as u32;
+                    } else {
+                        base = pe32.opt.image_base;
+                    }
                 }
 
             // system library
@@ -816,7 +823,11 @@ impl Emu {
                 if pe64.opt.image_base >= constants::LIBS64_MIN as u64 {
                     base = self.maps.alloc(pe64.size()+0xff).expect("out of memory");
                 } else {
-                    base = pe64.opt.image_base;
+                    if self.maps.overlaps(pe64.opt.image_base, pe64.size()) {
+                        base = self.maps.alloc(pe64.size()+0xff).expect("out of memory");
+                    } else {
+                        base = pe64.opt.image_base;
+                    }
                 }
 
             // system library
