@@ -18,7 +18,7 @@ use libscemu::emu32;
 fn main() {
     let mut emu = emu32();
     emu.set_maps_folder("/tmp/maps32/");
-    emu.init();
+    emu.init(false, false);
 ```
 
 Load your shellcode or PE binary and run the emulator.
