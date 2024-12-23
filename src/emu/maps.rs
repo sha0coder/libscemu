@@ -571,7 +571,7 @@ impl Maps {
                 Err(n) => " -utf8err- ".to_string(),
             };
 
-            log::info!("    {}", s);
+            println!("    {}", s);
         }
     }
 
@@ -586,7 +586,7 @@ impl Maps {
                 count += 1;
                 print!("{:02x} ", b);
                 if count >= amount {
-                    log::info!("");
+                    println!("");
                     return;
                 }
             }
@@ -597,7 +597,7 @@ impl Maps {
                 Err(n) => " -utf8err- ".to_string(),
             };
 
-            log::info!("    {}", s);
+            println!("    {}", s);
         }
     }
 
