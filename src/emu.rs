@@ -151,6 +151,7 @@ pub struct Emu {
     pub last_instruction_size: usize,
     pub pe64: Option<PE64>,
     pub pe32: Option<PE32>,
+    rep: Option<u64>,
 }
 
 impl Emu {
@@ -205,6 +206,7 @@ impl Emu {
             instruction: None,
             instruction_bytes: vec![],
             memory_operations: vec![],
+            rep: None,
         }
     }
 
@@ -4158,7 +4160,7 @@ impl Emu {
 
     pub fn show_instruction_taken(&self, color: &str, ins: &Instruction) {
         if self.cfg.verbose >= 2 {
-            log::debug!(
+            log::info!(
                 "{}{} 0x{:x}: {} taken {}",
                 color,
                 self.pos,
@@ -4171,7 +4173,7 @@ impl Emu {
 
     pub fn show_instruction_not_taken(&self, color: &str, ins: &Instruction) {
         if self.cfg.verbose >= 2 {
-            log::debug!(
+            log::info!(
                 "{}{} 0x{:x}: {} not taken {}",
                 color,
                 self.pos,
@@ -4537,21 +4539,31 @@ impl Emu {
                         Decoder::with_ip(32, &block, self.regs.get_eip(), DecoderOptions::NONE);
                 }
 
-                while decoder.can_decode() {
-                    let ins = decoder.decode();
-                    let sz = ins.len();
-                    let addr = ins.ip();
-                    let position = decoder.position();
-                    let instruction_bytes = block[position-sz..position].to_vec();
+                let mut ins:Instruction = Instruction::default();
+                let mut sz:usize = 0;
+                let mut addr:u64 = 0;
+                //let mut position:usize = 0;
+                //let mut instruction_bytes:Vec<u8> = Vec::new();
 
-                    if !end_addr.is_none() && Some(addr) == end_addr {
-                        return Ok(self.regs.rip);
+
+                self.rep = None;
+                while decoder.can_decode() {
+                    if self.rep.is_none() {
+                        ins = decoder.decode();
+                        sz = ins.len();
+                        addr = ins.ip();
+                        //position = decoder.position();
+                        //instruction_bytes = block[position-sz..position].to_vec();
+
+                        if !end_addr.is_none() && Some(addr) == end_addr {
+                            return Ok(self.regs.rip);
+                        }
                     }
 
                     self.out.clear();
                     formatter.format(&ins, &mut self.out);
                     self.instruction = Some(ins);
-                    self.instruction_bytes = instruction_bytes;
+                    //self.instruction_bytes = instruction_bytes;
                     self.memory_operations.clear();
                     self.pos += 1;
 
@@ -4575,34 +4587,36 @@ impl Emu {
                     }
 
                     // prevent infinite loop
-                    if addr == prev_addr {
-                        // || addr == prev_prev_addr {
-                        repeat_counter += 1;
-                    }
-                    //prev_prev_addr = prev_addr;
-                    prev_addr = addr;
-                    if repeat_counter == 100 {
-                        log::info!("infinite loop!  opcode: {}", ins.op_code().op_code_string());
-                        return Err(ScemuError::new("inifinite loop found"));
-                    }
+                    if self.rep.is_none() {
+                        if addr == prev_addr {
+                            // || addr == prev_prev_addr {
+                            repeat_counter += 1;
+                        }
+                        //prev_prev_addr = prev_addr;
+                        prev_addr = addr;
+                        if repeat_counter == 100 {
+                            log::info!("infinite loop!  opcode: {}", ins.op_code().op_code_string());
+                                return Err(ScemuError::new("inifinite loop found"));
+                        }
 
-                    if self.cfg.loops {
-                        // loop detector
-                        looped.push(addr);
-                        let mut count: u32 = 0;
-                        for a in looped.iter() {
-                            if addr == *a {
-                                count += 1;
+                        if self.cfg.loops {
+                            // loop detector
+                            looped.push(addr);
+                            let mut count: u32 = 0;
+                            for a in looped.iter() {
+                                if addr == *a {
+                                    count += 1;
+                                }
                             }
+                            if count > 2 {
+                                log::info!("    loop: {} interations", count);
+                            }
+                            /*
+                            if count > self.loop_limit {
+                            panic!("/!\\ iteration limit reached");
+                            }*/
+                            //TODO: if more than x addresses remove the bottom ones
                         }
-                        if count > 2 {
-                            log::info!("    loop: {} interations", count);
-                        }
-                        /*
-                        if count > self.loop_limit {
-                        panic!("/!\\ iteration limit reached");
-                        }*/
-                        //TODO: if more than x addresses remove the bottom ones
                     }
 
                     if self.cfg.trace_file.is_some() {
@@ -4627,7 +4641,43 @@ impl Emu {
                         None => (),
                     }
 
+                    if ins.has_rep_prefix() || ins.has_repe_prefix() || ins.has_repne_prefix() {
+                        if self.rep.is_none() {
+                            self.rep = Some(0);
+                        }
+
+                        // if rcx is 0 in first rep step, skip instruction.
+                        if self.regs.rcx == 0 {
+                            self.rep = None;
+                            if self.cfg.is_64bits {
+                                self.regs.rip += sz as u64;
+                            } else {
+                                self.regs.set_eip(self.regs.get_eip() + sz as u64);
+                            }
+                            continue;
+                        }
+                    }
+
+                    /*************************************/
                     let emulation_ok = self.emulate_instruction(&ins, sz, false);
+                    /*************************************/
+
+                    if let Some(rep_count) = self.rep {
+                        if self.regs.rcx > 0 {
+                            self.regs.rcx -= 1;
+                            if self.regs.rcx == 0 {
+                                self.rep = None;
+                            } else {
+                                self.rep = Some(rep_count + 1);
+                            }
+                        }
+                        if ins.has_repe_prefix() && !self.flags.f_zf {
+                            self.rep = None;
+                        }
+                        if ins.has_repne_prefix() && self.flags.f_zf {
+                            self.rep = None;
+                        }
+                    }
 
                     match self.hook.hook_on_post_instruction {
                         Some(hook_fn) => hook_fn(self, self.regs.rip, &ins, sz, emulation_ok),
@@ -4656,11 +4706,13 @@ impl Emu {
                         break;
                     }
 
-                    if self.cfg.is_64bits {
-                        self.regs.rip += sz as u64;
-                    } else {
-                        self.regs.set_eip(self.regs.get_eip() + sz as u64);
-                    }
+                    if self.rep.is_none() {
+                        if self.cfg.is_64bits {
+                            self.regs.rip += sz as u64;
+                        } else {
+                            self.regs.set_eip(self.regs.get_eip() + sz as u64);
+                        }
+                    } 
 
                     if self.force_break {
                         self.force_break = false;
@@ -6744,293 +6796,129 @@ impl Emu {
             }
 
             Mnemonic::Movsb => {
-                if self.cfg.is_64bits {
-                    if ins.has_rep_prefix() {
-                        let mut first_iteration = true;
-                        loop {
-                            if first_iteration || self.cfg.verbose >= 3 {
-                                self.show_instruction(&self.colors.light_cyan, &ins);
-                            }
-                            if !first_iteration {
-                                self.pos += 1;
-                            }
-
-                            let val = match self.maps.read_byte(self.regs.rsi) {
-                                Some(v) => v,
-                                None => {
-                                    log::info!("cannot read memory on rsi");
-                                    return false;
-                                }
-                            };
-                            if !self.maps.write_byte(self.regs.rdi, val) {
-                                log::info!("cannot write memoryh on rdi");
-                                return false;
-                            }
-
-                            if !self.flags.f_df {
-                                self.regs.rsi += 1;
-                                self.regs.rdi += 1;
-                            } else {
-                                self.regs.rsi -= 1;
-                                self.regs.rdi -= 1;
-                            }
-
-                            self.regs.rcx -= 1;
-                            if self.regs.rcx == 0 {
-                                return true;
-                            }
-                            first_iteration = false;
-                            if rep_step {
-                                self.force_reload = true;
-                                break;
-                            }
-                        }
-                    } else {
+                if self.rep.is_some() {
+                    if self.rep.unwrap() == 0 || self.cfg.verbose >= 3 {
                         self.show_instruction(&self.colors.light_cyan, &ins);
-
-                        let val = self
-                            .maps
-                            .read_byte(self.regs.rsi)
-                            .expect("cannot read memory");
-                        self.maps.write_byte(self.regs.rdi, val);
-                        if !self.flags.f_df {
-                            self.regs.rsi += 1;
-                            self.regs.rdi += 1;
-                        } else {
-                            self.regs.rsi -= 1;
-                            self.regs.rdi -= 1;
-                        }
                     }
                 } else {
-                    // 32bits
+                    self.show_instruction(&self.colors.light_cyan, &ins);
+                }
 
-                    if ins.has_rep_prefix() {
-                        let mut first_iteration = true;
-                        loop {
-                            if first_iteration || self.cfg.verbose >= 3 {
-                                self.show_instruction(&self.colors.light_cyan, &ins);
-                            }
-                            if !first_iteration {
-                                self.pos += 1;
-                            }
+                if self.cfg.is_64bits {
 
-                            let val = match self.maps.read_byte(self.regs.get_esi()) {
-                                Some(v) => v,
-                                None => {
-                                    log::info!("cannot read memory on esi");
-                                    return false;
-                                }
-                            };
-                            if !self.maps.write_byte(self.regs.get_edi(), val) {
-                                log::info!("cannot write memory on edi");
-                                return false;
-                            }
-
-                            if !self.flags.f_df {
-                                self.regs.set_esi(self.regs.get_esi() + 1);
-                                self.regs.set_edi(self.regs.get_edi() + 1);
-                            } else {
-                                self.regs.set_esi(self.regs.get_esi() - 1);
-                                self.regs.set_edi(self.regs.get_edi() - 1);
-                            }
-
-                            self.regs.set_ecx(self.regs.get_ecx() - 1);
-                            if self.regs.get_ecx() == 0 {
-                                return true;
-                            }
-                            first_iteration = false;
-                            if rep_step {
-                                self.force_reload = true;
-                                break;
-                            }
+                    let val = match self.maps.read_byte(self.regs.rsi) {
+                        Some(v) => v,
+                        None => {
+                            log::info!("cannot read memory on rsi");
+                            return false;
                         }
+                    };
+                    if !self.maps.write_byte(self.regs.rdi, val) {
+                        log::info!("cannot write memoryh on rdi");
+                        return false;
+                    }
+
+                    if !self.flags.f_df {
+                        self.regs.rsi += 1;
+                        self.regs.rdi += 1;
                     } else {
-                        self.show_instruction(&self.colors.light_cyan, &ins);
+                        self.regs.rsi -= 1;
+                        self.regs.rdi -= 1;
+                    }
 
-                        let val = match self.maps.read_byte(self.regs.get_esi()) {
-                            Some(v) => v,
-                            None => return false,
-                        };
-
-                        self.maps.write_byte(self.regs.get_edi(), val);
-                        if !self.flags.f_df {
-                            self.regs.set_esi(self.regs.get_esi() + 1);
-                            self.regs.set_edi(self.regs.get_edi() + 1);
-                        } else {
-                            self.regs.set_esi(self.regs.get_esi() - 1);
-                            self.regs.set_edi(self.regs.get_edi() - 1);
+                } else {
+                    let val = match self.maps.read_byte(self.regs.get_esi()) {
+                        Some(v) => v,
+                        None => {
+                            log::info!("cannot read memory on esi");
+                            return false;
                         }
+                    };
+                    if !self.maps.write_byte(self.regs.get_edi(), val) {
+                        log::info!("cannot write memory on edi");
+                        return false;
+                    }
+
+                    if !self.flags.f_df {
+                        self.regs.set_esi(self.regs.get_esi() + 1);
+                        self.regs.set_edi(self.regs.get_edi() + 1);
+                    } else {
+                        self.regs.set_esi(self.regs.get_esi() - 1);
+                        self.regs.set_edi(self.regs.get_edi() - 1);
                     }
                 }
             }
 
             Mnemonic::Movsw => {
-                if self.cfg.is_64bits {
-                    if ins.has_rep_prefix() {
-                        let mut first_iteration = true;
-                        loop {
-                            if first_iteration || self.cfg.verbose >= 3 {
-                                self.show_instruction(&self.colors.light_cyan, &ins);
-                            }
-                            if !first_iteration {
-                                self.pos += 1;
-                            }
-
-                            let val = self
-                                .maps
-                                .read_word(self.regs.rsi)
-                                .expect("cannot read memory");
-                            self.maps.write_word(self.regs.rdi, val);
-
-                            if !self.flags.f_df {
-                                self.regs.rsi += 2;
-                                self.regs.rdi += 2;
-                            } else {
-                                self.regs.rsi -= 2;
-                                self.regs.rdi -= 2;
-                            }
-
-                            self.regs.rcx -= 1;
-                            if self.regs.rcx == 0 {
-                                return true;
-                            }
-                            first_iteration = false;
-                            if rep_step {
-                                self.force_reload = true;
-                                break;
-                            }
-                        }
-                    } else {
+                if self.rep.is_some() {
+                    if self.rep.unwrap() == 0 || self.cfg.verbose >= 3 {
                         self.show_instruction(&self.colors.light_cyan, &ins);
-                        let val = self
-                            .maps
-                            .read_word(self.regs.rsi)
-                            .expect("cannot read memory");
-                        self.maps.write_word(self.regs.rdi, val);
-                        if !self.flags.f_df {
-                            self.regs.rsi += 2;
-                            self.regs.rdi += 2;
-                        } else {
-                            self.regs.rsi -= 2;
-                            self.regs.rdi -= 2;
-                        }
+                    }
+                } else {
+                    self.show_instruction(&self.colors.light_cyan, &ins);
+                }
+
+                if self.cfg.is_64bits {
+                    let val = self
+                        .maps
+                        .read_word(self.regs.rsi)
+                        .expect("cannot read memory");
+                    self.maps.write_word(self.regs.rdi, val);
+
+                    if !self.flags.f_df {
+                        self.regs.rsi += 2;
+                        self.regs.rdi += 2;
+                    } else {
+                        self.regs.rsi -= 2;
+                        self.regs.rdi -= 2;
                     }
                 } else {
                     // 32bits
+                    let val = self
+                        .maps
+                        .read_word(self.regs.get_esi())
+                        .expect("cannot read memory");
+                    self.maps.write_word(self.regs.get_edi(), val);
 
-                    if ins.has_rep_prefix() {
-                        let mut first_iteration = true;
-                        loop {
-                            if first_iteration || self.cfg.verbose >= 3 {
-                                self.show_instruction(&self.colors.light_cyan, &ins);
-                            }
-                            if !first_iteration {
-                                self.pos += 1;
-                            }
-
-                            let val = self
-                                .maps
-                                .read_word(self.regs.get_esi())
-                                .expect("cannot read memory");
-                            self.maps.write_word(self.regs.get_edi(), val);
-
-                            if !self.flags.f_df {
-                                self.regs.set_esi(self.regs.get_esi() + 2);
-                                self.regs.set_edi(self.regs.get_edi() + 2);
-                            } else {
-                                self.regs.set_esi(self.regs.get_esi() - 2);
-                                self.regs.set_edi(self.regs.get_edi() - 2);
-                            }
-
-                            self.regs.set_ecx(self.regs.get_ecx() - 1);
-                            if self.regs.get_ecx() == 0 {
-                                return true;
-                            }
-                            first_iteration = false;
-                            if rep_step {
-                                self.force_reload = true;
-                                break;
-                            }
-                        }
+                    if !self.flags.f_df {
+                        self.regs.set_esi(self.regs.get_esi() + 2);
+                        self.regs.set_edi(self.regs.get_edi() + 2);
                     } else {
-                        self.show_instruction(&self.colors.light_cyan, &ins);
-                        let val = match self.maps.read_word(self.regs.get_esi()) {
-                            Some(v) => v,
-                            None => {
-                                log::info!("cannot read memory on esi");
-                                return false;
-                            }
-                        };
-                        self.maps.write_word(self.regs.get_edi(), val);
-                        if !self.flags.f_df {
-                            self.regs.set_esi(self.regs.get_esi() + 2);
-                            self.regs.set_edi(self.regs.get_edi() + 2);
-                        } else {
-                            self.regs.set_esi(self.regs.get_esi() - 2);
-                            self.regs.set_edi(self.regs.get_edi() - 2);
-                        }
+                        self.regs.set_esi(self.regs.get_esi() - 2);
+                        self.regs.set_edi(self.regs.get_edi() - 2);
                     }
                 }
             }
 
             Mnemonic::Movsq => {
-                if ins.has_rep_prefix() {
-                    let mut first_iteration = true;
-                    loop {
-                        if first_iteration || self.cfg.verbose >= 3 {
-                            self.show_instruction(&self.colors.light_cyan, &ins);
-                        }
-                        if self.regs.rcx == 0 {
-                            return true;
-                        }
-                        if !first_iteration {
-                            self.pos += 1;
-                        }
-
-                        let val = self
-                            .maps
-                            .read_qword(self.regs.rsi)
-                            .expect("cannot read memory");
-                        self.maps.write_qword(self.regs.rdi, val);
-
-                        if !self.flags.f_df {
-                            self.regs.rsi += 8;
-                            self.regs.rdi += 8;
-                        } else {
-                            self.regs.rsi -= 8;
-                            self.regs.rdi -= 8;
-                        }
-
-                        self.regs.rcx -= 1;
-                        if self.regs.rcx == 0 {
-                            return true;
-                        }
-                        first_iteration = false;
-                        if rep_step {
-                            self.force_reload = true;
-                            break;
-                        }
+                if self.rep.is_some() {
+                    if self.rep.unwrap() == 0 || self.cfg.verbose >= 3 {
+                        self.show_instruction(&self.colors.light_cyan, &ins);
                     }
                 } else {
                     self.show_instruction(&self.colors.light_cyan, &ins);
-                    let val = self
-                        .maps
+                }
+                self.pos += 1;
+
+                assert!(self.cfg.is_64bits);
+
+                let val = self
+                    .maps
                         .read_qword(self.regs.rsi)
                         .expect("cannot read memory");
-
                     self.maps.write_qword(self.regs.rdi, val);
 
-                    if !self.flags.f_df {
-                        self.regs.rsi += 8;
-                        self.regs.rdi += 8;
-                    } else {
-                        self.regs.rsi -= 8;
-                        self.regs.rdi -= 8;
-                    }
+                if !self.flags.f_df {
+                    self.regs.rsi += 8;
+                    self.regs.rdi += 8;
+                } else {
+                    self.regs.rsi -= 8;
+                    self.regs.rdi -= 8;
                 }
             }
 
             Mnemonic::Movsd => {
+
                 if ins.op_count() == 2
                     && (self.get_operand_sz(&ins, 0) == 128 || self.get_operand_sz(&ins, 1) == 128)
                 {
@@ -7048,121 +6936,52 @@ impl Emu {
                     dst = (dst & 0xffffffff_ffffffff_00000000_00000000) | src;
 
                     self.set_operand_xmm_value_128(&ins, 0, dst);
+
                 } else {
-                    if self.cfg.is_64bits {
-                        if ins.has_rep_prefix() {
-                            let mut first_iteration = true;
-                            loop {
-                                if first_iteration || self.cfg.verbose >= 3 {
-                                    self.show_instruction(&self.colors.light_cyan, &ins);
-                                }
-                                if self.regs.rcx == 0 {
-                                    return true;
-                                }
-                                if !first_iteration {
-                                    self.pos += 1;
-                                }
+                    // legacy mode of movsd
 
-                                let val = self
-                                    .maps
-                                    .read_dword(self.regs.rsi)
-                                    .expect("cannot read memory");
-
-                                self.maps.write_dword(self.regs.rdi, val);
-
-                                if !self.flags.f_df {
-                                    self.regs.rsi += 4;
-                                    self.regs.rdi += 4;
-                                } else {
-                                    self.regs.rsi -= 4;
-                                    self.regs.rdi -= 4;
-                                }
-
-                                self.regs.rcx -= 1;
-                                if self.regs.rcx == 0 {
-                                    return true;
-                                }
-                                first_iteration = false;
-                                if rep_step {
-                                    self.force_reload = true;
-                                    break;
-                                }
-                            }
-                        } else {
+                    if self.rep.is_some() {
+                        if self.rep.unwrap() == 0 {
                             self.show_instruction(&self.colors.light_cyan, &ins);
-                            let val = self
-                                .maps
-                                .read_dword(self.regs.rsi)
-                                .expect("cannot read memory");
-                            self.maps.write_dword(self.regs.rdi, val);
-                            if !self.flags.f_df {
-                                self.regs.rsi += 4;
-                                self.regs.rdi += 4;
-                            } else {
-                                self.regs.rsi -= 4;
-                                self.regs.rdi -= 4;
-                            }
                         }
+                    } else {
+                        self.show_instruction(&self.colors.light_cyan, &ins);
+                    }
+
+                    if self.cfg.is_64bits {
+                        let val = self
+                            .maps
+                            .read_dword(self.regs.rsi)
+                            .expect("cannot read memory");
+
+                        self.maps.write_dword(self.regs.rdi, val);
+
+                        if !self.flags.f_df {
+                            self.regs.rsi += 4;
+                            self.regs.rdi += 4;
+                        } else {
+                            self.regs.rsi -= 4;
+                            self.regs.rdi -= 4;
+                        }
+
                     } else {
                         // 32bits
 
-                        if ins.has_rep_prefix() {
-                            let mut first_iteration = true;
-                            loop {
-                                if first_iteration || self.cfg.verbose >= 3 {
-                                    self.show_instruction(&self.colors.light_cyan, &ins);
-                                }
-                                if self.regs.get_ecx() == 0 {
-                                    return true;
-                                }
-                                if !first_iteration {
-                                    self.pos += 1;
-                                }
-
-                                let val = match self.maps.read_dword(self.regs.get_esi()) {
-                                    Some(v) => v,
-                                    None => {
-                                        log::info!("cannot read memory at esi");
-                                        return false;
-                                    }
-                                };
-                                self.maps.write_dword(self.regs.get_edi(), val);
-
-                                if !self.flags.f_df {
-                                    self.regs.set_esi(self.regs.get_esi() + 4);
-                                    self.regs.set_edi(self.regs.get_edi() + 4);
-                                } else {
-                                    self.regs.set_esi(self.regs.get_esi() - 4);
-                                    self.regs.set_edi(self.regs.get_edi() - 4);
-                                }
-
-                                self.regs.set_ecx(self.regs.get_ecx() - 1);
-                                if self.regs.get_ecx() == 0 {
-                                    return true;
-                                }
-                                first_iteration = false;
-                                if rep_step {
-                                    self.force_reload = true;
-                                    break;
-                                }
+                        let val = match self.maps.read_dword(self.regs.get_esi()) {
+                            Some(v) => v,
+                            None => {
+                                log::info!("cannot read memory at esi");
+                                return false;
                             }
+                        };
+                        self.maps.write_dword(self.regs.get_edi(), val);
+
+                        if !self.flags.f_df {
+                            self.regs.set_esi(self.regs.get_esi() + 4);
+                            self.regs.set_edi(self.regs.get_edi() + 4);
                         } else {
-                            self.show_instruction(&self.colors.light_cyan, &ins);
-                            let val = match self.maps.read_dword(self.regs.get_esi()) {
-                                Some(v) => v,
-                                None => {
-                                    log::info!("cannot read memory");
-                                    return false;
-                                }
-                            };
-                            self.maps.write_dword(self.regs.get_edi(), val);
-                            if !self.flags.f_df {
-                                self.regs.set_esi(self.regs.get_esi() + 4);
-                                self.regs.set_edi(self.regs.get_edi() + 4);
-                            } else {
-                                self.regs.set_esi(self.regs.get_esi() - 4);
-                                self.regs.set_edi(self.regs.get_edi() - 4);
-                            }
+                            self.regs.set_esi(self.regs.get_esi() - 4);
+                            self.regs.set_edi(self.regs.get_edi() - 4);
                         }
                     }
                 }
@@ -7644,72 +7463,38 @@ impl Emu {
             }
 
             Mnemonic::Stosb => {
-                if ins.has_rep_prefix() {
-                    let mut first_iteration = true;
-                    loop {
-                        if first_iteration || self.cfg.verbose >= 3 {
-                            self.show_instruction(&self.colors.light_cyan, &ins);
-                        }
-                        if !first_iteration {
-                            self.pos += 1;
-                        }
-
-                        if self.regs.rcx == 0 {
-                            return true;
-                        }
-
-                        if self.cfg.is_64bits {
-                            if !self
-                                .maps
-                                .write_byte(self.regs.rdi, self.regs.get_al() as u8)
-                            {
-                                return false;
-                            }
-                            if self.flags.f_df {
-                                self.regs.rdi -= 1;
-                            } else {
-                                self.regs.rdi += 1;
-                            }
-                        } else {
-                            // 32bits
-                            if !self
-                                .maps
-                                .write_byte(self.regs.get_edi(), self.regs.get_al() as u8)
-                            {
-                                return false;
-                            }
-                            if self.flags.f_df {
-                                self.regs.set_edi(self.regs.get_edi() - 1);
-                            } else {
-                                self.regs.set_edi(self.regs.get_edi() + 1);
-                            }
-                        }
-
-                        self.regs.rcx -= 1;
-                        first_iteration = false;
-                        if rep_step {
-                            self.force_reload = true;
-                            break;
-                        }
+                if self.rep.is_some() {
+                    if self.rep.unwrap() == 0 || self.cfg.verbose >= 3 {
+                        self.show_instruction(&self.colors.light_cyan, &ins);
                     }
                 } else {
-                    if self.cfg.is_64bits {
-                        self.maps
-                            .write_byte(self.regs.rdi, self.regs.get_al() as u8);
-                        if self.flags.f_df {
-                            self.regs.rdi -= 1;
-                        } else {
-                            self.regs.rdi += 1;
-                        }
+                    self.show_instruction(&self.colors.light_cyan, &ins);
+                }
+
+                if self.cfg.is_64bits {
+                    if !self
+                        .maps
+                        .write_byte(self.regs.rdi, self.regs.get_al() as u8)
+                    {
+                        return false;
+                    }
+                    if self.flags.f_df {
+                        self.regs.rdi -= 1;
                     } else {
-                        // 32bits
-                        self.maps
-                            .write_byte(self.regs.get_edi(), self.regs.get_al() as u8);
-                        if self.flags.f_df {
-                            self.regs.set_edi(self.regs.get_edi() - 1);
-                        } else {
-                            self.regs.set_edi(self.regs.get_edi() + 1);
-                        }
+                        self.regs.rdi += 1;
+                    }
+                } else {
+                    // 32bits
+                    if !self
+                        .maps
+                        .write_byte(self.regs.get_edi(), self.regs.get_al() as u8)
+                    {
+                        return false;
+                    }
+                    if self.flags.f_df {
+                        self.regs.set_edi(self.regs.get_edi() - 1);
+                    } else {
+                        self.regs.set_edi(self.regs.get_edi() + 1);
                     }
                 }
             }
@@ -7740,130 +7525,71 @@ impl Emu {
             }
 
             Mnemonic::Stosd => {
-                if ins.has_rep_prefix() {
-                    let mut first_iteration = true;
-                    loop {
-                        if first_iteration || self.cfg.verbose >= 3 {
-                            self.show_instruction(&self.colors.light_cyan, &ins);
-                        }
-                        if !first_iteration {
-                            self.pos += 1;
-                        }
-
-                        if self.regs.rcx == 0 {
-                            return true;
-                        }
-
-                        if self.cfg.is_64bits {
-                            if !self
-                                .maps
-                                .write_dword(self.regs.rdi, self.regs.get_eax() as u32)
-                            {
-                                return false;
-                            }
-                            if self.flags.f_df {
-                                self.regs.rdi -= 4;
-                            } else {
-                                self.regs.rdi += 4;
-                            }
-                        } else {
-                            // 32bits
-                            if !self
-                                .maps
-                                .write_dword(self.regs.get_edi(), self.regs.get_eax() as u32)
-                            {
-                                return false;
-                            }
-
-                            if self.flags.f_df {
-                                self.regs.set_edi(self.regs.get_edi() - 4);
-                            } else {
-                                self.regs.set_edi(self.regs.get_edi() + 4);
-                            }
-                        }
-
-                        self.regs.rcx -= 1;
-                        first_iteration = false;
-                        if rep_step {
-                            self.force_reload = true;
-                            break;
-                        }
+                if self.rep.is_some() {
+                    if self.rep.unwrap() == 0 || self.cfg.verbose >= 3 {
+                        self.show_instruction(&self.colors.light_cyan, &ins);
                     }
                 } else {
                     self.show_instruction(&self.colors.light_cyan, &ins);
-                    if self.cfg.is_64bits {
-                        self.maps
-                            .write_dword(self.regs.rdi, self.regs.get_eax() as u32);
+                }
 
-                        if self.flags.f_df {
-                            self.regs.rdi -= 4;
-                        } else {
-                            self.regs.rdi += 4;
-                        }
+                if self.cfg.is_64bits {
+                    if !self
+                        .maps
+                        .write_dword(self.regs.rdi, self.regs.get_eax() as u32)
+                    {
+                        return false;
+                    }
+                    if self.flags.f_df {
+                        self.regs.rdi -= 4;
                     } else {
-                        // 32bits
-                        self.maps
-                            .write_dword(self.regs.get_edi(), self.regs.get_eax() as u32);
+                        self.regs.rdi += 4;
+                    }
+                } else {
+                    // 32bits
+                    if !self
+                        .maps
+                        .write_dword(self.regs.get_edi(), self.regs.get_eax() as u32)
+                    {
+                        return false;
+                    }
 
-                        if self.flags.f_df {
-                            self.regs.set_edi(self.regs.get_edi() - 4);
-                        } else {
-                            self.regs.set_edi(self.regs.get_edi() + 4);
-                        }
+                    if self.flags.f_df {
+                        self.regs.set_edi(self.regs.get_edi() - 4);
+                    } else {
+                        self.regs.set_edi(self.regs.get_edi() + 4);
                     }
                 }
             }
 
             Mnemonic::Stosq => {
-                if ins.has_rep_prefix() {
-                    let mut first_iteration = true;
-                    loop {
-                        if first_iteration || self.cfg.verbose >= 3 {
-                            self.show_instruction(&self.colors.light_cyan, &ins);
-                        }
-                        if !first_iteration {
-                            // this is for the diff2.py diffing with gdb that
-                            // unrolls the reps
-                            if self.cfg.verbose > 2 {
-                                log::info!("\t{} rip: 0x{:x}", self.pos, self.regs.rip);
-                            }
-                        }
+                assert!(self.cfg.is_64bits);
 
-                        self.maps.write_qword(self.regs.rdi, self.regs.rax);
-
-                        if self.flags.f_df {
-                            self.regs.rdi -= 8;
-                        } else {
-                            self.regs.rdi += 8;
-                        }
-
-                        self.regs.rcx -= 1;
-                        if self.regs.rcx == 0 {
-                            return true;
-                        }
-
-                        first_iteration = false;
-                        if rep_step {
-                            self.force_reload = true;
-                            break;
-                        }
-                        self.pos += 1;
+                if self.rep.is_some() {
+                    if self.rep.unwrap() == 0 || self.cfg.verbose >= 3 {
+                        self.show_instruction(&self.colors.light_cyan, &ins);
                     }
                 } else {
                     self.show_instruction(&self.colors.light_cyan, &ins);
+                }
 
-                    self.maps.write_qword(self.regs.rdi, self.regs.rax);
+                self.maps.write_qword(self.regs.rdi, self.regs.rax);
 
-                    if self.flags.f_df {
-                        self.regs.rdi -= 8;
-                    } else {
-                        self.regs.rdi += 8;
-                    }
+                if self.flags.f_df {
+                    self.regs.rdi -= 8;
+                } else {
+                    self.regs.rdi += 8;
                 }
             }
 
             Mnemonic::Scasb => {
-                self.show_instruction(&self.colors.light_cyan, &ins);
+                if self.rep.is_some() {
+                    if self.rep.unwrap() == 0 || self.cfg.verbose >= 3 {
+                        self.show_instruction(&self.colors.light_cyan, &ins);
+                    }
+                } else {
+                    self.show_instruction(&self.colors.light_cyan, &ins);
+                }
 
                 let value0: u64 = match self.maps.read_byte(self.regs.rdi) {
                     Some(value) => value.into(),
@@ -7892,7 +7618,13 @@ impl Emu {
             }
 
             Mnemonic::Scasw => {
-                self.show_instruction(&self.colors.light_cyan, &ins);
+                if self.rep.is_some() { 
+                    if self.rep.unwrap() == 0 || self.cfg.verbose >= 3 {
+                        self.show_instruction(&self.colors.light_cyan, &ins);
+                    }
+                } else {
+                    self.show_instruction(&self.colors.light_cyan, &ins);
+                }
 
                 let value0 = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
@@ -7918,7 +7650,13 @@ impl Emu {
             }
 
             Mnemonic::Scasd => {
-                self.show_instruction(&self.colors.light_cyan, &ins);
+                if self.rep.is_some() {
+                    if self.rep.unwrap() == 0 || self.cfg.verbose >= 3 {
+                        self.show_instruction(&self.colors.light_cyan, &ins);
+                    }
+                } else {
+                    self.show_instruction(&self.colors.light_cyan, &ins);
+                }
 
                 let value0 = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
@@ -7944,7 +7682,13 @@ impl Emu {
             }
 
             Mnemonic::Scasq => {
-                self.show_instruction(&self.colors.light_cyan, &ins);
+                if self.rep.is_some() {
+                    if self.rep.unwrap() == 0 || self.cfg.verbose >= 3 {
+                        self.show_instruction(&self.colors.light_cyan, &ins);
+                    }
+                } else {
+                    self.show_instruction(&self.colors.light_cyan, &ins);
+                }
 
                 let value0 = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
@@ -8140,648 +7884,275 @@ impl Emu {
             }
 
             Mnemonic::Cmpsq => {
-                let mut value0: u64;
-                let mut value1: u64;
+                let value0: u64;
+                let value1: u64;
 
-                if ins.has_rep_prefix() {
-                    let mut first_iteration = true;
-                    loop {
-                        if first_iteration || self.cfg.verbose >= 3 {
-                            self.show_instruction(&self.colors.light_cyan, &ins);
-                        }
-                        if !first_iteration {
-                            self.pos += 1;
-                        }
+                assert!(self.cfg.is_64bits);
 
-                        if self.cfg.is_64bits {
-                            value0 = match self.maps.read_qword(self.regs.rsi) {
-                                Some(v) => v,
-                                None => {
-                                    log::info!("cannot read rsi");
-                                    return false;
-                                }
-                            };
-                            value1 = match self.maps.read_qword(self.regs.rdi) {
-                                Some(v) => v,
-                                None => {
-                                    log::info!("cannot read rdi");
-                                    return false;
-                                }
-                            };
-
-                            if self.flags.f_df {
-                                self.regs.rsi -= 8;
-                                self.regs.rdi -= 8;
-                            } else {
-                                self.regs.rsi += 8;
-                                self.regs.rdi += 8;
-                            }
-                        } else {
-                            // 32bits
-                            value0 = match self.maps.read_qword(self.regs.get_esi()) {
-                                Some(v) => v,
-                                None => {
-                                    log::info!("cannot read esi");
-                                    return false;
-                                }
-                            };
-                            value1 = match self.maps.read_qword(self.regs.get_edi()) {
-                                Some(v) => v,
-                                None => {
-                                    log::info!("cannot read edi");
-                                    return false;
-                                }
-                            };
-
-                            if self.flags.f_df {
-                                self.regs.set_esi(self.regs.get_esi() - 8);
-                                self.regs.set_edi(self.regs.get_edi() - 8);
-                            } else {
-                                self.regs.set_esi(self.regs.get_esi() + 8);
-                                self.regs.set_edi(self.regs.get_edi() + 8);
-                            }
-                        }
-
-                        self.flags.sub64(value0, value1);
-
-                        if value0 > value1 {
-                            if self.cfg.verbose >= 2 {
-                                log::info!("\tcmp: 0x{:x} > 0x{:x}", value0, value1);
-                            }
-                            return false;
-                        } else if value0 < value1 {
-                            if self.cfg.verbose >= 2 {
-                                log::info!("\tcmp: 0x{:x} < 0x{:x}", value0, value1);
-                            }
-                            return false;
-                        } else {
-                            if self.cfg.verbose >= 2 {
-                                log::info!("\tcmp: 0x{:x} == 0x{:x}", value0, value1);
-                            }
-                        }
-
-                        self.regs.rcx -= 1;
-                        if self.regs.rcx == 0 {
-                            return true;
-                        }
-
-                        first_iteration = false;
-                        if rep_step {
-                            self.force_reload = true;
-                            break;
-                        }
+                if self.rep.is_some() {
+                    if self.rep.unwrap() == 0 || self.cfg.verbose >= 3 {
+                        self.show_instruction(&self.colors.light_cyan, &ins);
                     }
                 } else {
-                    // not rep
+                    self.show_instruction(&self.colors.light_cyan, &ins);
+                }
 
-                    self.show_instruction(&self.colors.orange, &ins);
-
-                    if self.cfg.is_64bits {
-                        value0 = match self.maps.read_qword(self.regs.rsi) {
-                            Some(v) => v,
-                            None => {
-                                log::info!("cannot read rsi");
-                                return false;
-                            }
-                        };
-                        value1 = match self.maps.read_qword(self.regs.rdi) {
-                            Some(v) => v,
-                            None => {
-                                log::info!("cannot read rdi");
-                                return false;
-                            }
-                        };
-
-                        if self.flags.f_df {
-                            self.regs.rsi -= 8;
-                            self.regs.rdi -= 8;
-                        } else {
-                            self.regs.rsi += 8;
-                            self.regs.rdi += 8;
-                        }
-                    } else {
-                        // 32bits
-                        value0 = match self.maps.read_qword(self.regs.get_esi()) {
-                            Some(v) => v,
-                            None => {
-                                log::info!("cannot read esi");
-                                return false;
-                            }
-                        };
-                        value1 = match self.maps.read_qword(self.regs.get_edi()) {
-                            Some(v) => v,
-                            None => {
-                                log::info!("cannot read edi");
-                                return false;
-                            }
-                        };
-
-                        if self.flags.f_df {
-                            self.regs.set_esi(self.regs.get_esi() - 8);
-                            self.regs.set_edi(self.regs.get_edi() - 8);
-                        } else {
-                            self.regs.set_esi(self.regs.get_esi() + 8);
-                            self.regs.set_edi(self.regs.get_edi() + 8);
-                        }
+                value0 = match self.maps.read_qword(self.regs.rsi) {
+                    Some(v) => v,
+                    None => {
+                        log::info!("cannot read rsi");
+                        return false;
                     }
+                };
+                value1 = match self.maps.read_qword(self.regs.rdi) {
+                    Some(v) => v,
+                    None => {
+                        log::info!("cannot read rdi");
+                        return false;
+                    }
+                };
 
-                    self.flags.sub64(value0, value1);
+                if self.flags.f_df {
+                    self.regs.rsi -= 8;
+                    self.regs.rdi -= 8;
+                } else {
+                    self.regs.rsi += 8;
+                    self.regs.rdi += 8;
+                }
 
-                    if self.cfg.verbose >= 2 {
-                        if value0 > value1 {
-                            log::info!("\tcmp: 0x{:x} > 0x{:x}", value0, value1);
-                        } else if value0 < value1 {
-                            log::info!("\tcmp: 0x{:x} < 0x{:x}", value0, value1);
-                        } else {
-                            log::info!("\tcmp: 0x{:x} == 0x{:x}", value0, value1);
-                        }
+                self.flags.sub64(value0, value1);
+
+                if self.cfg.verbose >= 2 {
+                    if value0 > value1 {
+                        log::info!("\tcmp: 0x{:x} > 0x{:x}", value0, value1);
+                    } else if value0 < value1 {
+                        log::info!("\tcmp: 0x{:x} < 0x{:x}", value0, value1);
+                    } else {
+                        log::info!("\tcmp: 0x{:x} == 0x{:x}", value0, value1);
                     }
                 }
             }
 
             Mnemonic::Cmpsd => {
-                let mut value0: u32;
-                let mut value1: u32;
+                let value0: u32;
+                let value1: u32;
 
-                if ins.has_rep_prefix() {
-                    let mut first_iteration = true;
-                    loop {
-                        if first_iteration || self.cfg.verbose >= 3 {
-                            self.show_instruction(&self.colors.light_cyan, &ins);
-                        }
-                        if !first_iteration {
-                            self.pos += 1;
-                        }
-
-                        if self.cfg.is_64bits {
-                            value0 = match self.maps.read_dword(self.regs.rsi) {
-                                Some(v) => v,
-                                None => {
-                                    log::info!("cannot read rsi");
-                                    return false;
-                                }
-                            };
-                            value1 = match self.maps.read_dword(self.regs.rdi) {
-                                Some(v) => v,
-                                None => {
-                                    log::info!("cannot read rdi");
-                                    return false;
-                                }
-                            };
-
-                            if self.flags.f_df {
-                                self.regs.rsi -= 4;
-                                self.regs.rdi -= 4;
-                            } else {
-                                self.regs.rsi += 4;
-                                self.regs.rdi += 4;
-                            }
-                        } else {
-                            // 32bits
-                            value0 = match self.maps.read_dword(self.regs.get_esi()) {
-                                Some(v) => v,
-                                None => {
-                                    log::info!("cannot read esi");
-                                    return false;
-                                }
-                            };
-                            value1 = match self.maps.read_dword(self.regs.get_edi()) {
-                                Some(v) => v,
-                                None => {
-                                    log::info!("cannot read edi");
-                                    return false;
-                                }
-                            };
-
-                            if self.flags.f_df {
-                                self.regs.set_esi(self.regs.get_esi() - 4);
-                                self.regs.set_edi(self.regs.get_edi() - 4);
-                            } else {
-                                self.regs.set_esi(self.regs.get_esi() + 4);
-                                self.regs.set_edi(self.regs.get_edi() + 4);
-                            }
-                        }
-
-                        self.flags.sub32(value0 as u64, value1 as u64);
-
-                        if value0 > value1 {
-                            if self.cfg.verbose >= 2 {
-                                log::info!("\tcmp: 0x{:x} > 0x{:x}", value0, value1);
-                            }
-                            return false;
-                        } else if value0 < value1 {
-                            if self.cfg.verbose >= 2 {
-                                log::info!("\tcmp: 0x{:x} < 0x{:x}", value0, value1);
-                            }
-                            return false;
-                        } else {
-                            if self.cfg.verbose >= 2 {
-                                log::info!("\tcmp: 0x{:x} == 0x{:x}", value0, value1);
-                            }
-                        }
-
-                        self.regs.rcx -= 1;
-                        if self.regs.rcx == 0 {
-                            return true;
-                        }
-
-                        first_iteration = false;
-                        if rep_step {
-                            self.force_reload = true;
-                            break;
-                        }
+                if self.rep.is_some() {
+                    if self.rep.unwrap() == 0 || self.cfg.verbose >= 3 {
+                        self.show_instruction(&self.colors.light_cyan, &ins);
                     }
                 } else {
-                    // no rep
-
                     self.show_instruction(&self.colors.light_cyan, &ins);
+                }
 
-                    if self.cfg.is_64bits {
-                        value0 = match self.maps.read_dword(self.regs.rsi) {
-                            Some(v) => v,
-                            None => {
-                                log::info!("cannot read rsi");
-                                return false;
-                            }
-                        };
-                        value1 = match self.maps.read_dword(self.regs.rdi) {
-                            Some(v) => v,
-                            None => {
-                                log::info!("cannot read rdi");
-                                return false;
-                            }
-                        };
-
-                        if self.flags.f_df {
-                            self.regs.rsi -= 4;
-                            self.regs.rdi -= 4;
-                        } else {
-                            self.regs.rsi += 4;
-                            self.regs.rdi += 4;
+                if self.cfg.is_64bits {
+                    value0 = match self.maps.read_dword(self.regs.rsi) {
+                        Some(v) => v,
+                        None => {
+                            log::info!("cannot read rsi");
+                            return false;
                         }
+                    };
+                    value1 = match self.maps.read_dword(self.regs.rdi) {
+                        Some(v) => v,
+                        None => {
+                            log::info!("cannot read rdi");
+                            return false;
+                        }
+                    };
+
+                    if self.flags.f_df {
+                        self.regs.rsi -= 4;
+                        self.regs.rdi -= 4;
                     } else {
-                        // 32bits
-                        value0 = match self.maps.read_dword(self.regs.get_esi()) {
-                            Some(v) => v,
-                            None => {
-                                log::info!("cannot read esi");
-                                return false;
-                            }
-                        };
-                        value1 = match self.maps.read_dword(self.regs.get_edi()) {
-                            Some(v) => v,
-                            None => {
-                                log::info!("cannot read edi");
-                                return false;
-                            }
-                        };
-
-                        if self.flags.f_df {
-                            self.regs.set_esi(self.regs.get_esi() - 4);
-                            self.regs.set_edi(self.regs.get_edi() - 4);
-                        } else {
-                            self.regs.set_esi(self.regs.get_esi() + 4);
-                            self.regs.set_edi(self.regs.get_edi() + 4);
-                        }
+                        self.regs.rsi += 4;
+                        self.regs.rdi += 4;
                     }
-
-                    self.flags.sub32(value0 as u64, value1 as u64);
-
-                    if self.cfg.verbose >= 2 {
-                        if value0 > value1 {
-                            log::info!("\tcmp: 0x{:x} > 0x{:x}", value0, value1);
-                        } else if value0 < value1 {
-                            log::info!("\tcmp: 0x{:x} < 0x{:x}", value0, value1);
-                        } else {
-                            log::info!("\tcmp: 0x{:x} == 0x{:x}", value0, value1);
+                } else {
+                    // 32bits
+                    value0 = match self.maps.read_dword(self.regs.get_esi()) {
+                        Some(v) => v,
+                        None => {
+                            log::info!("cannot read esi");
+                            return false;
                         }
+                    };
+                    value1 = match self.maps.read_dword(self.regs.get_edi()) {
+                        Some(v) => v,
+                        None => {
+                            log::info!("cannot read edi");
+                            return false;
+                        }
+                    };
+
+                    if self.flags.f_df {
+                        self.regs.set_esi(self.regs.get_esi() - 4);
+                        self.regs.set_edi(self.regs.get_edi() - 4);
+                    } else {
+                        self.regs.set_esi(self.regs.get_esi() + 4);
+                        self.regs.set_edi(self.regs.get_edi() + 4);
+                    }
+                }
+
+                self.flags.sub32(value0 as u64, value1 as u64);
+
+                if self.cfg.verbose >= 2 {
+                    if value0 > value1 {
+                        log::info!("\tcmp: 0x{:x} > 0x{:x}", value0, value1);
+                    } else if value0 < value1 {
+                        log::info!("\tcmp: 0x{:x} < 0x{:x}", value0, value1);
+                    } else {
+                        log::info!("\tcmp: 0x{:x} == 0x{:x}", value0, value1);
                     }
                 }
             }
 
             Mnemonic::Cmpsw => {
-                let mut value0: u16;
-                let mut value1: u16;
+                let value0: u16;
+                let value1: u16;
 
-                if ins.has_rep_prefix() {
-                    let mut first_iteration = true;
-                    loop {
-                        if first_iteration || self.cfg.verbose >= 3 {
-                            self.show_instruction(&self.colors.light_cyan, &ins);
-                        }
-                        if !first_iteration {
-                            self.pos += 1;
-                        }
-
-                        if self.cfg.is_64bits {
-                            value0 = match self.maps.read_word(self.regs.rsi) {
-                                Some(v) => v,
-                                None => {
-                                    log::info!("cannot read rsi");
-                                    return false;
-                                }
-                            };
-                            value1 = match self.maps.read_word(self.regs.rdi) {
-                                Some(v) => v,
-                                None => {
-                                    log::info!("cannot read rdi");
-                                    return false;
-                                }
-                            };
-
-                            if self.flags.f_df {
-                                self.regs.rsi -= 1;
-                                self.regs.rdi -= 1;
-                            } else {
-                                self.regs.rsi += 1;
-                                self.regs.rdi += 1;
-                            }
-                        } else {
-                            // 32bits
-                            value0 = match self.maps.read_word(self.regs.get_esi()) {
-                                Some(v) => v,
-                                None => {
-                                    log::info!("cannot read esi");
-                                    return false;
-                                }
-                            };
-                            value1 = match self.maps.read_word(self.regs.get_edi()) {
-                                Some(v) => v,
-                                None => {
-                                    log::info!("cannot read edi");
-                                    return false;
-                                }
-                            };
-
-                            if self.flags.f_df {
-                                self.regs.set_esi(self.regs.get_esi() - 2);
-                                self.regs.set_edi(self.regs.get_edi() - 2);
-                            } else {
-                                self.regs.set_esi(self.regs.get_esi() + 2);
-                                self.regs.set_edi(self.regs.get_edi() + 2);
-                            }
-                        }
-
-                        self.flags.sub16(value0 as u64, value1 as u64);
-
-                        if value0 > value1 {
-                            if self.cfg.verbose >= 2 {
-                                log::info!("\tcmp: 0x{:x} > 0x{:x}", value0, value1);
-                            }
-                            break;
-                        } else if value0 < value1 {
-                            if self.cfg.verbose >= 2 {
-                                log::info!("\tcmp: 0x{:x} < 0x{:x}", value0, value1);
-                            }
-                            break;
-                        } else {
-                            if self.cfg.verbose >= 2 {
-                                log::info!("\tcmp: 0x{:x} == 0x{:x}", value0, value1);
-                            }
-                        }
-
-                        self.regs.rcx -= 1;
-                        if self.regs.rcx == 0 {
-                            return true;
-                        }
-
-                        first_iteration = false;
-                        if rep_step {
-                            self.force_reload = true;
-                            break;
-                        }
+                if self.rep.is_some() {
+                    if self.rep.unwrap() == 0 || self.cfg.verbose >= 3 {
+                        self.show_instruction(&self.colors.light_cyan, &ins);
                     }
                 } else {
-                    // no rep
-
                     self.show_instruction(&self.colors.light_cyan, &ins);
+                }
 
-                    if self.cfg.is_64bits {
-                        value0 = match self.maps.read_word(self.regs.rsi) {
-                            Some(v) => v,
-                            None => {
-                                log::info!("cannot read rsi");
-                                return false;
-                            }
-                        };
-                        value1 = match self.maps.read_word(self.regs.rdi) {
-                            Some(v) => v,
-                            None => {
-                                log::info!("cannot read rdi");
-                                return false;
-                            }
-                        };
-
-                        if self.flags.f_df {
-                            self.regs.rsi -= 1;
-                            self.regs.rdi -= 1;
-                        } else {
-                            self.regs.rsi += 1;
-                            self.regs.rdi += 1;
+                if self.cfg.is_64bits {
+                    value0 = match self.maps.read_word(self.regs.rsi) {
+                        Some(v) => v,
+                        None => {
+                            log::info!("cannot read rsi");
+                            return false;
                         }
+                    };
+                    value1 = match self.maps.read_word(self.regs.rdi) {
+                        Some(v) => v,
+                        None => {
+                            log::info!("cannot read rdi");
+                            return false;
+                        }
+                    };
+
+                    if self.flags.f_df {
+                        self.regs.rsi -= 2;
+                        self.regs.rdi -= 2;
                     } else {
-                        // 32bits
-                        value0 = match self.maps.read_word(self.regs.get_esi()) {
-                            Some(v) => v,
-                            None => {
-                                log::info!("cannot read esi");
-                                return false;
-                            }
-                        };
-                        value1 = match self.maps.read_word(self.regs.get_edi()) {
-                            Some(v) => v,
-                            None => {
-                                log::info!("cannot read edi");
-                                return false;
-                            }
-                        };
-
-                        if self.flags.f_df {
-                            self.regs.set_esi(self.regs.get_esi() - 2);
-                            self.regs.set_edi(self.regs.get_edi() - 2);
-                        } else {
-                            self.regs.set_esi(self.regs.get_esi() + 2);
-                            self.regs.set_edi(self.regs.get_edi() + 2);
-                        }
+                        self.regs.rsi += 2;
+                        self.regs.rdi += 2;
                     }
-
-                    self.flags.sub16(value0 as u64, value1 as u64);
-
-                    if self.cfg.verbose >= 2 {
-                        if value0 > value1 {
-                            log::info!("\tcmp: 0x{:x} > 0x{:x}", value0, value1);
-                        } else if value0 < value1 {
-                            log::info!("\tcmp: 0x{:x} < 0x{:x}", value0, value1);
-                        } else {
-                            log::info!("\tcmp: 0x{:x} == 0x{:x}", value0, value1);
+                } else {
+                    // 32bits
+                    value0 = match self.maps.read_word(self.regs.get_esi()) {
+                        Some(v) => v,
+                        None => {
+                            log::info!("cannot read esi");
+                            return false;
                         }
+                    };
+                    value1 = match self.maps.read_word(self.regs.get_edi()) {
+                        Some(v) => v,
+                        None => {
+                            log::info!("cannot read edi");
+                            return false;
+                        }
+                    };
+
+                    if self.flags.f_df {
+                        self.regs.set_esi(self.regs.get_esi() - 2);
+                        self.regs.set_edi(self.regs.get_edi() - 2);
+                    } else {
+                        self.regs.set_esi(self.regs.get_esi() + 2);
+                        self.regs.set_edi(self.regs.get_edi() + 2);
+                    }
+                }
+
+                self.flags.sub16(value0 as u64, value1 as u64);
+
+                if self.cfg.verbose >= 2 {
+                    if value0 > value1 {
+                        log::info!("\tcmp: 0x{:x} > 0x{:x}", value0, value1);
+                    } else if value0 < value1 {
+                        log::info!("\tcmp: 0x{:x} < 0x{:x}", value0, value1);
+                    } else {
+                        log::info!("\tcmp: 0x{:x} == 0x{:x}", value0, value1);
                     }
                 }
             }
 
             Mnemonic::Cmpsb => {
-                let mut value0: u8;
-                let mut value1: u8;
+                let value0: u8;
+                let value1: u8;
 
-                if ins.has_rep_prefix() {
-                    let mut first_iteration = true;
-                    loop {
-                        if first_iteration || self.cfg.verbose >= 3 {
-                            self.show_instruction(&self.colors.light_cyan, &ins);
-                        }
-                        if !first_iteration {
-                            self.pos += 1;
-                        }
-
-                        if self.cfg.is_64bits {
-                            value0 = match self.maps.read_byte(self.regs.rsi) {
-                                Some(v) => v,
-                                None => {
-                                    log::info!("cannot read rsi");
-                                    return false;
-                                }
-                            };
-                            value1 = match self.maps.read_byte(self.regs.rdi) {
-                                Some(v) => v,
-                                None => {
-                                    log::info!("cannot read rdi");
-                                    return false;
-                                }
-                            };
-
-                            if self.flags.f_df {
-                                self.regs.rsi -= 1;
-                                self.regs.rdi -= 1;
-                            } else {
-                                self.regs.rsi += 1;
-                                self.regs.rdi += 1;
-                            }
-                        } else {
-                            // 32bits
-                            value0 = match self.maps.read_byte(self.regs.get_esi()) {
-                                Some(v) => v,
-                                None => {
-                                    log::info!("cannot read esi");
-                                    return false;
-                                }
-                            };
-                            value1 = match self.maps.read_byte(self.regs.get_edi()) {
-                                Some(v) => v,
-                                None => {
-                                    log::info!("cannot read edi");
-                                    return false;
-                                }
-                            };
-
-                            if self.flags.f_df {
-                                self.regs.set_esi(self.regs.get_esi() - 1);
-                                self.regs.set_edi(self.regs.get_edi() - 1);
-                            } else {
-                                self.regs.set_esi(self.regs.get_esi() + 1);
-                                self.regs.set_edi(self.regs.get_edi() + 1);
-                            }
-                        } // end 32bits
-
-                        self.flags.sub8(value0 as u64, value1 as u64);
-
-                        if value0 > value1 {
-                            if self.cfg.verbose >= 2 {
-                                log::info!("\tcmp: 0x{:x} > 0x{:x}", value0, value1);
-                            }
-                            assert!(self.flags.f_zf == false);
-                            break;
-                            //return false;
-                        } else if value0 < value1 {
-                            if self.cfg.verbose >= 2 {
-                                log::info!("\tcmp: 0x{:x} < 0x{:x}", value0, value1);
-                            }
-                            assert!(self.flags.f_zf == false);
-                            break;
-                            //return false;
-                        } else {
-                            if self.cfg.verbose >= 2 {
-                                log::info!("\tcmp: 0x{:x} == 0x{:x}", value0, value1);
-                            }
-                            assert!(self.flags.f_zf == true);
-                        }
-
-                        self.regs.rcx -= 1;
-                        if self.regs.rcx == 0 {
-                            return true;
-                        }
-
-                        first_iteration = false;
-                        if rep_step {
-                            self.force_reload = true;
-                            break;
-                        }
-                    } // end rep loop
+                if self.rep.is_some() {
+                    if self.rep.unwrap() == 0 || self.cfg.verbose >= 3 {
+                        self.show_instruction(&self.colors.light_cyan, &ins);
+                    } 
                 } else {
-                    // no rep
-
                     self.show_instruction(&self.colors.light_cyan, &ins);
-
-                    if self.cfg.is_64bits {
-                        value0 = match self.maps.read_byte(self.regs.rsi) {
-                            Some(v) => v,
-                            None => {
-                                log::info!("cannot read rsi");
-                                return false;
-                            }
-                        };
-                        value1 = match self.maps.read_byte(self.regs.rdi) {
-                            Some(v) => v,
-                            None => {
-                                log::info!("cannot read rdi");
-                                return false;
-                            }
-                        };
-
-                        if self.flags.f_df {
-                            self.regs.rsi -= 1;
-                            self.regs.rdi -= 1;
-                        } else {
-                            self.regs.rsi += 1;
-                            self.regs.rdi += 1;
-                        }
-                    } else {
-                        // 32bits
-                        value0 = match self.maps.read_byte(self.regs.get_esi()) {
-                            Some(v) => v,
-                            None => {
-                                log::info!("cannot read esi");
-                                return false;
-                            }
-                        };
-                        value1 = match self.maps.read_byte(self.regs.get_edi()) {
-                            Some(v) => v,
-                            None => {
-                                log::info!("cannot read edi");
-                                return false;
-                            }
-                        };
-
-                        if self.flags.f_df {
-                            self.regs.set_esi(self.regs.get_esi() - 1);
-                            self.regs.set_edi(self.regs.get_edi() - 1);
-                        } else {
-                            self.regs.set_esi(self.regs.get_esi() + 1);
-                            self.regs.set_edi(self.regs.get_edi() + 1);
-                        }
-                    }
-
-                    self.flags.sub8(value0 as u64, value1 as u64);
-
-                    if self.cfg.verbose >= 2 {
-                        if value0 > value1 {
-                            log::info!("\tcmp: 0x{:x} > 0x{:x}", value0, value1);
-                        } else if value0 < value1 {
-                            log::info!("\tcmp: 0x{:x} < 0x{:x}", value0, value1);
-                        } else {
-                            log::info!("\tcmp: 0x{:x} == 0x{:x}", value0, value1);
-                        }
-                    }
                 }
+
+                if self.cfg.is_64bits {
+                    value0 = match self.maps.read_byte(self.regs.rsi) {
+                        Some(v) => v,
+                        None => {
+                            log::info!("cannot read rsi");
+                            return false;
+                        }
+                    };
+                    value1 = match self.maps.read_byte(self.regs.rdi) {
+                        Some(v) => v,
+                        None => {
+                            log::info!("cannot read rdi");
+                            return false;
+                        }
+                    };
+
+                    if self.flags.f_df {
+                        self.regs.rsi -= 1;
+                        self.regs.rdi -= 1;
+                    } else {
+                        self.regs.rsi += 1;
+                        self.regs.rdi += 1;
+                    }
+                } else {
+                    // 32bits
+                    value0 = match self.maps.read_byte(self.regs.get_esi()) {
+                        Some(v) => v,
+                        None => {
+                            log::info!("cannot read esi");
+                            return false;
+                        }
+                    };
+                    value1 = match self.maps.read_byte(self.regs.get_edi()) {
+                        Some(v) => v,
+                        None => {
+                            log::info!("cannot read edi");
+                            return false;
+                        }
+                    };
+
+                    if self.flags.f_df {
+                        self.regs.set_esi(self.regs.get_esi() - 1);
+                        self.regs.set_edi(self.regs.get_edi() - 1);
+                    } else {
+                        self.regs.set_esi(self.regs.get_esi() + 1);
+                        self.regs.set_edi(self.regs.get_edi() + 1);
+                    }
+                } // end 32bits
+
+                self.flags.sub8(value0 as u64, value1 as u64);
+
+                if self.cfg.verbose >= 2 {
+                    if value0 > value1 {
+                        log::info!("\tcmp: 0x{:x} > 0x{:x}", value0, value1);
+                    } else if value0 < value1 {
+                        log::info!("\tcmp: 0x{:x} < 0x{:x}", value0, value1);
+                    } else {
+                        log::info!("\tcmp: 0x{:x} == 0x{:x}", value0, value1);
+                    }
+                } 
             }
 
             //branches: https://web.itu.edu.tr/kesgin/mul06/intel/instr/jxx.html
