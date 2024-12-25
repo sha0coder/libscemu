@@ -417,7 +417,6 @@ impl Emu {
     pub fn init(&mut self, clear_registers: bool, clear_flags: bool) {
         self.pos = 0;
 
-
         if !atty::is(Stream::Stdout) {
             self.cfg.nocolors = true;
             self.colors.disable();
@@ -4422,6 +4421,12 @@ impl Emu {
     pub fn step(&mut self) -> bool {
         self.pos += 1;
 
+        // exit
+        if self.cfg.exit_position != 0 && self.pos == self.cfg.exit_position {
+            log::info!("exit position reached");
+            std::process::exit(0);
+        }
+
         // code
         let code = match self.maps.get_mem_by_addr(self.regs.rip) {
             Some(c) => c,
@@ -4437,8 +4442,8 @@ impl Emu {
 
         // block
         let block = code.read_from(self.regs.rip).to_vec(); // reduce code block for more speed
-                                                            //
-                                                            // decoder
+        
+        // decoder
         let mut decoder;
         if self.cfg.is_64bits {
             decoder = Decoder::with_ip(64, &block, self.regs.rip, DecoderOptions::NONE);
