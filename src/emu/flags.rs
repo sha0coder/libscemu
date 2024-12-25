@@ -396,17 +396,26 @@ impl Flags {
     }
 
     pub fn add8(&mut self, value1: u64, value2: u64) -> u64 {
-        let unsigned: u16 = value1 as u8 as u16 + value2 as u8 as u16;
-
-        self.f_sf = (unsigned as i8) < 0;
-        self.f_zf = (unsigned & 0xff) == 0;
-        self.calc_pf(unsigned as u8);
-        let (result, carry) = (value2 as u8).overflowing_add(value1 as u8);
-        let (_, overflow) = (value2 as u8 as i8).overflowing_add(value1 as u8 as i8);
-        self.f_of = overflow;
-        self.f_cf = carry;
+        // First add the values as u8s
+        let first_result = (value1 as u8).wrapping_add(value2 as u8);
+        // Then add carry into that result
+        let result = first_result;
+    
+        // Check carry from first addition
+        let (_, first_carry) = (value2 as u8).overflowing_add(value1 as u8); 
+        // Check carry from carry addition
+        self.f_cf = first_carry;
+        
+        // Similar for overflow - we need to check both steps
+        let (_, first_overflow) = (value2 as u8 as i8).overflowing_add(value1 as u8 as i8);
+        self.f_of = first_overflow;
+    
+        // Rest of flags based on final result
+        self.f_sf = (result as i8) < 0;
+        self.f_zf = result == 0;
+        self.calc_pf(result);
         self.calc_af(value1, value2, result as u64, 8);
-
+    
         result as u64
     }
 

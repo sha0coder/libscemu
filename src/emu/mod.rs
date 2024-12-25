@@ -5142,35 +5142,37 @@ impl Emu {
 
             Mnemonic::Adc => {
                 self.show_instruction(&self.colors.cyan, &ins);
-
+            
                 assert!(ins.op_count() == 2);
-
-                let cf: u64;
-                if self.flags.f_cf {
-                    cf = 1
-                } else {
-                    cf = 0;
-                }
-
-                let value0 = match self.get_operand_value(&ins, 0, true) {
+            
+                // Get current carry flag value
+                let cf = if self.flags.f_cf { 1 } else { 0 };
+            
+                // Get the size first to ensure consistent handling
+                let size = self.get_operand_sz(&ins, 1);
+                
+                // Get destination value (first operand)
+                let dest = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
                     None => return false,
                 };
-
-                let value1 = match self.get_operand_value(&ins, 1, true) {
+            
+                // Get source value (second operand)  
+                let src = match self.get_operand_value(&ins, 1, true) {
                     Some(v) => v,
                     None => return false,
                 };
-
-                let res: u64;
-                match self.get_operand_sz(&ins, 1) {
-                    64 => res = self.flags.add64(value0, value1 + cf),
-                    32 => res = self.flags.add32(value0, value1 + cf),
-                    16 => res = self.flags.add16(value0, value1 + cf),
-                    8 => res = self.flags.add8(value0, value1 + cf),
+            
+                // Do the addition with carry
+                let res = match size {
+                    64 => self.flags.add64(dest, src + cf),
+                    32 => self.flags.add32(dest, src + cf),
+                    16 => self.flags.add16(dest, src + cf),
+                    8 => self.flags.add8(dest, src + cf),
                     _ => unreachable!("weird size"),
-                }
-
+                };
+            
+                // Set the result
                 if !self.set_operand_value(&ins, 0, res) {
                     return false;
                 }
