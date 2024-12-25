@@ -4550,7 +4550,6 @@ impl Emu {
                 //let mut position:usize = 0;
                 //let mut instruction_bytes:Vec<u8> = Vec::new();
 
-
                 self.rep = None;
                 while decoder.can_decode() {
                     if self.rep.is_none() {
@@ -4571,6 +4570,11 @@ impl Emu {
                     //self.instruction_bytes = instruction_bytes;
                     self.memory_operations.clear();
                     self.pos += 1;
+
+                    if self.cfg.exit_position != 0 && self.pos == self.cfg.exit_position {
+                        log::info!("exit position reached");
+                        std::process::exit(0);
+                    }
 
                     if self.exp == self.pos
                         || self.pos == self.bp.get_instruction()
