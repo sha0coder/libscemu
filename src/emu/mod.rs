@@ -4672,21 +4672,20 @@ impl Emu {
                             }
                         }
 
+                        // repe and repe are the same on x86 (0xf3) so you have to check if it is movement or comparison
                         let is_string_movement = matches!(
                             ins.mnemonic(),
                             Mnemonic::Movsb | Mnemonic::Movsw | Mnemonic::Movsd | Mnemonic::Movsq |
                             Mnemonic::Stosb | Mnemonic::Stosw | Mnemonic::Stosd | Mnemonic::Stosq |
                             Mnemonic::Lodsb | Mnemonic::Lodsw | Mnemonic::Lodsd | Mnemonic::Lodsq
                         );
-                        
                         let is_string_comparison = matches!(
                             ins.mnemonic(),
                             Mnemonic::Cmpsb | Mnemonic::Cmpsw | Mnemonic::Cmpsd | Mnemonic::Cmpsq |
                             Mnemonic::Scasb | Mnemonic::Scasw | Mnemonic::Scasd | Mnemonic::Scasq
                         );
-
                         if is_string_movement {
-                            
+                            // do not clear rep if it is a string movement
                         } else if is_string_comparison {
                             if ins.has_repe_prefix() && !self.flags.f_zf {
                                 self.rep = None;
