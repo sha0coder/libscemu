@@ -5162,14 +5162,20 @@ impl Emu {
                     None => return false,
                 };
 
+                let rflags = self.flags.dump();
+                log::info!("DEBUG: adc value0: 0x{:x}, value1: 0x{:x}, cf: 0x{:x}, rflags: 0x{:x}", value0, value1, cf, rflags);
+
                 let res: u64;
                 match self.get_operand_sz(&ins, 1) {
-                    64 => res = self.flags.add64(value0, value1 + cf),
-                    32 => res = self.flags.add32(value0, value1 + cf),
-                    16 => res = self.flags.add16(value0, value1 + cf),
-                    8 => res = self.flags.add8(value0, value1 + cf),
+                    64 => res = self.flags.add64(value0, value1.wrapping_add(cf)),
+                    32 => res = self.flags.add32(value0, (value1 & 0xffffffff).wrapping_add(cf)),
+                    16 => res = self.flags.add16(value0, (value1 & 0xffff).wrapping_add(cf)),
+                    8 => res = self.flags.add8(value0, (value1 & 0xff).wrapping_add(cf)),
                     _ => unreachable!("weird size"),
                 }
+
+                let rflags = self.flags.dump();
+                log::info!("DEBUG: adc res: 0x{:x}, rflags: 0x{:x}", res, rflags);
 
                 if !self.set_operand_value(&ins, 0, res) {
                     return false;
@@ -5197,9 +5203,9 @@ impl Emu {
                 let sz = self.get_operand_sz(&ins, 1);
                 match sz {
                     64 => res = self.flags.sub64(value0, value1.wrapping_add(cf)),
-                    32 => res = self.flags.sub32(value0, value1.wrapping_add(cf)),
-                    16 => res = self.flags.sub16(value0, value1.wrapping_add(cf)),
-                    8 => res = self.flags.sub8(value0, value1.wrapping_add(cf)),
+                    32 => res = self.flags.sub32(value0, (value1 & 0xffffffff).wrapping_add(cf)),
+                    16 => res = self.flags.sub16(value0, (value1 & 0xffff).wrapping_add(cf)),
+                    8 => res = self.flags.sub8(value0, (value1 & 0xff).wrapping_add(cf)),
                     _ => panic!("weird size"),
                 }
             
