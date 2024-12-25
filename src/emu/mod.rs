@@ -4671,11 +4671,31 @@ impl Emu {
                                 self.rep = Some(rep_count + 1);
                             }
                         }
-                        if ins.has_repe_prefix() && !self.flags.f_zf {
-                            self.rep = None;
-                        }
-                        if ins.has_repne_prefix() && self.flags.f_zf {
-                            self.rep = None;
+
+                        let is_string_movement = matches!(
+                            ins.mnemonic(),
+                            Mnemonic::Movsb | Mnemonic::Movsw | Mnemonic::Movsd | Mnemonic::Movsq |
+                            Mnemonic::Stosb | Mnemonic::Stosw | Mnemonic::Stosd | Mnemonic::Stosq |
+                            Mnemonic::Lodsb | Mnemonic::Lodsw | Mnemonic::Lodsd | Mnemonic::Lodsq
+                        );
+                        
+                        let is_string_comparison = matches!(
+                            ins.mnemonic(),
+                            Mnemonic::Cmpsb | Mnemonic::Cmpsw | Mnemonic::Cmpsd | Mnemonic::Cmpsq |
+                            Mnemonic::Scasb | Mnemonic::Scasw | Mnemonic::Scasd | Mnemonic::Scasq
+                        );
+
+                        if is_string_movement {
+                            
+                        } else if is_string_comparison {
+                            if ins.has_repe_prefix() && !self.flags.f_zf {
+                                self.rep = None;
+                            }
+                            if ins.has_repne_prefix() && self.flags.f_zf {
+                                self.rep = None;
+                            }
+                        } else {
+                            unimplemented!("string instruction not supported");
                         }
                     }
 

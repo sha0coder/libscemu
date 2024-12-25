@@ -18,6 +18,7 @@ pub struct Config {
     pub console2: bool,
     pub console_addr: u64,
     pub entry_point: u64,
+    pub exit_position: u64,
     pub code_base_addr: u64,
     pub is_64bits: bool, // 64bits mode
     pub stack_trace: bool,
@@ -50,6 +51,7 @@ impl Config {
             console2: false,
             console_addr: 0,
             entry_point: 0x3c0000,
+            exit_position: 0,
             code_base_addr: 0x3c0000,
             is_64bits: false,
             stack_trace: false,
