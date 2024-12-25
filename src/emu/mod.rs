@@ -5128,10 +5128,10 @@ impl Emu {
                 };
 
                 let res: u64 = match self.get_operand_sz(&ins, 1) {
-                    64 => self.flags.add64(value0, value1),
-                    32 => self.flags.add32(value0, value1),
-                    16 => self.flags.add16(value0, value1),
-                    8 => self.flags.add8(value0, value1),
+                    64 => self.flags.add64(value0, value1), // TODO: cf as separate argument
+                    32 => self.flags.add32(value0, value1), // TODO: cf as separate argument
+                    16 => self.flags.add16(value0, value1), // TODO: cf as separate argument
+                    8 => self.flags.add8(value0, value1, self.flags.f_cf),
                     _ => unreachable!("weird size"),
                 };
 
@@ -5165,10 +5165,10 @@ impl Emu {
             
                 // Do the addition with carry
                 let res = match size {
-                    64 => self.flags.add64(dest, src + cf),
-                    32 => self.flags.add32(dest, src + cf),
-                    16 => self.flags.add16(dest, src + cf),
-                    8 => self.flags.add8(dest, src + cf),
+                    64 => self.flags.add64(dest, src + cf), // TODO: cf as separate argument
+                    32 => self.flags.add32(dest, src + cf), // TODO: cf as separate argument
+                    16 => self.flags.add16(dest, src + cf), // TODO: cf as separate argument
+                    8 => self.flags.add8(dest, src, self.flags.f_cf),
                     _ => unreachable!("weird size"),
                 };
             
@@ -6588,10 +6588,10 @@ impl Emu {
                 }
 
                 let res: u64 = match self.get_operand_sz(&ins, 1) {
-                    64 => self.flags.add64(value0, value1),
-                    32 => self.flags.add32(value0, value1),
-                    16 => self.flags.add16(value0, value1),
-                    8 => self.flags.add8(value0, value1),
+                    64 => self.flags.add64(value0, value1), // TODO: cf as separate argument
+                    32 => self.flags.add32(value0, value1), // TODO: cf as separate argument
+                    16 => self.flags.add16(value0, value1), // TODO: cf as separate argument
+                    8 => self.flags.add8(value0, value1, self.flags.f_cf),
                     _ => unreachable!("weird size"),
                 };
 

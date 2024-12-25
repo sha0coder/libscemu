@@ -395,20 +395,19 @@ impl Flags {
         result as u64
     }
 
-    pub fn add8(&mut self, value1: u64, value2: u64) -> u64 {
-        // First add the values as u8s
-        let first_result = (value1 as u8).wrapping_add(value2 as u8);
-        // Then add carry into that result
-        let result = first_result;
-    
-        // Check carry from first addition
-        let (_, first_carry) = (value2 as u8).overflowing_add(value1 as u8); 
-        // Check carry from carry addition
-        self.f_cf = first_carry;
+    pub fn add8(&mut self, value1: u64, value2: u64, input_cf: bool) -> u64 {
+        // Do full addition including carry
+        let result = (value1 as u8).wrapping_add(value2 as u8).wrapping_add(if input_cf { 1 } else { 0 });
         
-        // Similar for overflow - we need to check both steps
-        let (_, first_overflow) = (value2 as u8 as i8).overflowing_add(value1 as u8 as i8);
-        self.f_of = first_overflow;
+        // Check carry by doing additions step by step
+        let (temp, first_carry) = (value2 as u8).overflowing_add(value1 as u8);
+        let (_, second_carry) = temp.overflowing_add(if input_cf { 1 } else { 0 });
+        self.f_cf = first_carry || second_carry;
+        
+        // Similar for overflow
+        let (temp_s, first_overflow) = (value2 as u8 as i8).overflowing_add(value1 as u8 as i8);
+        let (_, second_overflow) = temp_s.overflowing_add(if input_cf { 1 } else { 0 });
+        self.f_of = first_overflow || second_overflow;
     
         // Rest of flags based on final result
         self.f_sf = (result as i8) < 0;
