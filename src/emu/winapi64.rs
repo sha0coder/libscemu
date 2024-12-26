@@ -14,6 +14,8 @@ mod kernelbase;
 use crate::emu;
 
 pub fn gateway(addr: u64, name: String, emu: &mut emu::Emu) {
+    log::info!("winapi64::gateway called with addr: 0x{:x}, name: {}", addr, name);
+
     let unimplemented_api = match name.as_str() {
         "kernel32.text" => kernel32::gateway(addr, emu),
         "kernel32.rdata" => kernel32::gateway(addr, emu),
