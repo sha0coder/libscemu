@@ -818,7 +818,6 @@ impl Emu {
 
         // base is setted by image base (if overlapps, alloc)
         } else {
-
             // user's program
             if set_entry {
                 if pe64.opt.image_base >= constants::LIBS64_MIN as u64 {
@@ -3312,7 +3311,7 @@ impl Emu {
             }
         } else {
             if self.seh == 0 {
-                log::info!("exception without any SEH handler nor vector configured.");
+                log::info!("exception without any SEH handler nor vector configured. pos = {}", self.pos);
                 if self.cfg.console_enabled {
                     self.spawn_console();
                 }
@@ -5138,9 +5137,6 @@ impl Emu {
                     None => return false,
                 };
 
-                let in_rflags = self.flags.clone();
-                log::info!("DEBUG: in: adc value0: 0x{:x}, value1: 0x{:x}, cf: 0x{:x}, rflags: 0x{:x}", value0, value1, cf, in_rflags.dump());
-
                 let res = match self.get_operand_sz(&ins, 1) {
                     64 => self.flags.add64(value0, value1, self.flags.f_cf, true),
                     32 => self.flags.add32((value0 & 0xffffffff) as u32, (value1 & 0xffffffff) as u32, self.flags.f_cf, true),
@@ -5148,9 +5144,6 @@ impl Emu {
                     8 => self.flags.add8((value0 & 0xff) as u8, (value1 & 0xff) as u8, self.flags.f_cf, true),
                     _ => unreachable!("weird size"),
                 };
-
-                let out_rflags = self.flags.clone();
-                log::info!("DEBUG: out: adc res: 0x{:x}, rflags: 0x{:x} diff: {}", res, out_rflags.dump(), Flags::diff(in_rflags, out_rflags));
 
                 if !self.set_operand_value(&ins, 0, res) {
                     return false;
