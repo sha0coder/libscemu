@@ -86,14 +86,6 @@ impl Flags {
         }
     }
 
-    pub fn diff(rip: u64, pos: u64, a: Flags, b: Flags) -> String {
-        let mut output = String::new();
-        if a.dump() != b.dump() {
-            output = format!("rflags: {:x} -> {:x}; ", a.dump(), b.dump());
-        }
-        output
-    }
-
     pub fn clear(&mut self) {
         self.f_cf = false;
         self.f_pf = false;
@@ -137,6 +129,83 @@ impl Flags {
         log::info!("vip: {}", self.f_vip);
         log::info!("id: {}", self.f_id);
         log::info!("---");
+    }
+
+    pub fn diff(a: Flags, b: Flags) -> String {
+        let mut output = String::new();
+        // f_cf
+        if a.f_cf != b.f_cf {
+            output = format!("{}{}: {} -> {} ", output, "cf", a.f_cf, b.f_cf);
+        }
+        // f_pf
+        if a.f_pf != b.f_pf {
+            output = format!("{}{}: {} -> {} ", output, "pf", a.f_pf, b.f_pf);
+        }
+        // f_af
+        if a.f_af != b.f_af {
+            output = format!("{}{}: {} -> {} ", output, "af", a.f_af, b.f_af);
+        }
+        // f_zf
+        if a.f_zf != b.f_zf {
+            output = format!("{}{}: {} -> {} ", output, "zf", a.f_zf, b.f_zf);
+        }
+        // f_sf
+        if a.f_sf != b.f_sf {
+            output = format!("{}{}: {} -> {} ", output, "sf", a.f_sf, b.f_sf);
+        }
+        // f_tf
+        if a.f_tf != b.f_tf {
+            output = format!("{}{}: {} -> {} ", output, "tf", a.f_tf, b.f_tf);
+        }
+        // f_if
+        if a.f_if != b.f_if {
+            output = format!("{}{}: {} -> {} ", output, "if", a.f_if, b.f_if);
+        }
+        // f_df
+        if a.f_df != b.f_df {
+            output = format!("{}{}: {} -> {} ", output, "df", a.f_df, b.f_df);
+        }
+        // f_of
+        if a.f_of != b.f_of {
+            output = format!("{}{}: {} -> {} ", output, "of", a.f_of, b.f_of);
+        }
+        // f_iopl1
+        if a.f_iopl1 != b.f_iopl1 {
+            output = format!("{}{}: {} -> {} ", output, "iopl1", a.f_iopl1, b.f_iopl1);
+        }
+        // f_iopl2
+        if a.f_iopl2 != b.f_iopl2 {
+            output = format!("{}{}: {} -> {} ", output, "iopl2", a.f_iopl2, b.f_iopl2);
+        }
+        // f_nt
+        if a.f_nt != b.f_nt {
+            output = format!("{}{}: {} -> {} ", output, "nt", a.f_nt, b.f_nt);
+        }
+        // f_rf
+        if a.f_rf != b.f_rf {
+            output = format!("{}{}: {} -> {} ", output, "rf", a.f_rf, b.f_rf);
+        }
+        // f_vm
+        if a.f_vm != b.f_vm {
+            output = format!("{}{}: {} -> {} ", output, "vm", a.f_vm, b.f_vm);
+        }
+        // f_ac
+        if a.f_ac != b.f_ac {
+            output = format!("{}{}: {} -> {} ", output, "ac", a.f_ac, b.f_ac);
+        }
+        // f_vif
+        if a.f_vif != b.f_vif {
+            output = format!("{}{}: {} -> {} ", output, "vif", a.f_vif, b.f_vif);
+        }
+        // f_vip
+        if a.f_vip != b.f_vip {
+            output = format!("{}{}: {} -> {} ", output, "vip", a.f_vip, b.f_vip);
+        }
+        // f_id
+        if a.f_id != b.f_id {
+            output = format!("{}{}: {} -> {} ", output, "id", a.f_id, b.f_id);
+        }
+        output
     }
 
     pub fn dump(&self) -> u32 {
@@ -336,77 +405,106 @@ impl Flags {
         //self.f_af = (value1 & 0x0f) + (value2 & 0x0f) > 0x09;
     }
 
-
-
-    pub fn add64(&mut self, value1: u64, value2: u64) -> u64 {
-        let unsigned: u128 = value1 as u128 + value2 as u128;
-
-        self.f_sf = (unsigned as i64) < 0;
-        self.f_zf = (unsigned & 0xffffffff_ffffffff) == 0;
-        //self.f_pf = (unsigned & 0xff) % 2 == 0;
-        self.calc_pf(unsigned as u8);
-        let (result, carry) = (value2).overflowing_add(value1);
-        let (_, overflow) = (value2 as i64).overflowing_add(value1 as i64);
-        self.f_of = overflow;
-        self.f_cf = carry;
-        self.calc_af(value1, value2, result, 64);
+    pub fn add64(&mut self, value1: u64, value2: u64, cf: bool, include_carry: bool) -> u64 {
+        let v1 = value1;
+        let v2 = value2;
+        let c = if include_carry { cf as u64 } else { 0 };
         
-        /*
-        let low_nibble_value1 = value1 & 0xf;
-        let low_nibble_value2 = value2 & 0xf;
-        self.f_af = (low_nibble_value1 > 0x7) && (low_nibble_value2 > 0x7);
-        */
-
+        let result = v1.wrapping_add(v2).wrapping_add(c);
+        let sum = v1 as u128 + v2 as u128 + c as u128;
+        
+        self.f_cf = sum > 0xFFFFFFFFFFFFFFFF;
+        self.f_sf = (result as i64) < 0;
+        self.f_zf = result == 0;
+        self.calc_pf(result as u8);
+        
+        let sign1 = (v1 >> 63) & 1;
+        let sign2 = (v2 >> 63) & 1;
+        let signr = (result >> 63) & 1;
+        self.f_of = (sign1 == sign2) && (sign1 != signr);
+        
+        self.calc_af(v1, v2, result, 64);
         result
     }
-
-    pub fn add32(&mut self, value1: u64, value2: u64) -> u64 {
-        let unsigned: u64 = value1 + value2;
-
-        self.f_sf = (unsigned as i32) < 0;
-        self.f_zf = (unsigned & 0xffffffff) == 0;
-        //self.f_pf = (unsigned & 0xff) % 2 == 0;
-        self.calc_pf(unsigned as u8);
-        let (result, carry) = (value2 as u32).overflowing_add(value1 as u32);
-        let (_, overflow) = (value2 as u32 as i32).overflowing_add(value1 as u32 as i32);
-        self.f_of = overflow;
-        self.f_cf = carry;
-        self.calc_af(value1, value2, result as u64, 32);
-
+     
+    pub fn add32(&mut self, value1: u32, value2: u32, cf: bool, include_carry: bool) -> u64 {
+        let result = if include_carry {
+            value1.wrapping_add(value2).wrapping_add(cf as u32)
+        } else {
+            value1.wrapping_add(value2)
+        };
+        
+        let sum = if include_carry {
+            value1 as u64 + value2 as u64 + cf as u64
+        } else {
+            value1 as u64 + value2 as u64
+        };
+        
+        self.f_cf = sum > 0xFFFFFFFF;
+        self.f_sf = (result as i32) < 0;
+        self.f_zf = result == 0;
+        self.calc_pf(result as u8);
+        
+        let sign1 = (value1 >> 31) & 1;
+        let sign2 = (value2 >> 31) & 1;
+        let signr = (result >> 31) & 1;
+        self.f_of = (sign1 == sign2) && (sign1 != signr);
+        
+        self.calc_af(value1 as u64, value2 as u64, result as u64, 32);
         result as u64
-    }
-
-    pub fn add16(&mut self, value1: u64, value2: u64) -> u64 {
-        if value1 > 0xffff || value2 > 0xffff {
-            panic!("add16 with a bigger precision");
-        }
-
-        let unsigned: u32 = value1 as u32 + value2 as u32;
-
-        self.f_sf = (unsigned as i16) < 0;
-        self.f_zf = (unsigned & 0xffff) == 0;
-        self.calc_pf(unsigned as u8);
-        let (result, carry) = (value2 as u16).overflowing_add(value1 as u16);
-        let (_, overflow) = (value2 as u16 as i16).overflowing_add(value1 as u16 as i16);
-        self.f_of = overflow;
-        self.f_cf = carry;
-        self.calc_af(value1, value2, result as u64, 16);
-
+     }
+     
+    pub fn add16(&mut self, value1: u16, value2: u16, cf: bool, include_carry: bool) -> u64 {
+        let result = if include_carry {
+            value1.wrapping_add(value2).wrapping_add(cf as u16)
+        } else {
+            value1.wrapping_add(value2)
+        };
+        
+        let sum = if include_carry {
+            value1 as u32 + value2 as u32 + cf as u32
+        } else {
+            value1 as u32 + value2 as u32
+        };
+        
+        self.f_cf = sum > 0xFFFF;
+        self.f_sf = (result as i16) < 0;
+        self.f_zf = result == 0;
+        self.calc_pf(result as u8);
+        
+        let sign1 = (value1 >> 15) & 1;
+        let sign2 = (value2 >> 15) & 1;
+        let signr = (result >> 15) & 1;
+        self.f_of = (sign1 == sign2) && (sign1 != signr);
+        
+        self.calc_af(value1 as u64, value2 as u64, result as u64, 16);
         result as u64
-    }
-
-    pub fn add8(&mut self, value1: u64, value2: u64) -> u64 {
-        let unsigned: u16 = value1 as u8 as u16 + value2 as u8 as u16;
-
-        self.f_sf = (unsigned as i8) < 0;
-        self.f_zf = (unsigned & 0xff) == 0;
-        self.calc_pf(unsigned as u8);
-        let (result, carry) = (value2 as u8).overflowing_add(value1 as u8);
-        let (_, overflow) = (value2 as u8 as i8).overflowing_add(value1 as u8 as i8);
-        self.f_of = overflow;
-        self.f_cf = carry;
-        self.calc_af(value1, value2, result as u64, 8);
-
+     }
+     
+    pub fn add8(&mut self, value1: u8, value2: u8, cf: bool, include_carry: bool) -> u64 {
+        let result = if include_carry {
+            value1.wrapping_add(value2).wrapping_add(cf as u8)
+        } else {
+            value1.wrapping_add(value2)
+        };
+        
+        let sum = if include_carry {
+            value1 as u16 + value2 as u16 + cf as u16
+        } else {
+            value1 as u16 + value2 as u16
+        };
+        
+        self.f_cf = sum > 0xFF;
+        self.f_sf = (result as i8) < 0;
+        self.f_zf = result == 0;
+        self.calc_pf(result as u8);
+        
+        let sign1 = (value1 >> 7) & 1;
+        let sign2 = (value2 >> 7) & 1;
+        let signr = (result >> 7) & 1;
+        self.f_of = (sign1 == sign2) && (sign1 != signr);
+        
+        self.calc_af(value1 as u64, value2 as u64, result as u64, 8);
         result as u64
     }
 
