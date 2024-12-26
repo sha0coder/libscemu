@@ -417,7 +417,6 @@ impl Emu {
     pub fn init(&mut self, clear_registers: bool, clear_flags: bool) {
         self.pos = 0;
 
-
         if !atty::is(Stream::Stdout) {
             self.cfg.nocolors = true;
             self.colors.disable();
@@ -819,7 +818,6 @@ impl Emu {
 
         // base is setted by image base (if overlapps, alloc)
         } else {
-
             // user's program
             if set_entry {
                 if pe64.opt.image_base >= constants::LIBS64_MIN as u64 {
@@ -3313,7 +3311,7 @@ impl Emu {
             }
         } else {
             if self.seh == 0 {
-                log::info!("exception without any SEH handler nor vector configured.");
+                log::info!("exception without any SEH handler nor vector configured. pos = {}", self.pos);
                 if self.cfg.console_enabled {
                     self.spawn_console();
                 }
@@ -4265,35 +4263,16 @@ impl Emu {
     }
 
     pub fn write_to_trace_file(&mut self) {
-        // 00,00007FFBEF4E5FF0,EB 08,jmp 7FFBEF4E5FFA,rax: 7FFBEF4E5FF0-> 7FFBEF4E5FF0 rbx: 7FFE0385-> 7FFE0385 rcx: 7FFBEE4B0000-> 7FFBEE4B0000 rdx: 1-> 1 rsp: 98EB5DDFF8-> 98EB5DDFF8 rbp: 98EB5DE338-> 98EB5DE338 rsi: 1-> 1 rdi: 7FFE0384-> 7FFE0384 r8: 0-> 0 r9: 0-> 0 r10: A440AE23305F3A70-> A440AE23305F3A70 r11: 98EB5DE068-> 98EB5DE068 r12: 7FFBEF4E5FF0-> 7FFBEF4E5FF0 r13: 1FC18C72DC0-> 1FC18C72DC0 r14: 7FFBEE4B0000-> 7FFBEE4B0000 r15: 0-> 0 rflags: 344-> 246,,OptionalHeader.AddressOfEntryPoint
-        // 01,00007FFBEF4E5FFA,50,push rax,rsp: 98EB5DDFF8-> 98EB5DDFF0,00000098EB5DDFF0: 7FFC65FF8B8F-> 7FFBEF4E5FF0,rax:GetMsgProc+102D07D
         let index = self.pos - 1;
 
         let instruction = self.instruction.unwrap();
         let instruction_bytes = &self.instruction_bytes;
 
+        let mut comments = String::new();
+
         // dump all registers on first, only differences on next
         let mut registers = String::new();
         if index == 0 {
-            /*
-            rax: 7FFBEF4E5FF0->7FFBEF4E5FF0
-            rbx: 7FFE0385->7FFE0385
-            rcx: 7FFBEE4B0000->7FFBEE4B0000
-            rdx: 1->1
-            rsp: 98EB5DDFF8->98EB5DDFF8
-            rbp: 98EB5DE338->98EB5DE338
-            rsi: 1->1 
-            rdi: 7FFE0384->7FFE0384 
-            r8: 0->0 
-            r9: 0->0 
-            r10: A440AE23305F3A70->A440AE23305F3A70 
-            r11: 98EB5DE068->98EB5DE068 
-            r12: 7FFBEF4E5FF0->7FFBEF4E5FF0
-            r13: 1FC18C72DC0->1FC18C72DC0
-            r14: 7FFBEE4B0000->7FFBEE4B0000
-            r15: 0->0 
-            rflags: 344->246
-            */
             registers = format!("{} rax: {:x}-> {:x}", registers, self.pre_op_regs.rax, self.post_op_regs.rax);
             registers = format!("{} rbx: {:x}-> {:x}", registers, self.pre_op_regs.rbx, self.post_op_regs.rbx);
             registers = format!("{} rcx: {:x}-> {:x}", registers, self.pre_op_regs.rcx, self.post_op_regs.rcx);
@@ -4312,28 +4291,28 @@ impl Emu {
             registers = format!("{} r15: {:x}-> {:x}", registers, self.pre_op_regs.r15, self.post_op_regs.r15);
         } else {
             registers = Regs64::diff(
-                self.pre_op_regs.rip,
-                self.pos - 1,
                 self.pre_op_regs,
                 self.post_op_regs,
             );
         }
 
         let mut flags = String::new();
+        // dump all flags on first, only differences on next
         if index == 0 {
             flags = format!("rflags: {:x}-> {:x}", self.pre_op_flags.dump(), self.post_op_flags.dump());
         } else {
             if self.pre_op_flags.dump() != self.post_op_flags.dump() {
                 flags = format!("rflags: {:x}-> {:x}", self.pre_op_flags.dump(), self.post_op_flags.dump());
+                comments = format!("{} {}", comments, Flags::diff(self.pre_op_flags, self.post_op_flags));
             }
         }
 
+        // dump all write memory operations
         let mut memory = String::new();
         for memory_op in self.memory_operations.iter() {
             if memory_op.op == "read" {
                 continue;
             }
-            // 00000098EB5DDFF0: 7FFC65FF8B8F-> 7FFBEF4E5FF0
             memory = format!("{} {:016X}: {:X}-> {:X}", memory, memory_op.address, memory_op.old_value, memory_op.new_value);
         }
 
@@ -4347,7 +4326,7 @@ impl Emu {
             disassembly = self.out, 
             registers = format!("{} {}", registers, flags), 
             memory = memory, 
-            comments = ""
+            comments = comments
         ).expect("failed to write to trace file");
     }
 
@@ -4422,6 +4401,12 @@ impl Emu {
     pub fn step(&mut self) -> bool {
         self.pos += 1;
 
+        // exit
+        if self.cfg.exit_position != 0 && self.pos == self.cfg.exit_position {
+            log::info!("exit position reached");
+            std::process::exit(0);
+        }
+
         // code
         let code = match self.maps.get_mem_by_addr(self.regs.rip) {
             Some(c) => c,
@@ -4437,8 +4422,8 @@ impl Emu {
 
         // block
         let block = code.read_from(self.regs.rip).to_vec(); // reduce code block for more speed
-                                                            //
-                                                            // decoder
+        
+        // decoder
         let mut decoder;
         if self.cfg.is_64bits {
             decoder = Decoder::with_ip(64, &block, self.regs.rip, DecoderOptions::NONE);
@@ -4545,7 +4530,6 @@ impl Emu {
                 //let mut position:usize = 0;
                 //let mut instruction_bytes:Vec<u8> = Vec::new();
 
-
                 self.rep = None;
                 while decoder.can_decode() {
                     if self.rep.is_none() {
@@ -4566,6 +4550,11 @@ impl Emu {
                     //self.instruction_bytes = instruction_bytes;
                     self.memory_operations.clear();
                     self.pos += 1;
+
+                    if self.cfg.exit_position != 0 && self.pos == self.cfg.exit_position {
+                        log::info!("exit position reached");
+                        std::process::exit(0);
+                    }
 
                     if self.exp == self.pos
                         || self.pos == self.bp.get_instruction()
@@ -4671,11 +4660,30 @@ impl Emu {
                                 self.rep = Some(rep_count + 1);
                             }
                         }
-                        if ins.has_repe_prefix() && !self.flags.f_zf {
-                            self.rep = None;
-                        }
-                        if ins.has_repne_prefix() && self.flags.f_zf {
-                            self.rep = None;
+
+                        // repe and repe are the same on x86 (0xf3) so you have to check if it is movement or comparison
+                        let is_string_movement = matches!(
+                            ins.mnemonic(),
+                            Mnemonic::Movsb | Mnemonic::Movsw | Mnemonic::Movsd | Mnemonic::Movsq |
+                            Mnemonic::Stosb | Mnemonic::Stosw | Mnemonic::Stosd | Mnemonic::Stosq |
+                            Mnemonic::Lodsb | Mnemonic::Lodsw | Mnemonic::Lodsd | Mnemonic::Lodsq
+                        );
+                        let is_string_comparison = matches!(
+                            ins.mnemonic(),
+                            Mnemonic::Cmpsb | Mnemonic::Cmpsw | Mnemonic::Cmpsd | Mnemonic::Cmpsq |
+                            Mnemonic::Scasb | Mnemonic::Scasw | Mnemonic::Scasd | Mnemonic::Scasq
+                        );
+                        if is_string_movement {
+                            // do not clear rep if it is a string movement
+                        } else if is_string_comparison {
+                            if ins.has_repe_prefix() && !self.flags.f_zf {
+                                self.rep = None;
+                            }
+                            if ins.has_repne_prefix() && self.flags.f_zf {
+                                self.rep = None;
+                            }
+                        } else {
+                            unimplemented!("string instruction not supported");
                         }
                     }
 
@@ -5100,10 +5108,10 @@ impl Emu {
                 };
 
                 let res: u64 = match self.get_operand_sz(&ins, 1) {
-                    64 => self.flags.add64(value0, value1),
-                    32 => self.flags.add32(value0, value1),
-                    16 => self.flags.add16(value0, value1),
-                    8 => self.flags.add8(value0, value1),
+                    64 => self.flags.add64(value0, value1, self.flags.f_cf, false),
+                    32 => self.flags.add32((value0 & 0xffffffff) as u32, (value1 & 0xffffffff) as u32, self.flags.f_cf, false),
+                    16 => self.flags.add16((value0 & 0xffff) as u16, (value1 & 0xffff) as u16, self.flags.f_cf, false),
+                    8 => self.flags.add8((value0 & 0xff) as u8, (value1 & 0xff) as u8, self.flags.f_cf, false),
                     _ => unreachable!("weird size"),
                 };
 
@@ -5117,12 +5125,7 @@ impl Emu {
 
                 assert!(ins.op_count() == 2);
 
-                let cf: u64;
-                if self.flags.f_cf {
-                    cf = 1
-                } else {
-                    cf = 0;
-                }
+                let cf = self.flags.f_cf as u64;
 
                 let value0 = match self.get_operand_value(&ins, 0, true) {
                     Some(v) => v,
@@ -5134,14 +5137,13 @@ impl Emu {
                     None => return false,
                 };
 
-                let res: u64;
-                match self.get_operand_sz(&ins, 1) {
-                    64 => res = self.flags.add64(value0, value1 + cf),
-                    32 => res = self.flags.add32(value0, value1 + cf),
-                    16 => res = self.flags.add16(value0, value1 + cf),
-                    8 => res = self.flags.add8(value0, value1 + cf),
+                let res = match self.get_operand_sz(&ins, 1) {
+                    64 => self.flags.add64(value0, value1, self.flags.f_cf, true),
+                    32 => self.flags.add32((value0 & 0xffffffff) as u32, (value1 & 0xffffffff) as u32, self.flags.f_cf, true),
+                    16 => self.flags.add16((value0 & 0xffff) as u16, (value1 & 0xffff) as u16, self.flags.f_cf, true),
+                    8 => self.flags.add8((value0 & 0xff) as u8, (value1 & 0xff) as u8, self.flags.f_cf, true),
                     _ => unreachable!("weird size"),
-                }
+                };
 
                 if !self.set_operand_value(&ins, 0, res) {
                     return false;
@@ -5169,9 +5171,9 @@ impl Emu {
                 let sz = self.get_operand_sz(&ins, 1);
                 match sz {
                     64 => res = self.flags.sub64(value0, value1.wrapping_add(cf)),
-                    32 => res = self.flags.sub32(value0, value1.wrapping_add(cf)),
-                    16 => res = self.flags.sub16(value0, value1.wrapping_add(cf)),
-                    8 => res = self.flags.sub8(value0, value1.wrapping_add(cf)),
+                    32 => res = self.flags.sub32(value0, (value1 & 0xffffffff).wrapping_add(cf)),
+                    16 => res = self.flags.sub16(value0, (value1 & 0xffff).wrapping_add(cf)),
+                    8 => res = self.flags.sub8(value0, (value1 & 0xff).wrapping_add(cf)),
                     _ => panic!("weird size"),
                 }
             
@@ -6558,10 +6560,10 @@ impl Emu {
                 }
 
                 let res: u64 = match self.get_operand_sz(&ins, 1) {
-                    64 => self.flags.add64(value0, value1),
-                    32 => self.flags.add32(value0, value1),
-                    16 => self.flags.add16(value0, value1),
-                    8 => self.flags.add8(value0, value1),
+                    64 => self.flags.add64(value0, value1, self.flags.f_cf, false),
+                    32 => self.flags.add32((value0 & 0xffffffff) as u32, (value1 & 0xffffffff) as u32, self.flags.f_cf, false),
+                    16 => self.flags.add16((value0 & 0xffff) as u16, (value1 & 0xffff) as u16, self.flags.f_cf, false),
+                    8 => self.flags.add8((value0 & 0xff) as u8, (value1 & 0xff) as u8, self.flags.f_cf, false),
                     _ => unreachable!("weird size"),
                 };
 

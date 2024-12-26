@@ -10,7 +10,6 @@ documentation = "https://docs.rs/libscemu/0.4.15/libscemu/"
 repository = "https://github.com/sha0coder/libscemu"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-
 [dependencies]
 iced-x86 = "1.19.0"
 uint = "0.9.5"
